@@ -74,7 +74,7 @@ function Login() {
             <p className="mt-4 text-sm text-center text-gray-600">
               Não tem uma conta?{" "}
            <Link to="/registro" className="text-verdePrincipal hover:underline">Registre-se</Link>
-
+ola
             </p>
           </form>
         </div>
