@@ -15,8 +15,8 @@ const Navbar = () => {
                 alt="Logo"
               />
             </a>
-
-            {/* Botão mobile */}
+  
+            {/* Botão mobile */} 
             <div className="flex lg:hidden">
               <button
                 onClick={() => setIsOpen(!isOpen)}
