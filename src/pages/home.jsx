@@ -15,7 +15,6 @@ const Navbar = () => {
                 alt="Logo"
               />
             </a>
-  
             {/* Botão mobile */} 
             <div className="flex lg:hidden">
               <button

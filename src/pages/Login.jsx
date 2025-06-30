@@ -1,7 +1,7 @@
 import fundo from "../assets/logo-fundo.png";
 import logo from "../assets/logo-quadraflex.png";
-import { Link, useNavigate } from 'react-router-dom'; // Importar useNavigate
-
+import { Link, useNavigate } from 'react-router-dom';
+ 
 function Login() {
   const navigate = useNavigate();
 
@@ -63,18 +63,18 @@ function Login() {
               />
             </div>
 
-            <button
-              type="submit"
-              onClick={handleLogin}
-              className="w-full bg-verdePrincipal text-white py-2 rounded-lg hover:bg-green-700 transition"
-            >
-              Entrar
-            </button>
+        <button
+  onClick={() => navigate("/Home")}
+  type="button" // impede submit por enquanto
+  className="...">
+  Entrar
+</button>
+
 
             <p className="mt-4 text-sm text-center text-gray-600">
               Não tem uma conta?{" "}
-           <Link to="/registro" className="text-verdePrincipal hover:underline">Registre-se</Link>
-ola
+           <Link to="/Register" className="text-verdePrincipal hover:underline">Registre-se</Link>
+
             </p>
           </form>
         </div>

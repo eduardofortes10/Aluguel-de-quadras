@@ -6,13 +6,12 @@ import Home from './pages/home';
 
 const App = () => {
   return (
-    <Router>
-      <Routes>
-       <Route path="/Login" element={<Login />} />
-        <Route path="/Register" element={<Register />} />
-         <Route path="/" element={<Home />} />
-      </Routes>
-    </Router>
+    <Routes>
+  <Route path="/" element={<Login />} />         {/* <- Página inicial = Login */}
+  <Route path="/Register" element={<Register />} />
+  <Route path="/Home" element={<Home />} />      {/* <- Página Home fica acessível como /Home */}
+</Routes>
+
   );
 };
 
