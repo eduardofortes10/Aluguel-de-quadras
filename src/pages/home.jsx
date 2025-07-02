@@ -19,7 +19,7 @@ import quadra7 from "../assets/quadras7.png";
 export default function Home() {
   const [mostrarAviso, setMostrarAviso] = useState(false);
   const [mostrarCookies, setMostrarCookies] = useState(true);
-
+  const [mostrarModal, setMostrarModal] = useState(false);
   const quadrasParaVoce = [quadra1, quadra2, quadra3, quadra4, quadra5, quadra6, quadra7];
 
   const todasQuadras = [
@@ -51,41 +51,29 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [instanceRef]);
 
- return (
-  <div className="flex min-h-screen overflow-x-hidden">
+  return (
+    <div className="flex min-h-screen overflow-x-hidden">
+      <div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-6 space-y-6 fixed h-full">
+        <div className="w-10 h-10 bg-white rounded-full mb-4"></div>
+        <button title="Home" className="hover:text-gray-300">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9.75L12 4l9 5.75M4.5 10.5v8.25a.75.75 0 00.75.75H9v-5.25h6v5.25h3.75a.75.75 0 00.75-.75V10.5" />
+          </svg>
+        </button>
+        <button title="Quadras" className="hover:text-gray-300">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
+          </svg>
+        </button>
+        <button title="Contato" className="hover:text-gray-300">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10l-6-6m0 0L3 16v5h5L21 10z" />
+          </svg>
+        </button>
+      </div>
 
-     {/* SIDEBAR */}
-      <aside className="flex flex-col items-center w-16 h-screen py-8 overflow-y-auto bg-[#14532d] border-r fixed left-0 top-0 z-50">
-        <nav className="flex flex-col flex-1 space-y-6">
-       
-          {[
-            // Home
-            "M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75",
-            // Chart
-            "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75c0 .621-.504 1.125-1.125 1.125h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z",
-            // Clipboard Check
-            "M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0118 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3l1.5 1.5 3-3.75",
-            // Megafone
-            "M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5",
-            // Engrenagem
-            "M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"
-          ].map((d, i) => (
-            <a key={i} href="#" className="p-1.5 text-white hover:bg-green-700 rounded-lg transition-colors duration-200">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-6 h-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d={d} />
-              </svg>
-            </a>
-          ))}
-        </nav>
-         {/* AVATAR NO FINAL */}
-        <div className="mt-6">
-          <div className="w-10 h-10 rounded-full overflow-hidden shadow-md">
-            <img src={userPhoto} alt="Usuário" className="w-full h-full object-cover" />
-          </div>
-        </div>
-      </aside>
-<div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
-        {/* AVISO DE SUCESSO */}
+      <div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
+       {/* AVISO DE SUCESSO */}
         {mostrarAviso && (
           <div className="fixed top-6 right-6 flex w-full max-w-sm overflow-hidden bg-white rounded-lg shadow-md z-50">
             <div className="flex items-center justify-center w-12 bg-emerald-500">
@@ -101,42 +89,61 @@ export default function Home() {
             </div>
           </div>
         )}
+{/* TOPO COM SAUDAÇÃO, AVATAR E BOTÃO DE FILTRO */}
+<div className="relative bg-[#1E8449] text-white p-6 pb-10 rounded-b-3xl shadow-md">
+  {/* AVATAR E NOTIFICAÇÃO */}
+  <div className="absolute top-4 right-4 flex items-center gap-4">
+    <div className="w-10 h-10 rounded-full overflow-hidden shadow-md bg-white flex items-center justify-center">
+      <img src={bellIcon} alt="Notificações" className="w-6 h-6 object-contain" />
+    </div>
+  </div>
 
-        {/* TOPO COM AVATAR E NOTIFICAÇÃO */}
-        <div className="relative bg-[#1E8449] text-white p-6 rounded-lg shadow-md mt-4">
-          <div className="absolute top-4 right-4 flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full overflow-hidden shadow-md bg-white flex items-center justify-center">
-              <img src={bellIcon} alt="Notificações" className="w-6 h-6 object-contain" />
-            </div>
-           
-          </div>
+  {/* TÍTULO */}
+  <h1 className="text-2xl font-bold text-center">Olá, Richard Rasmussen</h1>
+  <p className="text-sm mt-1 text-center">Sua quadra, seu jogo!</p>
 
-          <h1 className="text-2xl font-bold text-center">Olá, Richard Rasmussen</h1>
-          <p className="text-sm mt-1 text-center">Sua quadra, seu jogo!</p>
+  {/* BARRA DE PESQUISA + BOTÃO DE FILTRO */}
+  <div className="flex items-center justify-center mt-4">
+    <div className="flex items-center bg-white rounded-full px-4 py-2 shadow-md">
+      <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M5 11a6 6 0 1112 0 6 6 0 01-12 0z" />
+      </svg>
+      <input
+        type="text"
+        placeholder="Procure sua quadra aqui"
+        className="outline-none text-gray-700 w-64"
+      />
+    </div>
 
-          <div className="mt-4 flex justify-center">
-            <input
-              type="text"
-              placeholder="Procure sua quadra aqui"
-              className="py-2 px-4 rounded-full text-black focus:outline-none focus:ring-2 focus:ring-green-500 shadow-md w-full max-w-3xl"
-            />
-          </div>
+    {/* Botão de filtro */}
+    <button 
+      className="ml-2 p-3 bg-white rounded-xl shadow-md"
+      onClick={() => setMostrarModal(true)}
+    >
+      <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6l-6.2 7.9V19a1 1 0 01-1.6.8l-2-1.5a1 1 0 01-.4-.8v-5.8L3.2 5.6A1 1 0 013 4z" />
+      </svg>
+    </button>
+  </div>
 
-          <div className="flex gap-6 mt-6 justify-center flex-wrap">
-            {[{ nome: "Futebol", img: futebolIcon },
-              { nome: "Basquete", img: basqueteIcon },
-              { nome: "Vôlei", img: voleiIcon },
-              { nome: "Tênis", img: tenisIcon }
-            ].map(({ nome, img }) => (
-              <div key={nome} className="flex flex-col items-center">
-                <div className="bg-white rounded-full p-2 shadow-md hover:scale-105 transition">
-                  <img src={img} alt={nome} className="w-10 h-10 object-contain" />
-                </div>
-                <span className="text-sm mt-1 capitalize text-white">{nome}</span>
-              </div>
-            ))}
-          </div>
+  {/* ÍCONES */}
+  <div className="flex gap-6 mt-6 justify-center flex-wrap">
+    {[{ nome: "Futebol", img: futebolIcon },
+      { nome: "Basquete", img: basqueteIcon },
+      { nome: "Vôlei", img: voleiIcon },
+      { nome: "Tênis", img: tenisIcon }
+    ].map(({ nome, img }) => (
+      <div key={nome} className="flex flex-col items-center">
+        <div className="bg-white rounded-full p-2 shadow-md hover:scale-105 transition">
+          <img src={img} alt={nome} className="w-10 h-10 object-contain" />
         </div>
+        <span className="text-sm mt-1 capitalize text-white">{nome}</span>
+      </div>
+    ))}
+  </div>
+</div>
+
+        {/* Seção de ícones e filtro já enviada */}
 
         {/* SLIDER */}
         <div className="mt-10">
@@ -145,6 +152,7 @@ export default function Home() {
             {quadrasParaVoce.map((img, index) => (
               <div className="keen-slider__slide bg-white rounded-lg shadow-md p-2" key={index}>
                 <img src={img} alt={`Quadra ${index + 1}`} className="rounded-md w-full h-32 object-cover" />
+
                 <div className="mt-2">
                   <h3 className="font-medium text-sm">Quadra {index + 1}</h3>
                   <p className="text-green-700 font-bold text-sm">R${100 + index * 10} / hora</p>
@@ -155,7 +163,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* LISTA QUADRAS */}
+        {/* LISTA DE QUADRAS */}
         <div className="mt-10">
           <h2 className="text-xl font-semibold mb-4">Quadras</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -207,6 +215,103 @@ export default function Home() {
           </div>
         </footer>
       </div>
+
+
+      {mostrarModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
+          <div className="bg-white w-[90%] max-w-md rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]">
+            <button
+              className="absolute top-4 right-4 text-gray-600 hover:text-red-500"
+              onClick={() => setMostrarModal(false)}
+            >
+              ✕
+            </button>
+
+            <h2 className="text-xl font-bold text-green-700 mb-4">Filtros</h2>
+
+            <div className="mb-4">
+              <h3 className="font-semibold text-sm mb-2">Tipo de quadra</h3>
+              <div className="flex flex-wrap gap-2">
+                {["Todos", "Futsal", "Society", "Campo", "Quadra"].map((tipo, i) => (
+                  <button
+                    key={i}
+                    className="px-3 py-1 rounded-full bg-gray-100 hover:bg-green-100 text-sm text-gray-800"
+                  >
+                    {tipo}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="font-semibold text-sm mb-2">Número de Estrelas</h3>
+              <div className="flex flex-col gap-1">
+                {[5, 4, 3, 2, 1].map((star) => (
+                  <label key={star} className="flex items-center gap-2">
+                    <input type="checkbox" />
+                    {Array.from({ length: star }, (_, i) => (
+                      <span key={i}>⭐</span>
+                    ))}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="font-semibold text-sm mb-2">Linha de preço</h3>
+              <input type="range" min={0} max={1000} className="w-full accent-green-600" />
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>R$0</span>
+                <span>R$1000</span>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="font-semibold text-sm mb-2">Horas</h3>
+              <div className="flex flex-wrap gap-2">
+                {["Todos", 1, 2, 3, 4, "5+"].map((hora, i) => (
+                  <button
+                    key={i}
+                    className="px-3 py-1 rounded-full bg-gray-100 hover:bg-green-100 text-sm text-gray-800"
+                  >
+                    {hora}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="font-semibold text-sm mb-2">Banheiros</h3>
+              <div className="flex flex-wrap gap-2">
+                {["Todos", 1, 2, 3, 4, "5+"].map((banheiro, i) => (
+                  <button
+                    key={i}
+                    className="px-3 py-1 rounded-full bg-gray-100 hover:bg-green-100 text-sm text-gray-800"
+                  >
+                    {banheiro}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <h3 className="font-semibold text-sm mb-2 text-blue-900">Distância até você</h3>
+              <input type="range" min={10} max={2000} className="w-full accent-green-600" />
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>100m</span>
+                <span>2000m+</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setMostrarModal(false)}
+              className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg"
+            >
+              Aplicar Filtro
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
