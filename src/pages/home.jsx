@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
+import { useNavigate } from "react-router-dom";
 
 import futebolIcon from "../assets/imagem2logo.png";
 import basqueteIcon from "../assets/imagem1logo.png";
@@ -16,7 +17,10 @@ import quadra5 from "../assets/quadras5.png";
 import quadra6 from "../assets/quadras6.png";
 import quadra7 from "../assets/quadras7.png";
 
+
+
 export default function Home() {
+  const navigate = useNavigate(); // ✅ Agora está dentro do componente
   const [mostrarAviso, setMostrarAviso] = useState(false);
   const [mostrarCookies, setMostrarCookies] = useState(true);
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -53,24 +57,63 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen overflow-x-hidden">
-      <div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-6 space-y-6 fixed h-full">
-        <div className="w-10 h-10 bg-white rounded-full mb-4"></div>
-        <button title="Home" className="hover:text-gray-300">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 9.75L12 4l9 5.75M4.5 10.5v8.25a.75.75 0 00.75.75H9v-5.25h6v5.25h3.75a.75.75 0 00.75-.75V10.5" />
-          </svg>
-        </button>
-        <button title="Quadras" className="hover:text-gray-300">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" />
-          </svg>
-        </button>
-        <button title="Contato" className="hover:text-gray-300">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10l-6-6m0 0L3 16v5h5L21 10z" />
-          </svg>
-        </button>
-      </div>
+<div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-4 space-y-4 fixed h-full">
+  {/* Logotipo redondo branco */}
+  <div className="w-8 h-8 rounded-full bg-white"></div>
+
+  {/* Ícone Home */}
+  <button title="Home" className="p-2 rounded-lg hover:bg-green-700 transition">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5L12 4l9 6.5M4.5 10.5v9a.5.5 0 00.5.5h4.5v-6h5v6H19a.5.5 0 00.5-.5v-9" />
+    </svg>
+  </button>
+
+  {/* Ícone Favoritos */}
+  <button title="Favoritos" className="p-2 rounded-lg hover:bg-green-700 transition">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
+      <path d="M6 4a2 2 0 00-2 2v16l8-4 8 4V6a2 2 0 00-2-2H6z" />
+    </svg>
+  </button>
+
+  {/* Ícone Chat */}
+  <button title="Chat" className="p-2 rounded-lg hover:bg-green-700 transition">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
+      <path d="M2 5a2 2 0 012-2h16a2 2 0 012 2v11a2 2 0 01-2 2H6l-4 4V5z" />
+    </svg>
+  </button>
+
+  {/* Ícone Perfil */}
+<button
+  title="Perfil"
+  onClick={() => navigate("/perfil")}
+  className="p-2 rounded-lg hover:bg-green-700 transition"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" className="w-6 h-6" viewBox="0 0 24 24">
+    <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-3.3 0-10 1.7-10 5v1h20v-1c0-3.3-6.7-5-10-5z" />
+  </svg>
+</button>
+
+
+
+  <button title="Quadras" className="p-2 hover:bg-green-700 rounded-lg">
+    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+      <path d="…"/>
+    </svg>
+  </button>
+
+  <button title="Reservas" className="p-2 hover:bg-green-700 rounded-lg">
+    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+      <path d="…"/>
+    </svg>
+  </button>
+
+  <button title="Perfil" className="p-2 hover:bg-green-700 rounded-lg">
+    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+      <path d="…"/>
+    </svg>
+  </button>
+</div>
+
 
       <div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
        {/* AVISO DE SUCESSO */}
