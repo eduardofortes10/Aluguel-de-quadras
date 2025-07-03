@@ -15,10 +15,18 @@ export default function Pagamento() {
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
             </svg>
           </Link>
+
           <span className="mx-2">/</span>
-          <Link to="/perfil" className="hover:underline text-gray-600 dark:text-gray-200">Perfil</Link>
+
+          <Link to="/perfil" className="hover:underline text-gray-600 dark:text-gray-200">
+            Perfil
+          </Link>
+
           <span className="mx-2">/</span>
-          <span className="text-blue-600 dark:text-blue-400 font-medium">Pagamento</span>
+
+          <span className="text-blue-600 dark:text-blue-400 font-medium">
+            Pagamento
+          </span>
         </div>
 
         <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md">
