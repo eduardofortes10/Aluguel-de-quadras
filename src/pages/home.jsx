@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+
+
 
 import futebolIcon from "../assets/imagem2logo.png";
 import basqueteIcon from "../assets/imagem1logo.png";
@@ -18,22 +21,129 @@ import quadra6 from "../assets/quadras6.png";
 import quadra7 from "../assets/quadras7.png";
 
 
-
 export default function Home() {
-  const navigate = useNavigate(); // ✅ Agora está dentro do componente
+  const navigate = useNavigate(); // Correção adicionada
+
+  const handleQuadraClick = (quadra) => {
+    console.log("Clicado:", quadra);
+    navigate(`/quadra/${quadra.id}`, { state: { quadra } });
+  };
+
+
+
   const [mostrarAviso, setMostrarAviso] = useState(false);
   const [mostrarCookies, setMostrarCookies] = useState(true);
   const [mostrarModal, setMostrarModal] = useState(false);
   const quadrasParaVoce = [quadra1, quadra2, quadra3, quadra4, quadra5, quadra6, quadra7];
 
   const todasQuadras = [
-    { nome: "Quadra de areia", local: "Itoupava, Blumenau", preco: "R$140", nota: 4.2, imagem: quadra3 },
-    { nome: "Quadra", local: "Fortaleza, Blumenau", preco: "R$240", nota: 4.1, imagem: quadra4 },
-    { nome: "Campo", local: "Salto Norte, Blumenau", preco: "R$200", nota: 4.3, imagem: quadra5 },
-    { nome: "Futebol Society", local: "Velha Central, Blumenau", preco: "R$180", nota: 4.0, imagem: quadra1 },
-    { nome: "Ginásio Coberto", local: "Centro, Blumenau", preco: "R$220", nota: 4.6, imagem: quadra2 },
-    { nome: "Quadra Sintética", local: "Ponta Aguda, Blumenau", preco: "R$190", nota: 4.4, imagem: quadra6 }
-  ];
+  {
+    id: 1,
+    nome: "Quadra Eng.Coelho",
+    imagem: quadra1,
+    local: "Engenheiro Coelho, R. São Bento, 328",
+    preco: "R$150",
+    avaliacao: 4.6,
+    tipo: "Quadra de basquete , Futsal e Vôlei",
+    dono: {
+      nome: "Paulo Scholl",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "paulo@email.com",
+      telefone: "(47) 99999-9999"
+    }
+  },
+  {
+    id: 2,
+    nome: "Quadra Poliesportiva A",
+    imagem: quadra2,
+    local: "Fortaleza, Blumenau",
+    preco: "R$240",
+    avaliacao: 4.1,
+    tipo: "Quadra poliesportiva",
+    dono: {
+      nome: "Dono Genérico",
+      foto: "https://i.imgur.com/ZvWYkBa.png",
+      email: "dono@email.com",
+      telefone: "(47) 98888-8888"
+    }
+  }, {
+      id: 3,
+      nome: "Quadra Poliesportiva B",
+      imagem: quadra3,
+      local: "Fortaleza, Blumenau",
+      preco: "R$240 /hora",
+      avaliacao: 4.1,
+      tipo: "Quadra poliesportiva",
+      dono: {
+        nome: "Dono Genérico",
+        foto: "https://i.imgur.com/ZvWYkBa.png",
+        email: "dono@email.com",
+        telefone: "(47) 98888-8888"
+      }
+    },
+    {
+      id: 4,
+      nome: "Quadra Poliesportiva C",
+      imagem: quadra4,
+      local: "Fortaleza, Blumenau",
+      preco: "R$240 /hora",
+      avaliacao: 4.1,
+      tipo: "Quadra poliesportiva",
+      dono: {
+        nome: "Dono Genérico",
+        foto: "https://i.imgur.com/ZvWYkBa.png",
+        email: "dono@email.com",
+        telefone: "(47) 98888-8888"
+      }
+    },
+    {
+      id: 5,
+      nome: "Quadra Poliesportiva D",
+      imagem: quadra5,
+      local: "Fortaleza, Blumenau",
+      preco: "R$240 /hora",
+      avaliacao: 4.1,
+      tipo: "Quadra poliesportiva",
+      dono: {
+        nome: "Dono Genérico",
+        foto: "https://i.imgur.com/ZvWYkBa.png",
+        email: "dono@email.com",
+        telefone: "(47) 98888-8888"
+      }
+    },
+  {
+    id: 0,
+    nome: "Quadra de areia",
+    imagem: quadra3,
+    local: "Itoupava, Blumenau",
+    preco: "R$140",
+    avaliacao: 4.2,
+    tipo: "Quadra de areia para vôlei ou futevôlei",
+    dono: {
+      nome: "Dono Genérico",
+      foto: "https://i.imgur.com/ZvWYkBa.png",
+      email: "dono@email.com",
+      telefone: "(47) 98888-8888"
+    }
+  },
+  {
+  id: 6,
+  nome: "Quadra de areia",
+  imagem: quadra6,
+  local: "Itoupava, Blumenau",
+  preco: "R$140",
+  avaliacao: 4.2,
+  tipo: "Quadra de areia para vôlei ou futevôlei",
+  dono: {
+    nome: "Dono Genérico",
+    foto: "https://i.imgur.com/ZvWYkBa.png",
+    email: "dono@email.com",
+    telefone: "(47) 98888-8888"
+  }
+}
+
+];
+      
 
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
@@ -55,6 +165,8 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [instanceRef]);
 
+  console.log("Quadras:", todasQuadras);
+
   return (
     <div className="flex min-h-screen overflow-x-hidden">
 <div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-4 space-y-4 fixed h-full">
@@ -69,18 +181,19 @@ export default function Home() {
   </button>
 
   {/* Ícone Favoritos */}
-  <button title="Favoritos" className="p-2 rounded-lg hover:bg-green-700 transition">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
-      <path d="M6 4a2 2 0 00-2 2v16l8-4 8 4V6a2 2 0 00-2-2H6z" />
-    </svg>
-  </button>
+  <Link to="/favoritos" title="Favoritos" className="p-2 rounded-lg hover:bg-green-700 transition">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
+    <path d="M6 4a2 2 0 00-2 2v16l8-4 8 4V6a2 2 0 00-2-2H6z" />
+  </svg>
+</Link>
 
-  {/* Ícone Chat */}
-  <button title="Chat" className="p-2 rounded-lg hover:bg-green-700 transition">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
-      <path d="M2 5a2 2 0 012-2h16a2 2 0 012 2v11a2 2 0 01-2 2H6l-4 4V5z" />
-    </svg>
-  </button>
+ {/* Ícone Chat */}
+<Link to="/chat" title="Chat" className="p-2 rounded-lg hover:bg-green-700 transition">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
+    <path d="M2 5a2 2 0 012-2h16a2 2 0 012 2v11a2 2 0 01-2 2H6l-4 4V5z" />
+  </svg>
+</Link>
+
 
   {/* Ícone Perfil */}
 <button
@@ -206,23 +319,31 @@ export default function Home() {
           </div>
         </div>
 
-        {/* LISTA DE QUADRAS */}
         <div className="mt-10">
-          <h2 className="text-xl font-semibold mb-4">Quadras</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {todasQuadras.map((q, index) => (
-              <div key={index} className="bg-white rounded-lg shadow-md p-4 flex gap-4 hover:shadow-lg hover:scale-[1.01] transition duration-300">
-                <img src={q.imagem} alt={q.nome} className="w-24 h-20 object-cover rounded-md" />
-                <div className="flex flex-col justify-between">
-                  <h3 className="font-medium">{q.nome}</h3>
-                  <p className="text-sm text-gray-600">{q.local}</p>
-                  <p className="text-green-700 font-bold text-sm">{q.preco} / hora</p>
-                  <p className="text-yellow-500 text-sm">★ {q.nota}</p>
-                </div>
-              </div>
-            ))}
+      <h2 className="text-xl font-semibold mb-4">Quadras</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {todasQuadras.map((q) => (
+          <div
+            key={q.id}
+            onClick={() => handleQuadraClick(q)}
+            className="cursor-pointer bg-white rounded-lg shadow-md p-4 flex gap-4 hover:shadow-lg hover:scale-[1.01] transition duration-300"
+          >
+            <img
+              src={q.imagem}
+              alt={q.nome}
+              className="w-24 h-20 object-cover rounded-md"
+            />
+            <div className="flex flex-col justify-between">
+              <h3 className="font-medium">{q.nome}</h3>
+              <p className="text-sm text-gray-600">{q.local}</p>
+              <p className="text-green-700 font-bold text-sm">{q.preco} / hora</p>
+              <p className="text-yellow-500 text-sm">★ {q.nota}</p>
+            </div>
           </div>
-        </div>
+        ))}
+      </div>
+    </div>
+
 
         {/* COOKIES */}
         {mostrarCookies && (
@@ -257,7 +378,7 @@ export default function Home() {
             <p className="text-center text-sm mt-4">© 2025 Aluguel de Quadras — Todos os direitos reservados.</p>
           </div>
         </footer>
-      </div>
+      
 
 
       {mostrarModal && (
@@ -351,10 +472,11 @@ export default function Home() {
               className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg"
             >
               Aplicar Filtro
-            </button>
+                       </button>
           </div>
         </div>
       )}
-    </div>
+         </div> 
+    </div> 
   );
 }
