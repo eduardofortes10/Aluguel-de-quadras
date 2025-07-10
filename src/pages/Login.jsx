@@ -66,7 +66,8 @@ function Login() {
         <button
   onClick={() => navigate("/Home")}
   type="button" // impede submit por enquanto
-  className="...">
+  className="w-full bg-verdePrincipal text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-colors">
+
   Entrar
 </button>
 

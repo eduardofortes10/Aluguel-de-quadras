@@ -3,6 +3,28 @@ import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
+import { quadras, quadrasCarrossel } from "../data/quadras";
+
+
+ {/*Carrosel das fotos! */}
+import quadraCarrossel1 from "../carrossel/quadra1.png";
+import quadraCarrossel2 from "../carrossel/quadra2.png";
+import quadraCarrossel3 from "../carrossel/quadra3.png";
+import quadraCarrossel4 from "../carrossel/quadra4.png";
+import quadraCarrossel5 from "../carrossel/quadra5.png";
+import quadraCarrossel6 from "../carrossel/quadra6.png";
+import quadraCarrossel7 from "../carrossel/quadra7.png";
+import quadraCarrossel8 from "../carrossel/quadra8.png";
+import quadraCarrossel9 from "../carrossel/quadra9.png";
+import quadraCarrossel10 from "../carrossel/quadra10.png";
+import quadraCarrossel11 from "../carrossel/quadra11.png";
+import quadraCarrossel12 from "../carrossel/quadra12.png";
+import quadraCarrossel13 from "../carrossel/quadra13.png";
+import quadraCarrossel14 from "../carrossel/quadra14.png";
+import quadraCarrossel15 from "../carrossel/quadra15.png";
+
+
+
 
 
 
@@ -14,10 +36,10 @@ import bellIcon from "../assets/bellIcon.png";
 import userPhoto from "../assets/avatar.png";
 import quadra1 from "../assets/imagem11.png";
 import quadra2 from "../assets/quadras2.png";
-import quadra3 from "../assets/quadras3.png";
+import quadra3 from "../assets/quadras6.png";
 import quadra4 from "../assets/quadras4.png";
 import quadra5 from "../assets/quadras5.png";
-import quadra6 from "../assets/quadras6.png";
+import quadra6 from "../assets/quadras10.png";
 import quadra7 from "../assets/quadras7.png";
 
 
@@ -35,6 +57,12 @@ export default function Home() {
   const [mostrarCookies, setMostrarCookies] = useState(true);
   const [mostrarModal, setMostrarModal] = useState(false);
   const quadrasParaVoce = [quadra1, quadra2, quadra3, quadra4, quadra5, quadra6, quadra7];
+  const imagensCarrossel = [
+  quadraCarrossel1, quadraCarrossel2, quadraCarrossel3, quadraCarrossel4, quadraCarrossel5,
+  quadraCarrossel6, quadraCarrossel7, quadraCarrossel8, quadraCarrossel9, quadraCarrossel10,
+  quadraCarrossel11, quadraCarrossel12, quadraCarrossel13, quadraCarrossel14, quadraCarrossel15
+];
+
 
   const todasQuadras = [
   {
@@ -114,7 +142,7 @@ export default function Home() {
   {
     id: 0,
     nome: "Quadra de areia",
-    imagem: quadra3,
+    imagem: quadra6,
     local: "Itoupava, Blumenau",
     preco: "R$140",
     avaliacao: 4.2,
@@ -126,21 +154,6 @@ export default function Home() {
       telefone: "(47) 98888-8888"
     }
   },
-  {
-  id: 6,
-  nome: "Quadra de areia",
-  imagem: quadra6,
-  local: "Itoupava, Blumenau",
-  preco: "R$140",
-  avaliacao: 4.2,
-  tipo: "Quadra de areia para vôlei ou futevôlei",
-  dono: {
-    nome: "Dono Genérico",
-    foto: "https://i.imgur.com/ZvWYkBa.png",
-    email: "dono@email.com",
-    telefone: "(47) 98888-8888"
-  }
-}
 
 ];
       
@@ -301,23 +314,33 @@ export default function Home() {
 
         {/* Seção de ícones e filtro já enviada */}
 
-        {/* SLIDER */}
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold mb-4">Para você</h2>
-          <div ref={sliderRef} className="keen-slider">
-            {quadrasParaVoce.map((img, index) => (
-              <div className="keen-slider__slide bg-white rounded-lg shadow-md p-2" key={index}>
-                <img src={img} alt={`Quadra ${index + 1}`} className="rounded-md w-full h-32 object-cover" />
-
-                <div className="mt-2">
-                  <h3 className="font-medium text-sm">Quadra {index + 1}</h3>
-                  <p className="text-green-700 font-bold text-sm">R${100 + index * 10} / hora</p>
-                  <p className="text-xs text-gray-500">Bairro {index + 1}, Blumenau</p>
-                </div>
-              </div>
-            ))}
-          </div>
+  {/* SLIDER */}
+<div className="mt-10">
+  <h2 className="text-xl font-semibold mb-4">Para você</h2>
+  <div ref={sliderRef} className="keen-slider">
+    {quadrasCarrossel.map((quadra) => (
+      <div
+        key={quadra.id}
+        className="keen-slider__slide bg-white rounded-lg shadow-md p-2 cursor-pointer"
+        onClick={() => navigate(`/quadra/${quadra.id}`, { state: { quadra } })}
+      >
+        <img
+          src={quadra.imagem}
+          alt={quadra.nome}
+          className="rounded-md w-full h-32 object-cover"
+        />
+        <div className="mt-2">
+          <h3 className="font-medium text-sm">{quadra.nome}</h3>
+          <p className="text-green-700 font-bold text-sm">{quadra.preco}</p>
+          <p className="text-xs text-gray-500">{quadra.local}</p>
         </div>
+      </div>
+    ))}
+  </div>
+</div>
+
+
+
 
         <div className="mt-10">
       <h2 className="text-xl font-semibold mb-4">Quadras</h2>
