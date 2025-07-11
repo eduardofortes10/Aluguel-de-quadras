@@ -4,6 +4,8 @@ import quadra1 from "../assets/quadras1.png";
 import quadra2 from "../assets/quadras2.png";
 import quadra3 from "../assets/quadras3.png";
 import Sidebar from "../components/Sidebar";
+import UserDropdown from "../components/DropdownUser";
+
 export default function Favoritos() {
   const [favoritos, setFavoritos] = useState([
     {
@@ -38,40 +40,17 @@ export default function Favoritos() {
 
   return (
  <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
+       {/* Sidebar sempre visível em desktop, oculta no mobile por padrão (ajuste se tiver menu mobile) */}
+            <div className="md:block hidden">
+              <Sidebar />
+            </div>
+
+<div className="absolute top-4 right-4 z-50">
+  <UserDropdown />
+</div>
+
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar fixa */}
-      <div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-4 space-y-4 fixed h-full">
-        <div className="w-8 h-8 rounded-full bg-white" />
-
-        {/* Ícone Home */}
-        <Link to="/home" title="Home" className="p-2 rounded-lg hover:bg-green-700 transition">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5L12 4l9 6.5M4.5 10.5v9a.5.5 0 00.5.5h4.5v-6h5v6H19a.5.5 0 00.5-.5v-9" />
-          </svg>
-        </Link>
-
-        {/* Ícone Favoritos */}
-        <Link to="/favoritos" title="Favoritos" className="p-2 rounded-lg hover:bg-green-700 transition">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" className="w-6 h-6" viewBox="0 0 24 24">
-            <path d="M6 4a4 4 0 00-4 4c0 5 10 12 10 12s10-7 10-12a4 4 0 00-4-4c-1.6 0-3 .9-4 2.09C13 4.9 11.6 4 10 4z" />
-          </svg>
-        </Link>
-
-        {/* Outros ícones exemplo */}
-        <button title="Chat" className="p-2 rounded-lg hover:bg-green-700 transition">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" className="w-6 h-6" viewBox="0 0 24 24">
-            <path d="M2 5a2 2 0 012-2h16a2 2 0 012 2v11a2 2 0 01-2 2H6l-4 4V5z" />
-          </svg>
-        </button>
-
-        <Link to="/perfil" title="Perfil" className="p-2 rounded-lg hover:bg-green-700 transition">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" className="w-6 h-6" viewBox="0 0 24 24">
-            <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-3.3 0-10 1.7-10 5v1h20v-1c0-3.3-6.7-5-10-5z" />
-          </svg>
-        </Link>
-      </div>
-
+      
       {/* Conteúdo principal */}
       <div className="flex-1 pl-16 p-6">
 {/* Breadcrumb dentro da área principal */}

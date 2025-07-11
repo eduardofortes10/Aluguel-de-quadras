@@ -2,6 +2,7 @@ import React from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar"; // ajuste se o caminho estiver diferente
 import { FaStar, FaEnvelope, FaPhone, FaCommentDots, FaHeart, FaMapMarkerAlt } from "react-icons/fa";
+import UserDropdown from "../components/DropdownUser";
 
 export default function QuadraDetalhe() {
   const { state } = useLocation();

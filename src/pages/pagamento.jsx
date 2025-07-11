@@ -1,11 +1,19 @@
 import React from "react";
 import Sidebar from "../components/Sidebar";
 import { Link } from "react-router-dom";
-
+import UserDropdown from "../components/DropdownUser";
 export default function Pagamento() {
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Sidebar />
+       {/* Sidebar sempre visível em desktop, oculta no mobile por padrão (ajuste se tiver menu mobile) */}
+            <div className="md:block hidden">
+              <Sidebar />
+            </div>
+
+<div className="absolute top-4 right-4 z-50">
+  <UserDropdown />
+</div>
+
 
       <div className="flex-1 p-8 ml-16 text-gray-800 dark:text-white">
         {/* Breadcrumb */}

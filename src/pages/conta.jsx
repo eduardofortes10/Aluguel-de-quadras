@@ -2,13 +2,22 @@
 import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import UserDropdown from "../components/DropdownUser";
+
 
 export default function Conta() {
   const navigate = useNavigate();
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Sidebar />
+       {/* Sidebar sempre visível em desktop, oculta no mobile por padrão (ajuste se tiver menu mobile) */}
+            <div className="md:block hidden">
+              <Sidebar />
+            </div>
+      
+<div className="absolute top-4 right-4 z-50">
+  <UserDropdown />
+</div>
 
       {/* Conteúdo */}
       <div className="flex-1 text-black px-6 pl-20 py-10">
@@ -25,6 +34,8 @@ export default function Conta() {
           <span className="mx-5 text-gray-500 dark:text-gray-300">/</span>
           <span className="text-blue-600 dark:text-blue-400 font-medium">Conta</span>
         </div>
+
+        
 
         {/* Formulário */}
         <div className="max-w-xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
@@ -53,7 +64,9 @@ export default function Conta() {
               <label htmlFor="birthday" className="block text-sm text-gray-500 dark:text-gray-300">Data de Nascimento</label>
               <input type="date" className="block w-full mt-2 px-5 py-2.5 text-gray-700 border border-gray-200 rounded-lg bg-white dark:bg-gray-900 dark:text-gray-300 dark:border-gray-600" />
             </div>
+            
           </form>
+          
         </div>
       </div>
     </div>

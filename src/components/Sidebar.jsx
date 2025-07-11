@@ -7,8 +7,7 @@ export default function Sidebar() {
 
   return (
     <div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-4 space-y-4 fixed h-full z-50">
-      {/* Logotipo redondo branco */}
-      <div className="w-8 h-8 rounded-full bg-white"></div>
+     
 
       {/* Ícone Home */}
       <Link

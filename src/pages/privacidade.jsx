@@ -1,13 +1,20 @@
 import React, { useState } from "react";
 import Sidebar from "../components/Sidebar";
+import UserDropdown from "../components/DropdownUser";
 
 export default function Privacidade() {
   const [authMethod, setAuthMethod] = useState("email");
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Sidebar />
-
+      {/* Sidebar sempre visível em desktop, oculta no mobile por padrão (ajuste se tiver menu mobile) */}
+            <div className="md:block hidden">
+              <Sidebar />
+            </div>
+      
+<div className="absolute top-4 right-4 z-50">
+  <UserDropdown />
+</div>
       <div className="flex-1 p-8 text-gray-800 dark:text-gray-200 ml-16">
         {/* Breadcrumb */}
         <div className="flex items-center py-4 overflow-x-auto whitespace-nowrap">

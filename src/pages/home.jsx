@@ -4,7 +4,7 @@ import "keen-slider/keen-slider.min.css";
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { quadras, quadrasCarrossel } from "../data/quadras";
-
+import UserDropdown from "../components/DropdownUser";
 
  {/*Carrosel das fotos! */}
 import quadraCarrossel1 from "../carrossel/quadra1.png";
@@ -183,8 +183,8 @@ export default function Home() {
   return (
     <div className="flex min-h-screen overflow-x-hidden">
 <div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-4 space-y-4 fixed h-full">
-  {/* Logotipo redondo branco */}
-  <div className="w-8 h-8 rounded-full bg-white"></div>
+
+  
 
   {/* Ícone Home */}
   <button title="Home" className="p-2 rounded-lg hover:bg-green-700 transition">
@@ -243,32 +243,43 @@ export default function Home() {
 
       <div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
        {/* AVISO DE SUCESSO */}
-        {mostrarAviso && (
-          <div className="fixed top-6 right-6 flex w-full max-w-sm overflow-hidden bg-white rounded-lg shadow-md z-50">
-            <div className="flex items-center justify-center w-12 bg-emerald-500">
-              <svg className="w-6 h-6 text-white fill-current" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 3.33331C10.8 3.33331 3.33337 10.8 3.33337 20C3.33337 29.2 10.8 36.6666 20 36.6666C29.2 36.6666 36.6667 29.2 36.6667 20C36.6667 10.8 29.2 3.33331 20 3.33331ZM16.6667 28.3333L8.33337 20L10.6834 17.65L16.6667 23.6166L29.3167 10.9666L31.6667 13.3333L16.6667 28.3333Z" />
-              </svg>
-            </div>
-            <div className="px-4 py-2 -mx-3">
-              <div className="mx-3">
-                <span className="font-semibold text-emerald-500">Sucesso</span>
-                <p className="text-sm text-gray-600">Sua conta foi acessada com sucesso!</p>
-              </div>
-            </div>
-          </div>
-        )}
-{/* TOPO COM SAUDAÇÃO, AVATAR E BOTÃO DE FILTRO */}
-<div className="relative bg-[#1E8449] text-white p-6 pb-10 rounded-b-3xl shadow-md">
-  {/* AVATAR E NOTIFICAÇÃO */}
-  <div className="absolute top-4 right-4 flex items-center gap-4">
-    <div className="w-10 h-10 rounded-full overflow-hidden shadow-md bg-white flex items-center justify-center">
-      <img src={bellIcon} alt="Notificações" className="w-6 h-6 object-contain" />
+{mostrarAviso && (
+  <div className="fixed top-20 right-6 flex w-full max-w-sm overflow-hidden bg-white rounded-lg shadow-md z-50">
+    <div className="flex items-center justify-center w-12 bg-emerald-500">
+      <svg className="w-6 h-6 text-white fill-current" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 3.33331C10.8 3.33331 3.33337 10.8 3.33337 20C3.33337 29.2 10.8 36.6666 20 36.6666C29.2 36.6666 36.6667 29.2 36.6667 20C36.6667 10.8 29.2 3.33331 20 3.33331ZM16.6667 28.3333L8.33337 20L10.6834 17.65L16.6667 23.6166L29.3167 10.9666L31.6667 13.3333L16.6667 28.3333Z" />
+      </svg>
+    </div>
+    <div className="px-4 py-2 -mx-3">
+      <div className="mx-3">
+        <span className="font-semibold text-emerald-500">Sucesso</span>
+        <p className="text-sm text-gray-600">Sua conta foi acessada com sucesso!</p>
+      </div>
     </div>
   </div>
+)}
+
+{/* TOPO COM SAUDAÇÃO, AVATAR E BOTÃO DE FILTRO */}
+<div className="relative bg-[#1E8449] text-white p-6 pb-10 rounded-b-3xl shadow-md overflow-visible z-10">
+
+  
+{/* NOTIFICAÇÃO NO TOPO ESQUERDO */}
+<Link to="/notificacao" className="absolute top-6 left-6 flex items-center gap-4 sm:left-16">
+  <div className="w-10 h-10 rounded-full overflow-hidden shadow-md bg-white flex items-center justify-center">
+    <img src={bellIcon} alt="Notificações" className="w-6 h-6 object-contain" />
+  </div>
+</Link>
+
+
+
+
+  <div className="absolute top-4 right-4 z-50">
+    <UserDropdown />
+  </div>
+
 
   {/* TÍTULO */}
-  <h1 className="text-2xl font-bold text-center">Olá, Richard Rasmussen</h1>
+  <h1 className="text-2xl font-bold text-center">Olá, Usuário(a)</h1>
   <p className="text-sm mt-1 text-center">Sua quadra, seu jogo!</p>
 
   {/* BARRA DE PESQUISA + BOTÃO DE FILTRO */}

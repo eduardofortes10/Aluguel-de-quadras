@@ -17,7 +17,8 @@ import { quadras } from "./data/quadras";
 const App = () => {
   return (
     <Routes>
-      <Route path="/" element={<Login />} />
+        <Route path="/" element={<Login />} /> {/* 👈 Define o caminho inicial */}
+      <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/home" element={<Home />} />
       <Route path="/favoritos" element={<Favoritos />} />

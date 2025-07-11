@@ -24,7 +24,7 @@ export default function Perfil() {
           {[
             { path: "/conta", label: "Conta", icon: "👤" },
             { path: "/pagamento", label: "Pagamento", icon: "💳" },
-            { path: "/notificacao", label: "Notificação", icon: "🔔" },
+          { path: "/notificacao", label: "Notificação", icon: "🔔" },
             { path: "/privacidade", label: "Privacidade", icon: "🔒" },
             { path: "/sobre", label: "Sobre nós", icon: "ℹ️" },
           ].map((item, i) => (
