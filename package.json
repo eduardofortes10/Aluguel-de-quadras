@@ -7,12 +7,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "axios": "^1.10.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "keen-slider": "^6.8.6",
     "lucide-react": "^0.525.0",
+    "mysql2": "^3.14.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
-    "react-router-dom": "^7.6.3"
+    "react-router-dom": "^7.6.3",
+    "sequelize": "^6.37.7"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.6.0",
@@ -20,5 +25,18 @@
     "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2",
     "vite": "^5.0.0"
-  }
+  },
+  "description": "��#\u0000 \u0000P\u0000r\u0000o\u0000j\u0000e\u0000t\u0000o\u0000 \u0000d\u0000e\u0000 \u0000A\u0000l\u0000u\u0000g\u0000u\u0000e\u0000l\u0000 \u0000d\u0000e\u0000 \u0000Q\u0000u\u0000a\u0000d\u0000r\u0000a\u0000",
+  "main": "postcss.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eduardofortes10/Aluguel-de-quadras.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/eduardofortes10/Aluguel-de-quadras/issues"
+  },
+  "homepage": "https://github.com/eduardofortes10/Aluguel-de-quadras#readme"
 }

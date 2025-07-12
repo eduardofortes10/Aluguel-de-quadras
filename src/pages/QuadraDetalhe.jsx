@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useParams, Link } from "react-router-dom";
-import Sidebar from "../components/Sidebar"; // ajuste se o caminho estiver diferente
+import Sidebar from "../components/Sidebar";
 import { FaStar, FaEnvelope, FaPhone, FaCommentDots, FaHeart, FaMapMarkerAlt } from "react-icons/fa";
 import UserDropdown from "../components/DropdownUser";
 
@@ -12,12 +12,37 @@ export default function QuadraDetalhe() {
     return <div className="p-4">Quadra não encontrada.</div>;
   }
 
-  return (
-   <div className="flex">
-  <Sidebar />
-  <div className="flex-1 p-4 pl-[80px] md:pl-[100px] lg:pl-[120px]">
+ const handleFavoritar = async () => {
+  try {
+    const imagemNome = quadra.imagem?.split("/").pop(); // pega só "quadra1.png"
 
-       {/* Breadcrumb */}
+    const resposta = await fetch("http://localhost:3001/api/favoritos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        usuario_id: 1,
+        quadra_id: quadra.id,
+        nome: quadra.nome,
+        preco: quadra.preco?.replace("R$", "").replace("/hora", "").trim(),
+        local: quadra.local,
+        imagem_url: imagemNome, // agora vem só o nome: quadra1.png
+        nota: quadra.avaliacao || 4.5
+      }),
+    });
+
+    const data = await resposta.json();
+    console.log("✅ Resposta do servidor:", data);
+  } catch (erro) {
+    console.error("❌ Erro ao favoritar:", erro);
+  }
+};
+
+
+  return (
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-1 p-4 pl-[80px] md:pl-[100px] lg:pl-[120px]">
+        {/* Breadcrumb */}
         <div className="flex items-center py-4 overflow-x-auto whitespace-nowrap">
           <a href="/home" className="text-gray-600 dark:text-gray-200">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -35,7 +60,10 @@ export default function QuadraDetalhe() {
             alt={quadra.nome}
             className="w-full h-72 object-cover rounded-lg"
           />
-          <button className="absolute top-4 right-4 bg-white text-red-600 p-2 rounded-full shadow">
+          <button
+            onClick={handleFavoritar}
+            className="absolute top-4 right-4 bg-white text-red-600 p-2 rounded-full shadow"
+          >
             <FaHeart />
           </button>
         </div>

@@ -1,46 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
-import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { quadras, quadrasCarrossel } from "../data/quadras";
 import UserDropdown from "../components/DropdownUser";
-
- {/*Carrosel das fotos! */}
-import quadraCarrossel1 from "../carrossel/quadra1.png";
-import quadraCarrossel2 from "../carrossel/quadra2.png";
-import quadraCarrossel3 from "../carrossel/quadra3.png";
-import quadraCarrossel4 from "../carrossel/quadra4.png";
-import quadraCarrossel5 from "../carrossel/quadra5.png";
-import quadraCarrossel6 from "../carrossel/quadra6.png";
-import quadraCarrossel7 from "../carrossel/quadra7.png";
-import quadraCarrossel8 from "../carrossel/quadra8.png";
-import quadraCarrossel9 from "../carrossel/quadra9.png";
-import quadraCarrossel10 from "../carrossel/quadra10.png";
-import quadraCarrossel11 from "../carrossel/quadra11.png";
-import quadraCarrossel12 from "../carrossel/quadra12.png";
-import quadraCarrossel13 from "../carrossel/quadra13.png";
-import quadraCarrossel14 from "../carrossel/quadra14.png";
-import quadraCarrossel15 from "../carrossel/quadra15.png";
-
-
-
-
-
-
-import futebolIcon from "../assets/imagem2logo.png";
-import basqueteIcon from "../assets/imagem1logo.png";
-import voleiIcon from "../assets/imagem4logo.png";
-import tenisIcon from "../assets/imagem3logo.png";
-import bellIcon from "../assets/bellIcon.png";
-import userPhoto from "../assets/avatar.png";
-import quadra1 from "../assets/imagem11.png";
-import quadra2 from "../assets/quadras2.png";
-import quadra3 from "../assets/quadras6.png";
-import quadra4 from "../assets/quadras4.png";
-import quadra5 from "../assets/quadras5.png";
-import quadra6 from "../assets/quadras10.png";
-import quadra7 from "../assets/quadras7.png";
 
 
 export default function Home() {
@@ -56,107 +19,7 @@ export default function Home() {
   const [mostrarAviso, setMostrarAviso] = useState(false);
   const [mostrarCookies, setMostrarCookies] = useState(true);
   const [mostrarModal, setMostrarModal] = useState(false);
-  const quadrasParaVoce = [quadra1, quadra2, quadra3, quadra4, quadra5, quadra6, quadra7];
-  const imagensCarrossel = [
-  quadraCarrossel1, quadraCarrossel2, quadraCarrossel3, quadraCarrossel4, quadraCarrossel5,
-  quadraCarrossel6, quadraCarrossel7, quadraCarrossel8, quadraCarrossel9, quadraCarrossel10,
-  quadraCarrossel11, quadraCarrossel12, quadraCarrossel13, quadraCarrossel14, quadraCarrossel15
-];
-
-
-  const todasQuadras = [
-  {
-    id: 1,
-    nome: "Quadra Eng.Coelho",
-    imagem: quadra1,
-    local: "Engenheiro Coelho, R. São Bento, 328",
-    preco: "R$150",
-    avaliacao: 4.6,
-    tipo: "Quadra de basquete , Futsal e Vôlei",
-    dono: {
-      nome: "Paulo Scholl",
-      foto: "https://i.imgur.com/XZ0yU1w.png",
-      email: "paulo@email.com",
-      telefone: "(47) 99999-9999"
-    }
-  },
-  {
-    id: 2,
-    nome: "Quadra Poliesportiva A",
-    imagem: quadra2,
-    local: "Fortaleza, Blumenau",
-    preco: "R$240",
-    avaliacao: 4.1,
-    tipo: "Quadra poliesportiva",
-    dono: {
-      nome: "Dono Genérico",
-      foto: "https://i.imgur.com/ZvWYkBa.png",
-      email: "dono@email.com",
-      telefone: "(47) 98888-8888"
-    }
-  }, {
-      id: 3,
-      nome: "Quadra Poliesportiva B",
-      imagem: quadra3,
-      local: "Fortaleza, Blumenau",
-      preco: "R$240 /hora",
-      avaliacao: 4.1,
-      tipo: "Quadra poliesportiva",
-      dono: {
-        nome: "Dono Genérico",
-        foto: "https://i.imgur.com/ZvWYkBa.png",
-        email: "dono@email.com",
-        telefone: "(47) 98888-8888"
-      }
-    },
-    {
-      id: 4,
-      nome: "Quadra Poliesportiva C",
-      imagem: quadra4,
-      local: "Fortaleza, Blumenau",
-      preco: "R$240 /hora",
-      avaliacao: 4.1,
-      tipo: "Quadra poliesportiva",
-      dono: {
-        nome: "Dono Genérico",
-        foto: "https://i.imgur.com/ZvWYkBa.png",
-        email: "dono@email.com",
-        telefone: "(47) 98888-8888"
-      }
-    },
-    {
-      id: 5,
-      nome: "Quadra Poliesportiva D",
-      imagem: quadra5,
-      local: "Fortaleza, Blumenau",
-      preco: "R$240 /hora",
-      avaliacao: 4.1,
-      tipo: "Quadra poliesportiva",
-      dono: {
-        nome: "Dono Genérico",
-        foto: "https://i.imgur.com/ZvWYkBa.png",
-        email: "dono@email.com",
-        telefone: "(47) 98888-8888"
-      }
-    },
-  {
-    id: 0,
-    nome: "Quadra de areia",
-    imagem: quadra6,
-    local: "Itoupava, Blumenau",
-    preco: "R$140",
-    avaliacao: 4.2,
-    tipo: "Quadra de areia para vôlei ou futevôlei",
-    dono: {
-      nome: "Dono Genérico",
-      foto: "https://i.imgur.com/ZvWYkBa.png",
-      email: "dono@email.com",
-      telefone: "(47) 98888-8888"
-    }
-  },
-
-];
-      
+  
 
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
@@ -177,9 +40,6 @@ export default function Home() {
     }, 5000);
     return () => clearInterval(interval);
   }, [instanceRef]);
-
-  console.log("Quadras:", todasQuadras);
-
   return (
     <div className="flex min-h-screen overflow-x-hidden">
 <div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-4 space-y-4 fixed h-full">
@@ -266,7 +126,7 @@ export default function Home() {
 {/* NOTIFICAÇÃO NO TOPO ESQUERDO */}
 <Link to="/notificacao" className="absolute top-6 left-6 flex items-center gap-4 sm:left-16">
   <div className="w-10 h-10 rounded-full overflow-hidden shadow-md bg-white flex items-center justify-center">
-    <img src={bellIcon} alt="Notificações" className="w-6 h-6 object-contain" />
+   <img src="/quadras/bellIcon.png" alt="Notificações" className="w-6 h-6 object-contain" />
   </div>
 </Link>
 
@@ -308,11 +168,13 @@ export default function Home() {
 
   {/* ÍCONES */}
   <div className="flex gap-6 mt-6 justify-center flex-wrap">
-    {[{ nome: "Futebol", img: futebolIcon },
-      { nome: "Basquete", img: basqueteIcon },
-      { nome: "Vôlei", img: voleiIcon },
-      { nome: "Tênis", img: tenisIcon }
-    ].map(({ nome, img }) => (
+   {[
+  { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
+  { nome: "Basquete", img: "/quadras/imagem1logo.png" },
+  { nome: "Vôlei", img: "/quadras/imagem4logo.png" },
+  { nome: "Tênis", img: "/quadras/imagem3logo.png" }
+  ].map(({ nome, img }) => (
+
       <div key={nome} className="flex flex-col items-center">
         <div className="bg-white rounded-full p-2 shadow-md hover:scale-105 transition">
           <img src={img} alt={nome} className="w-10 h-10 object-contain" />
@@ -326,57 +188,46 @@ export default function Home() {
         {/* Seção de ícones e filtro já enviada */}
 
   {/* SLIDER */}
-<div className="mt-10">
-  <h2 className="text-xl font-semibold mb-4">Para você</h2>
-  <div ref={sliderRef} className="keen-slider">
-    {quadrasCarrossel.map((quadra) => (
-      <div
-        key={quadra.id}
-        className="keen-slider__slide bg-white rounded-lg shadow-md p-2 cursor-pointer"
-        onClick={() => navigate(`/quadra/${quadra.id}`, { state: { quadra } })}
-      >
-        <img
-          src={quadra.imagem}
-          alt={quadra.nome}
-          className="rounded-md w-full h-32 object-cover"
-        />
-        <div className="mt-2">
-          <h3 className="font-medium text-sm">{quadra.nome}</h3>
-          <p className="text-green-700 font-bold text-sm">{quadra.preco}</p>
-          <p className="text-xs text-gray-500">{quadra.local}</p>
-        </div>
-      </div>
-    ))}
-  </div>
-</div>
-
-
-
-
-        <div className="mt-10">
-      <h2 className="text-xl font-semibold mb-4">Quadras</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {todasQuadras.map((q) => (
-          <div
-            key={q.id}
-            onClick={() => handleQuadraClick(q)}
-            className="cursor-pointer bg-white rounded-lg shadow-md p-4 flex gap-4 hover:shadow-lg hover:scale-[1.01] transition duration-300"
-          >
-            <img
-              src={q.imagem}
-              alt={q.nome}
-              className="w-24 h-20 object-cover rounded-md"
-            />
-            <div className="flex flex-col justify-between">
-              <h3 className="font-medium">{q.nome}</h3>
-              <p className="text-sm text-gray-600">{q.local}</p>
-              <p className="text-green-700 font-bold text-sm">{q.preco} / hora</p>
-              <p className="text-yellow-500 text-sm">★ {q.nota}</p>
-            </div>
+   <div className="mt-10">
+          <h2 className="text-xl font-semibold mb-4">Para você</h2>
+          <div ref={sliderRef} className="keen-slider">
+            {quadrasCarrossel.map((quadra) => (
+              <div
+                key={quadra.id}
+                className="keen-slider__slide bg-white rounded-lg shadow-md p-2 cursor-pointer"
+                onClick={() => navigate(`/quadra/${quadra.id}`, { state: { quadra } })}
+              >
+                <img src={quadra.imagem} alt={quadra.nome} className="rounded-md w-full h-32 object-cover" />
+                <div className="mt-2">
+                  <h3 className="font-medium text-sm">{quadra.nome}</h3>
+                  <p className="text-green-700 font-bold text-sm">{quadra.preco}</p>
+                  <p className="text-xs text-gray-500">{quadra.local}</p>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-    </div>
+        </div>
+        {/* Quadras em destaque */}
+ <div className="mt-10">
+          <h2 className="text-xl font-semibold mb-4">Quadras</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {quadras.map((q) => (
+              <div
+                key={q.id}
+                onClick={() => handleQuadraClick(q)}
+                className="cursor-pointer bg-white rounded-lg shadow-md p-4 flex gap-4 hover:shadow-lg hover:scale-[1.01] transition duration-300"
+              >
+                <img src={q.imagem} alt={q.nome} className="w-24 h-20 object-cover rounded-md" />
+                <div className="flex flex-col justify-between">
+                  <h3 className="font-medium">{q.nome}</h3>
+                  <p className="text-sm text-gray-600">{q.local}</p>
+                  <p className="text-green-700 font-bold text-sm">{q.preco} / hora</p>
+                  <p className="text-yellow-500 text-sm">★ {q.avaliacao}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
 
         {/* COOKIES */}
