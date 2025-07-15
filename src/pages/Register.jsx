@@ -13,22 +13,26 @@ function Register() {
 
   const handleRegister = async () => {
     const nomeCompleto = `${nome} ${sobrenome}`;
-    const dados = { nome: nomeCompleto, email, senha, tipo };
+    const dados = { nome: nomeCompleto, email, senha, tipo, telefone };
 
     try {
-      const response = await fetch("http://localhost:3000/usuarios", {
+      const response = await fetch("http://localhost:3001/usuarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dados),
       });
 
+      const resultado = await response.json();
+
       if (response.ok) {
+        alert("Usuário registrado com sucesso!");
         navigate("/Home");
       } else {
-        alert("Erro ao registrar usuário");
+        alert(resultado.error || "Erro ao registrar usuário");
       }
     } catch (err) {
-      console.error(err);
+      console.error("Erro na requisição:", err);
+      alert("Erro ao conectar com o servidor");
     }
   };
 
@@ -37,7 +41,7 @@ function Register() {
       {/* LADO ESQUERDO */}
       <div
         className="w-2/5 bg-cover bg-center relative hidden lg:block"
-        style={{ backgroundImage: "url('/assets/logo-fundo.png')" }} // <-- corrigido aqui
+        style={{ backgroundImage: "url('/quadras/logo-fundo.png')" }}
       >
         <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
           <div className="text-white p-6 max-w-md">

@@ -85,3 +85,8 @@ const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
+
+const usuariosRoutes = require("./routes/usuarios");
+app.use("/usuarios", usuariosRoutes);
+const loginRoutes = require("./routes/login");
+app.use("/login", loginRoutes);

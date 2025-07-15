@@ -1,20 +1,44 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from 'react-router-dom';
 
 function Login() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    navigate('/Home');
-  };
+
+  const handleLogin = async (e) => {
+  e.preventDefault();
+
+  try {
+    const response = await fetch("http://localhost:3001/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, senha }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert("Login bem-sucedido!");
+      localStorage.setItem("usuario", JSON.stringify(data.user));
+      navigate("/Home");
+    } else {
+      alert(data.error || "Erro ao fazer login");
+    }
+  } catch (err) {
+    console.error("Erro no login:", err);
+    alert("Erro no servidor");
+  }
+};
+
 
   return (
     <div className="flex h-screen">
       {/* Lado esquerdo - fundo com imagem do public */}
       <div
         className="hidden lg:flex w-2/3 bg-cover bg-center items-center justify-center p-16"
-        style={{ backgroundImage: "url('/assets/logo-fundo.png')" }}
+        style={{ backgroundImage: "url('/quadras/logo-fundo.png')" }}
       >
         <div className="bg-black bg-opacity-40 p-8 rounded-lg">
           <h2 className="text-3xl font-bold text-white">QuadraFlex</h2>
@@ -31,7 +55,7 @@ function Login() {
         <div className="w-full max-w-md px-6 py-8 bg-white rounded-lg shadow-lg">
           <div className="flex flex-col items-center">
             {/* Corrigido: imagem da logo acessando diretamente do public */}
-            <img src="/assets/logo-quadraflex.png" alt="Logo" className="w-24 h-24 rounded-full mb-4" />
+            <img src="/quadras/logo-quadraflex.png" alt="Logo" className="w-24 h-24 rounded-full mb-4" />
             <p className="text-gray-700 text-sm mb-6 text-center">
               Entre para acessar sua conta
             </p>
@@ -43,11 +67,14 @@ function Login() {
                 Email
               </label>
               <input
-                type="email"
-                id="email"
-                placeholder="exemplo@email.com"
-                className="w-full px-4 py-2 border rounded-lg mt-1"
-              />
+              type="email"
+              id="email"
+              placeholder="exemplo@email.com"
+              className="w-full px-4 py-2 border rounded-lg mt-1"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+             />
+
             </div>
 
             <div className="mb-4">
@@ -55,11 +82,14 @@ function Login() {
                 Senha
               </label>
               <input
-                type="password"
-                id="senha"
-                placeholder="Sua senha"
-                className="w-full px-4 py-2 border rounded-lg mt-1"
-              />
+  type="password"
+  id="senha"
+  placeholder="Sua senha"
+  className="w-full px-4 py-2 border rounded-lg mt-1"
+  value={senha}
+  onChange={(e) => setSenha(e.target.value)}
+/>
+
             </div>
 
             <button
