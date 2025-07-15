@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from 'react-router-dom';
-
+import MobileNav from "../components/MobileNav";
 function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -22,7 +22,12 @@ function Login() {
     if (response.ok) {
       alert("Login bem-sucedido!");
       localStorage.setItem("usuario", JSON.stringify(data.user));
-      navigate("/Home");
+      if (data.user.tipo === "locador") {
+  navigate("/home-locador");
+} else {
+  navigate("/Home");
+}
+
     } else {
       alert(data.error || "Erro ao fazer login");
     }

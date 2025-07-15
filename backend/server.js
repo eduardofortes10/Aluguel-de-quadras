@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require("multer");
+const path = require("path");
 const app = express();
 const connection = require('./db');
 
@@ -11,6 +13,10 @@ app.use(cors({
 }));
 
 app.use(express.json());
+// Servir arquivos estáticos (imagens)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+const quadrasRoutes = require("./routes/quadras");
+app.use("/quadras", quadrasRoutes);
 
 // ✅ Importa e usa as rotas externas
 const favoritosRoutes = require("./routes/favoritos");
@@ -29,13 +35,28 @@ app.get('/notificacoes', (req, res) => {
   });
 });
 
-// ✅ Rota para buscar conversas
-app.get('/conversas', (req, res) => {
-  connection.query('SELECT * FROM conversas', (err, results) => {
-    if (err) return res.status(500).send(err);
-    res.json(results);
+// ✅ NOVA rota para listar todos os contatos que o usuário conversou
+app.get('/api/conversas/:usuario_id', (req, res) => {
+  const { usuario_id } = req.params;
+  const sql = `
+    SELECT DISTINCT 
+      CASE 
+        WHEN remetente_id = ? THEN destinatario_id
+        ELSE remetente_id
+      END AS contato_id
+    FROM conversas
+    WHERE remetente_id = ? OR destinatario_id = ?
+  `;
+  connection.query(sql, [usuario_id, usuario_id, usuario_id], (err, results) => {
+    if (err) {
+      console.error("Erro ao buscar contatos:", err);
+      return res.status(500).json({ erro: "Erro ao buscar contatos" });
+    }
+    const contatos = results.map(row => row.contato_id);
+    res.status(200).json(contatos);
   });
 });
+
 
 // ✅ POST Notificações
 app.post('/api/notificacoes', (req, res) => {

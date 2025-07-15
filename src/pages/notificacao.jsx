@@ -2,7 +2,7 @@ import React from "react";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
 import { Link } from "react-router-dom";
-
+import MobileNav from "../components/MobileNav";
 export default function Notificacoes() {
   const notificacoes = [
     {

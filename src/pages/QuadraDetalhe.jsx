@@ -3,7 +3,7 @@ import { useLocation, useParams, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { FaStar, FaEnvelope, FaPhone, FaCommentDots, FaHeart, FaMapMarkerAlt } from "react-icons/fa";
 import UserDropdown from "../components/DropdownUser";
-
+import MobileNav from "../components/MobileNav";
 export default function QuadraDetalhe() {
   const { state } = useLocation();
   const quadra = state?.quadra;

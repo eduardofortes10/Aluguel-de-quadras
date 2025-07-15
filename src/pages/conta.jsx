@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
-
+import MobileNav from "../components/MobileNav";
 
 export default function Conta() {
   const navigate = useNavigate();

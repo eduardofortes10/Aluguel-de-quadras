@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
-
+import MobileNav from "../components/MobileNav";
 function Register() {
   const navigate = useNavigate();
 
@@ -25,11 +25,16 @@ function Register() {
       const resultado = await response.json();
 
       if (response.ok) {
-        alert("Usuário registrado com sucesso!");
-        navigate("/Home");
-      } else {
-        alert(resultado.error || "Erro ao registrar usuário");
-      }
+  alert("Usuário registrado com sucesso!");
+  localStorage.setItem("usuario", JSON.stringify(resultado.usuario || dados)); // salvar no localStorage
+
+  if ((resultado.usuario?.tipo || tipo) === "locador") {
+    navigate("/homeLocador");
+  } else {
+    navigate("/Home");
+  }
+}
+
     } catch (err) {
       console.error("Erro na requisição:", err);
       alert("Erro ao conectar com o servidor");

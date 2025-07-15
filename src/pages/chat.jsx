@@ -1,189 +1,134 @@
-// src/pages/Chat.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
-import DropdownUser from "../components/DropdownUser";
-
-const conversations = [
-  {
-    id: 1,
-    name: "Chuck",
-    avatar: "/avatars/chuck.png",
-    messages: [
-      { from: "other", text: "Olá! Posso te ajudar?", time: "13:20" },
-      { from: "me", text: "Obrigado por entrar em contato", time: "13:25" },
-    ],
-  },
-  {
-    id: 2,
-    name: "Kim",
-    avatar: "/avatars/kim.png",
-    messages: [
-      { from: "other", text: "Sim! A quadra está disponível!", time: "13:14" },
-    ],
-  },
-  {
-    id: 3,
-    name: "Marie",
-    avatar: "/avatars/marie.png",
-    messages: [
-      { from: "other", text: "Sem burocracia, direto comigo", time: "11:00" },
-    ],
-  },
-  {
-    id: 4,
-    name: "Paulo Scholl",
-    avatar: "/avatars/paulo.png",
-    messages: [
-      { from: "other", text: "Ok, aguardo seu retorno", time: "10:25" },
-    ],
-  },
-  {
-    id: 5,
-    name: "Ehrmantraut",
-    avatar: "/avatars/ehrmantraut.png",
-    messages: [
-      { from: "other", text: "Ok!", time: "9:30" },
-    ],
-  },
-  {
-    id: 6,
-    name: "Hector",
-    avatar: "/avatars/hector.png",
-    messages: [
-      { from: "other", text: "Sim, está disponível às 14:30!", time: "8:45" },
-    ],
-  },
-];
+import MobileNav from "../components/MobileNav";
 
 export default function Chat() {
-  const [selectedChat, setSelectedChat] = useState(conversations[0]);
-  const [input, setInput] = useState("");
+  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  const [conversas, setConversas] = useState([]);
+  const [destinatarioId, setDestinatarioId] = useState(null);
+  const [mensagens, setMensagens] = useState([]);
+  const [novaMensagem, setNovaMensagem] = useState("");
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const newMessage = {
-      from: "me",
-      text: input,
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
+  // Carrega lista de contatos
+  useEffect(() => {
+  if (!usuario?.id) return;
+
+  const carregarConversas = async () => {
+    try {
+      const res = await fetch(`http://localhost:3001/api/conversas/${usuario.id}`);
+      const data = await res.json();
+
+      const contatos = [];
+      data.forEach((msg) => {
+        const idOutro = msg.remetente_id === usuario.id ? msg.destinatario_id : msg.remetente_id;
+        if (!contatos.includes(idOutro)) contatos.push(idOutro);
+      });
+
+      setConversas(contatos);
+    } catch (err) {
+      console.error("Erro ao buscar lista de conversas:", err);
+    }
+  };
+
+  carregarConversas();
+}, [usuario, mensagens]); // ← Adiciona mensagens como dependência
+
+
+
+  // Carrega mensagens entre usuário e destinatário
+useEffect(() => {
+  if (!destinatarioId) return;
+
+  fetch(`http://localhost:3001/api/conversas/${usuario.id}/${destinatarioId}`)
+    .then((res) => res.json())
+    .then((data) => setMensagens(data))
+    .catch((err) => console.error("Erro ao buscar mensagens", err));
+}, [destinatarioId]);
+
+
+
+  const enviarMensagem = async () => {
+    if (!novaMensagem || !destinatarioId) return;
+
+    await fetch("http://localhost:3001/api/conversas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        remetente_id: usuario.id,
+        destinatario_id: destinatarioId,
+        mensagem: novaMensagem,
       }),
-    };
-    const updatedChat = {
-      ...selectedChat,
-      messages: [...selectedChat.messages, newMessage],
-    };
-    setSelectedChat(updatedChat);
-    setInput("");
+    });
+
+    setNovaMensagem("");
+
+    const res = await fetch(`http://localhost:3001/api/conversas/${usuario.id}/${destinatarioId}`);
+    const data = await res.json();
+    setMensagens(data);
   };
 
   return (
-    <div className="flex h-screen">
-      {/* Sidebar fixa */}
-      <div className="fixed h-screen z-10">
+    <div className="flex bg-gray-100 min-h-screen">
+      {/* Sidebar e Mobile */}
+      <div className="hidden md:block">
         <Sidebar />
       </div>
+      <MobileNav />
 
-      {/* Conteúdo principal com margem à esquerda */}
-      <div className="ml-16 flex flex-col flex-1">
-        {/* Dropdown no topo direito */}
-        <div className="w-full flex justify-end p-4 pr-6 border-b">
-          <DropdownUser />
+      {/* Conteúdo principal */}
+      <div className="flex-1 md:ml-64 flex flex-col md:flex-row">
+        {/* Lista de conversas */}
+        <div className="w-full md:w-1/3 border-r bg-white p-4">
+          <h2 className="text-lg font-semibold mb-4">Conversas</h2>
+          {conversas.length === 0 && <p className="text-gray-500">Nenhuma conversa iniciada.</p>}
+          {conversas.map((id) => (
+            <button
+              key={id}
+              onClick={() => setDestinatarioId(id)}
+              className={`block w-full text-left px-4 py-2 rounded mb-2 ${
+                destinatarioId === id ? "bg-green-100 font-bold" : "hover:bg-gray-100"
+              }`}
+            >
+              Usuário {id}
+            </button>
+          ))}
         </div>
 
-        {/* Corpo do chat dividido */}
-        <div className="flex flex-1 overflow-hidden">
-          {/* Lista de conversas */}
-          <div className="w-1/4 bg-white border-r flex flex-col">
-            <div className="p-4 text-lg font-semibold text-green-800">Chats</div>
-            <input
-              type="text"
-              placeholder="Procurar mensagem..."
-              className="w-full px-4 py-2 border-b text-sm focus:outline-none"
-            />
-            <div className="overflow-y-auto flex-1">
-              {conversations.map((chat) => (
-                <div
-                  key={chat.id}
-                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-100 ${
-                    selectedChat.id === chat.id ? "bg-gray-200" : ""
-                  }`}
-                  onClick={() => setSelectedChat(chat)}
-                >
-                  <img
-                    src={chat.avatar}
-                    alt={chat.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm">{chat.name}</div>
-                    <div className="text-xs text-gray-500 truncate">
-                      {chat.messages.at(-1)?.text}
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {chat.messages.at(-1)?.time}
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Mensagens */}
+        <div className="flex-1 flex flex-col justify-between bg-white">
+          <div className="p-4 overflow-y-auto h-[calc(100vh-6rem)]">
+            {mensagens.map((msg) => (
+              <div
+                key={msg.id}
+                className={`mb-2 p-2 rounded max-w-xs ${
+                  msg.remetente_id === usuario.id
+                    ? "bg-green-200 ml-auto text-right"
+                    : "bg-gray-200 text-left"
+                }`}
+              >
+                {msg.mensagem}
+              </div>
+            ))}
           </div>
 
-          {/* Janela do chat */}
-          <div className="flex-1 flex flex-col">
-            {/* Cabeçalho */}
-            <div className="flex items-center px-6 py-4 border-b bg-white">
-              <img
-                src={selectedChat.avatar}
-                alt={selectedChat.name}
-                className="w-10 h-10 rounded-full object-cover mr-3"
-              />
-              <div className="font-semibold">{selectedChat.name}</div>
-            </div>
-
-            {/* Mensagens */}
-            <div className="flex-1 p-6 space-y-3 overflow-y-auto">
-              {selectedChat.messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`flex ${
-                    msg.from === "me" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`rounded-lg px-4 py-2 text-sm shadow max-w-xs ${
-                      msg.from === "me"
-                        ? "bg-green-100 text-black"
-                        : "bg-white text-gray-800"
-                    }`}
-                  >
-                    <div>{msg.text}</div>
-                    <div className="text-xs text-gray-400 text-right mt-1">
-                      {msg.time}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Campo de digitação */}
-            <div className="flex items-center px-6 py-4 border-t bg-white">
+          {/* Input */}
+          {destinatarioId && (
+            <div className="p-4 border-t flex">
               <input
                 type="text"
-                placeholder="Digite uma mensagem..."
-                className="flex-1 px-4 py-2 border rounded-full text-sm focus:outline-none"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                value={novaMensagem}
+                onChange={(e) => setNovaMensagem(e.target.value)}
+                placeholder="Digite sua mensagem..."
+                className="flex-1 border rounded px-3 py-2 mr-2"
               />
               <button
-                onClick={handleSend}
-                className="ml-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-full text-sm"
+                onClick={enviarMensagem}
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
               >
                 Enviar
               </button>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

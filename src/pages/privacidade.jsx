@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
-
+import MobileNav from "../components/MobileNav";
 export default function Privacidade() {
   const [authMethod, setAuthMethod] = useState("email");
 

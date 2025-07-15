@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
+import MobileNav from "../components/MobileNav";
 
 export default function Favoritos() {
   const [favoritos, setFavoritos] = useState([]);

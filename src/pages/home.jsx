@@ -4,7 +4,7 @@ import "keen-slider/keen-slider.min.css";
 import { useNavigate, Link } from "react-router-dom";
 import { quadras, quadrasCarrossel } from "../data/quadras";
 import UserDropdown from "../components/DropdownUser";
-
+import MobileNav from "../components/MobileNav";
 
 export default function Home() {
   const navigate = useNavigate(); // Correção adicionada

@@ -2,6 +2,7 @@ import React from "react";
 import Sidebar from "../components/Sidebar";
 import { Link } from "react-router-dom";
 import UserDropdown from "../components/DropdownUser";
+import MobileNav from "../components/MobileNav";
 export default function Pagamento() {
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">

@@ -13,7 +13,9 @@ import Favoritos from "./pages/Favoritos";
 import Chat from './pages/chat';
 import QuadraDetalhe from "./pages/QuadraDetalhe";
 import { quadras } from "./data/quadras";
-
+import HomeLocador from "./pages/HomeLocador";
+import CadastrarQuadra from "./pages/CadastrarQuadra";
+import DetalheQuadraLocador from "./pages/DetalheQuadraLocador";
 const App = () => {
   return (
     <Routes>
@@ -30,6 +32,9 @@ const App = () => {
       <Route path="/chat" element={<Chat />} />
       <Route path="/sobre" element={<Sobre />} />
       <Route path="/quadra/:id" element={<QuadraDetalhe />} />
+      <Route path="/home-locador" element={<HomeLocador />} />
+      <Route path="/cadastrarquadra" element={<CadastrarQuadra/>} />
+      <Route path="/quadra-locador/:id" element={<DetalheQuadraLocador />} />
       </Routes>
   );
 };

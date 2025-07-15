@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
-
+import MobileNav from "../components/MobileNav";
 export default function Sobre() {
   return (
     <div className="flex flex-col md:flex-row bg-white min-h-screen">
