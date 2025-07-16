@@ -1,46 +1,34 @@
-// backend/routes/login.js
 const express = require("express");
 const router = express.Router();
-const connection = require("../db");
+const db = require("../db");
 const bcrypt = require("bcrypt");
 
-// Rota de login
-router.post("/", (req, res) => {
+// POST /login
+router.post("/", async (req, res) => {
   const { email, senha } = req.body;
 
-  if (!email || !senha) {
-    return res.status(400).json({ error: "Preencha todos os campos." });
+  try {
+    const [rows] = await db.query("SELECT * FROM usuarios WHERE email = ?", [email]);
+
+    if (rows.length === 0) {
+      return res.status(401).json({ error: "Usuário não encontrado" });
+    }
+
+    const usuario = rows[0];
+
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaValida) {
+      return res.status(401).json({ error: "Senha inválida" });
+    }
+
+    // Remova a senha do objeto antes de enviar
+    delete usuario.senha;
+
+    res.json({ user: usuario });
+  } catch (err) {
+    console.error("Erro no login:", err);
+    res.status(500).json({ error: "Erro no servidor" });
   }
-
-  const sql = "SELECT * FROM usuarios WHERE email = ?";
-  connection.query(sql, [email], async (err, results) => {
-    if (err) {
-      console.error("Erro ao buscar usuário:", err);
-      return res.status(500).json({ error: "Erro no servidor." });
-    }
-
-    if (results.length === 0) {
-      return res.status(401).json({ error: "Usuário não encontrado." });
-    }
-
-    const user = results[0];
-    const senhaCorreta = await bcrypt.compare(senha, user.senha);
-
-    if (!senhaCorreta) {
-      return res.status(401).json({ error: "Senha incorreta." });
-    }
-
-    // Login válido
-    res.json({
-      message: "Login bem-sucedido!",
-      user: {
-        id: user.id,
-        nome: user.nome,
-        email: user.email,
-        tipo: user.tipo
-      }
-    });
-  });
 });
 
 module.exports = router;

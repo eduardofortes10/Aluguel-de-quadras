@@ -50,13 +50,13 @@ export default function Favoritos() {
 
           <h1 className="text-2xl font-bold mb-6 text-green-700">Favoritos</h1>
 
-          {favoritos.map((quadra) => (
-            <div key={quadra.id} className="bg-white rounded-xl shadow-md overflow-hidden relative mb-6">
-              <img
-  src={quadra.imagem_url?.startsWith("/") ? quadra.imagem_url : `/quadras/${quadra.imagem_url}`}
-  alt={quadra.nome}
-  className="w-full h-48 object-cover"
-/>
+          {favoritos.map((quadra, index) => (
+  <div key={`${quadra.id}-${index}`} className="bg-white rounded-xl shadow-md overflow-hidden relative mb-6">
+    <img
+      src={quadra.imagem_url?.startsWith("/") ? quadra.imagem_url : `/quadras/${quadra.imagem_url}`}
+      alt={quadra.nome}
+      className="w-full h-48 object-cover"
+    />
 
 
 
