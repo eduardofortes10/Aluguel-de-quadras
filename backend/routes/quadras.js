@@ -1,79 +1,32 @@
 const express = require('express');
-const db = require('../db');
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
+const db = require('../db');
 
-// ⬇️ Configuração do multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const nome = Date.now() + ext;
-    cb(null, nome);
-  }
-});
-const upload = multer({ storage });
-
-// ⬇️ Buscar quadra por ID (DEVE vir antes da rota com query param)
-router.get('/quadras/:id', (req, res) => {
-  const { id } = req.params;
-
-  const sql = "SELECT * FROM quadras WHERE id = ?";
-  db.query(sql, [id], (err, results) => {
-    if (err) {
-      console.error("Erro ao buscar quadra por ID:", err);
-      return res.status(500).json({ erro: 'Erro interno ao buscar quadra' });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ erro: 'Quadra não encontrada' });
-    }
-
-    res.json(results[0]);
-  });
-});
-
-// ⬇️ Rota GET para listar quadras por dono
+// Buscar todas as quadras
 router.get('/quadras', (req, res) => {
-  const { dono_id } = req.query;
-  if (!dono_id) return res.status(400).json({ erro: 'dono_id é obrigatório' });
-
-  const sql = "SELECT * FROM quadras WHERE dono_id = ?";
-  db.query(sql, [dono_id], (err, results) => {
-    if (err) {
-      console.error("Erro ao buscar quadras:", err);
-      return res.status(500).json({ erro: 'Erro ao buscar quadras' });
-    }
+  db.query('SELECT * FROM quadras', (err, results) => {
+    if (err) return res.status(500).json({ erro: err });
     res.json(results);
   });
 });
 
-// ⬇️ Rota POST com upload de imagem
-router.post('/quadras', upload.single('imagem'), (req, res) => {
-  const { nome, local, preco, tipo, descricao, dono_id, nota } = req.body;
-  const imagem_url = req.file ? `/uploads/${req.file.filename}` : "";
-
-  if (!nome || !local || !preco || !dono_id) {
-    return res.status(400).json({ error: 'Preencha todos os campos obrigatórios' });
-  }
-
-  const sql = `
-    INSERT INTO quadras (nome, local, preco, imagem_url, dono_id, nota)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
-  const values = [nome, local, preco, imagem_url, dono_id, nota || 4.5];
-
-  db.query(sql, values, (err, result) => {
-    if (err) {
-      console.error("Erro ao cadastrar quadra:", err);
-      return res.status(500).json({ error: 'Erro ao cadastrar quadra' });
+// Buscar quadra por ID
+router.get('/quadras/:id', (req, res) => {
+  const { id } = req.params;
+  db.query(
+    `SELECT q.*, i.url_completa AS imagem_url, i.nome_arquivo,
+            u.nome AS dono_nome, u.email AS dono_email, u.telefone AS dono_telefone, u.foto AS dono_foto
+     FROM quadras q
+     JOIN imagens_quadras i ON q.imagem_id = i.id
+     JOIN usuarios u ON q.dono_id = u.id
+     WHERE q.id = ?`,
+    [id],
+    (err, results) => {
+      if (err) return res.status(500).json({ erro: err });
+      if (results.length === 0) return res.status(404).json({ erro: "Quadra não encontrada" });
+      res.json(results[0]);
     }
-
-    res.json({ mensagem: 'Quadra cadastrada com sucesso!', id: result.insertId });
-  });
+  );
 });
 
 module.exports = router;

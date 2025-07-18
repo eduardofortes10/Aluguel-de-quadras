@@ -18,14 +18,20 @@ function Login() {
     const resultado = await response.json();
 
     if (response.ok) {
-      alert("Login realizado com sucesso!");
-      localStorage.setItem("usuario", JSON.stringify(resultado));
+  alert("Login realizado com sucesso!");
+  localStorage.setItem("usuario_id", resultado.id); // Adicione essa linha
+localStorage.setItem("usuario", JSON.stringify(resultado)); // Mantém essa
 
-      if (resultado.tipo_usuario === "locador") {
-        navigate("/home-locador");
-      } else {
-        navigate("/Home");
-      }
+
+  if (resultado.tipo_usuario === "locador") {
+    navigate("/home-locador");
+  } else {
+    navigate("/Home");
+  }
+
+
+
+
     } else {
       alert(resultado.erro || "Erro ao fazer login.");
     }

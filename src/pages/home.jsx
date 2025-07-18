@@ -10,9 +10,18 @@ export default function Home() {
   const navigate = useNavigate(); // Correção adicionada
 
   const handleQuadraClick = (quadra) => {
-    console.log("Clicado:", quadra);
-    navigate(`/quadra/${quadra.id}`, { state: { quadra } });
-  };
+  const imagem_nome = quadra.imagem?.split("/").pop(); // extrai apenas o nome do arquivo
+  navigate(`/quadra/${quadra.id}`, {
+    state: {
+      quadra: {
+        ...quadra,
+        imagem_url: imagem_nome,
+        imagem: `/quadras/${imagem_nome}`, // garante compatibilidade visual em QuadraDetalhe se usar quadra.imagem
+      },
+    },
+  });
+};
+
 
 
 
