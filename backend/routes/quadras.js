@@ -1,80 +1,79 @@
-const express = require("express");
+const express = require('express');
+const db = require('../db');
 const router = express.Router();
-const multer = require("multer");
-const path = require("path");
-const connection = require("../db");
+const multer = require('multer');
+const path = require('path');
 
-// Configuração do multer
+// ⬇️ Configuração do multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../uploads"));
+    cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
-    const unique = Date.now() + "-" + file.originalname;
-    cb(null, unique);
-  },
+    const ext = path.extname(file.originalname);
+    const nome = Date.now() + ext;
+    cb(null, nome);
+  }
 });
-
 const upload = multer({ storage });
 
-// Rota POST com upload
-router.post("/", upload.single("imagem"), (req, res) => {
-  const { nome, local, preco, tipo, dono_id, nota, descricao } = req.body;
-  const imagem_url = req.file ? `/uploads/${req.file.filename}` : null;
+// ⬇️ Buscar quadra por ID (DEVE vir antes da rota com query param)
+router.get('/quadras/:id', (req, res) => {
+  const { id } = req.params;
 
-  const sql = `
-    INSERT INTO quadras (nome, local, preco, tipo, dono_id, nota, descricao, imagem_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  connection.query(sql, [nome, local, preco, tipo, dono_id, nota, descricao, imagem_url], (err, result) => {
+  const sql = "SELECT * FROM quadras WHERE id = ?";
+  db.query(sql, [id], (err, results) => {
     if (err) {
-      console.error("Erro ao salvar quadra:", err);
-      return res.status(500).json({ error: "Erro ao salvar quadra" });
+      console.error("Erro ao buscar quadra por ID:", err);
+      return res.status(500).json({ erro: 'Erro interno ao buscar quadra' });
     }
 
-    res.status(201).json({ message: "Quadra cadastrada com sucesso!" });
+    if (results.length === 0) {
+      return res.status(404).json({ erro: 'Quadra não encontrada' });
+    }
+
+    res.json(results[0]);
   });
 });
-// Rota GET para listar quadras, com suporte a filtro por dono_id
-router.get("/", (req, res) => {
+
+// ⬇️ Rota GET para listar quadras por dono
+router.get('/quadras', (req, res) => {
   const { dono_id } = req.query;
+  if (!dono_id) return res.status(400).json({ erro: 'dono_id é obrigatório' });
 
-  let sql = "SELECT * FROM quadras";
-  const params = [];
-
-  if (dono_id) {
-    sql += " WHERE dono_id = ?";
-    params.push(dono_id);
-  }
-
-  connection.query(sql, params, (err, results) => {
+  const sql = "SELECT * FROM quadras WHERE dono_id = ?";
+  db.query(sql, [dono_id], (err, results) => {
     if (err) {
       console.error("Erro ao buscar quadras:", err);
-      return res.status(500).json({ error: "Erro ao buscar quadras" });
+      return res.status(500).json({ erro: 'Erro ao buscar quadras' });
+    }
+    res.json(results);
+  });
+});
+
+// ⬇️ Rota POST com upload de imagem
+router.post('/quadras', upload.single('imagem'), (req, res) => {
+  const { nome, local, preco, tipo, descricao, dono_id, nota } = req.body;
+  const imagem_url = req.file ? `/uploads/${req.file.filename}` : "";
+
+  if (!nome || !local || !preco || !dono_id) {
+    return res.status(400).json({ error: 'Preencha todos os campos obrigatórios' });
+  }
+
+  const sql = `
+    INSERT INTO quadras (nome, local, preco, imagem_url, dono_id, nota)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+  const values = [nome, local, preco, imagem_url, dono_id, nota || 4.5];
+
+  db.query(sql, values, (err, result) => {
+    if (err) {
+      console.error("Erro ao cadastrar quadra:", err);
+      return res.status(500).json({ error: 'Erro ao cadastrar quadra' });
     }
 
-    res.status(200).json(results);
+    res.json({ mensagem: 'Quadra cadastrada com sucesso!', id: result.insertId });
   });
 });
 
 module.exports = router;
-
-// Rota GET /quadras/:id para buscar os detalhes de uma quadra
-router.get("/:id", (req, res) => {
-  const { id } = req.params;
-
-  const sql = "SELECT * FROM quadras WHERE id = ?";
-  connection.query(sql, [id], (err, results) => {
-    if (err) {
-      console.error("Erro ao buscar quadra:", err);
-      return res.status(500).json({ error: "Erro ao buscar quadra" });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: "Quadra não encontrada" });
-    }
-
-    res.status(200).json(results[0]);
-  });
-});

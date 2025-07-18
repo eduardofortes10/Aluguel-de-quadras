@@ -7,35 +7,34 @@ function Login() {
   const [senha, setSenha] = useState('');
 
 
-  const handleLogin = async (e) => {
-  e.preventDefault();
-
+ const handleLogin = async () => {
   try {
-    const response = await fetch("http://localhost:3001/login", {
+    const response = await fetch("http://localhost:5000/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, senha }),
     });
 
-    const data = await response.json();
+    const resultado = await response.json();
 
     if (response.ok) {
-      alert("Login bem-sucedido!");
-      localStorage.setItem("usuario", JSON.stringify(data.user));
-      if (data.user.tipo === "locador") {
-  navigate("/home-locador");
-} else {
-  navigate("/Home");
-}
+      alert("Login realizado com sucesso!");
+      localStorage.setItem("usuario", JSON.stringify(resultado));
 
+      if (resultado.tipo_usuario === "locador") {
+        navigate("/home-locador");
+      } else {
+        navigate("/Home");
+      }
     } else {
-      alert(data.error || "Erro ao fazer login");
+      alert(resultado.erro || "Erro ao fazer login.");
     }
   } catch (err) {
     console.error("Erro no login:", err);
-    alert("Erro no servidor");
+    alert("Erro ao conectar com o servidor");
   }
 };
+
 
 
   return (

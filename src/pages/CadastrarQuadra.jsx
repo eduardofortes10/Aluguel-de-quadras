@@ -14,34 +14,35 @@ export default function CadastrarQuadra() {
   const usuario = JSON.parse(localStorage.getItem("usuario"));
 
   const handleCadastrar = async () => {
-    const formData = new FormData();
-    formData.append("nome", nome);
-    formData.append("local", local);
-    formData.append("preco", preco);
-    formData.append("tipo", tipo);
-    formData.append("descricao", descricao);
-    formData.append("dono_id", usuario?.id || 1);
-    formData.append("nota", 0);
-    if (imagem) formData.append("imagem", imagem);
+  const formData = new FormData();
+  formData.append("nome", nome);
+  formData.append("local", local);
+  formData.append("preco", preco);
+  formData.append("tipo", tipo);
+  formData.append("descricao", descricao);
+  formData.append("dono_id", usuario?.id || 1);
+  formData.append("nota", 0);
+  if (imagem) formData.append("imagem", imagem);
 
-    try {
-      const response = await fetch("http://localhost:3001/quadras", {
-        method: "POST",
-        body: formData,
-      });
+  try {
+    const response = await fetch("http://localhost:5000/api/quadras", {
+      method: "POST",
+      body: formData,
+    });
 
-      if (response.ok) {
-        alert("Quadra cadastrada com sucesso!");
-        navigate("/home-locador");
-      } else {
-        const erro = await response.json();
-        alert(erro.error || "Erro ao cadastrar quadra");
-      }
-    } catch (err) {
-      console.error("Erro na requisição:", err);
-      alert("Erro ao conectar com o servidor");
+    if (response.ok) {
+      alert("Quadra cadastrada com sucesso!");
+      navigate("/home-Locador");
+    } else {
+      const erro = await response.json();
+      alert(erro.error || "Erro ao cadastrar quadra");
     }
-  };
+  } catch (err) {
+    console.error("Erro na requisição:", err);
+    alert("Erro ao conectar com o servidor");
+  }
+};
+
 
   return (
     <div className="flex bg-gray-100 min-h-screen">

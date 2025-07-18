@@ -12,7 +12,8 @@ export default function HomeLocador() {
   const usuario = JSON.parse(localStorage.getItem("usuario"));
   if (!usuario?.id) return;
 
-fetch("http://localhost:3001/quadras?dono_id=" + usuario?.id)
+fetch("http://localhost:5000/api/quadras?dono_id=" + usuario?.id)
+
     .then((res) => res.json())
     .then((data) => setQuadras(data))
     .catch((err) => console.error("Erro ao carregar quadras:", err));
@@ -58,7 +59,7 @@ fetch("http://localhost:3001/quadras?dono_id=" + usuario?.id)
       quadras.map((quadra) => (
 <Link to={`/quadra-locador/${quadra.id}`} key={quadra.id} className="block bg-white rounded-xl shadow-md overflow-hidden relative mb-6 w-full max-w-md mx-auto">
   <img
-    src={`http://localhost:3001${quadra.imagem_url}`}
+    src={`http://localhost:5000${quadra.imagem_url}`}
     alt={quadra.nome}
     className="w-full h-48 object-cover"
   />

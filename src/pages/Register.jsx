@@ -9,37 +9,46 @@ function Register() {
   const [telefone, setTelefone] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
-  const [tipo, setTipo] = useState('locatario');
+  const [tipo, setTipo] = useState('cliente'); // cliente ou locador
 
-  const handleRegister = async () => {
-    const nomeCompleto = `${nome} ${sobrenome}`;
-    const dados = { nome: nomeCompleto, email, senha, tipo, telefone };
 
-    try {
-      const response = await fetch("http://localhost:3001/usuarios", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dados),
-      });
-
-      const resultado = await response.json();
-
-      if (response.ok) {
-  alert("Usuário registrado com sucesso!");
-  localStorage.setItem("usuario", JSON.stringify(resultado.usuario || dados)); // salvar no localStorage
-
-  if ((resultado.usuario?.tipo || tipo) === "locador") {
-    navigate("/homeLocador");
-  } else {
-    navigate("/Home");
-  }
-}
-
-    } catch (err) {
-      console.error("Erro na requisição:", err);
-      alert("Erro ao conectar com o servidor");
-    }
+ const handleRegister = async () => {
+  const nomeCompleto = `${nome} ${sobrenome}`;
+  const dados = {
+    nome: nomeCompleto,
+    email,
+    senha,
+    tipo_usuario: tipo
   };
+
+  try {
+    const response = await fetch("http://localhost:5000/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dados),
+    });
+
+    const resultado = await response.json();
+
+    if (response.ok) {
+      alert("Usuário registrado com sucesso!");
+      localStorage.setItem("usuario", JSON.stringify(resultado.usuario || dados));
+
+      if ((resultado.usuario?.tipo_usuario || tipo) === "locador") {
+        navigate("/home-Locador");
+      } else {
+        navigate("/Home");
+      }
+    } else {
+      alert(resultado.erro || "Erro ao registrar.");
+    }
+
+  } catch (err) {
+    console.error("Erro na requisição:", err);
+    alert("Erro ao conectar com o servidor");
+  }
+};
+
 
   return (
     <section className="flex min-h-screen">
@@ -74,7 +83,7 @@ function Register() {
             <div className="mt-3 md:flex md:items-center md:-mx-2">
               <button
                 type="button"
-                onClick={() => setTipo("locatario")}
+               onClick={() => setTipo("cliente")}
                 className={`flex justify-center w-full px-6 py-3 text-white rounded-lg md:w-auto md:mx-2 ${
                   tipo === "locatario" ? "bg-[#1E8449]" : "border border-white"
                 }`}

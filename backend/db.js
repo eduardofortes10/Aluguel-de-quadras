@@ -1,10 +1,16 @@
-const mysql = require('mysql2/promise'); // Usa o wrapper com suporte a async/await
+// db.js
+const mysql = require('mysql');
 
-const db = mysql.createPool({
-  host: 'localhost',
+const db = mysql.createConnection({
+  host: '127.0.0.1',
   user: 'root',
-  password: 'Dudu110608@',
-  database: 'aluguel_quadras'
+ password: 'Dudu110608@', // coloque sua senha aqui, se tiver
+  database: 'aluguel_quadras',
+});
+
+db.connect((err) => {
+  if (err) throw err;
+  console.log('🟢 Conectado ao MySQL');
 });
 
 module.exports = db;

@@ -3,12 +3,12 @@ import { useParams, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 
-export default function DetalhesQuadraLocador() {
+export default function DetalheQuadraLocador() {
   const { id } = useParams();
   const [quadra, setQuadra] = useState(null);
 
   useEffect(() => {
-    fetch(`http://localhost:3001/quadras/${id}`)
+    fetch(`http://localhost:5000/api/quadras/${id}`)
       .then((res) => res.json())
       .then((data) => setQuadra(data))
       .catch((err) => console.error("Erro ao carregar detalhes da quadra:", err));
@@ -27,7 +27,7 @@ export default function DetalhesQuadraLocador() {
       <div className="flex-1 md:ml-64 p-4 pb-24">
         <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
           <img
-            src={`http://localhost:3001${quadra.imagem_url}`}
+            src={`http://localhost:5000${quadra.imagem_url}`}
             alt={quadra.nome}
             className="w-full h-60 object-cover"
           />
