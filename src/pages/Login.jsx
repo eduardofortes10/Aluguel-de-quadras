@@ -19,16 +19,19 @@ function Login() {
 
     if (response.ok) {
   alert("Login realizado com sucesso!");
-  localStorage.setItem("usuario_id", resultado.id); // Adicione essa linha
-localStorage.setItem("usuario", JSON.stringify(resultado)); // Mantém essa
-
+  localStorage.setItem("usuario_id", resultado.id);
+  localStorage.setItem("nomeUsuario", resultado.nome); // <- CORRIGIDO AQUI
+  localStorage.setItem("usuario", JSON.stringify({
+    id: resultado.id,
+    nome: resultado.nome,
+    tipo: resultado.tipo_usuario
+  }));
 
   if (resultado.tipo_usuario === "locador") {
     navigate("/home-locador");
   } else {
-    navigate("/Home");
+    navigate("/home", { state: { loginSucesso: true } });
   }
-
 
 
 

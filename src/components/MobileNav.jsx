@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useLayoutEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Home, Bookmark, MessageSquare, User, Plus } from "lucide-react";
 
@@ -7,11 +7,19 @@ export default function MobileNav() {
   const [homeRoute, setHomeRoute] = useState("/home");
   const [isLocador, setIsLocador] = useState(false);
 
-  useEffect(() => {
-    const usuario = JSON.parse(localStorage.getItem("usuario"));
-    if (usuario?.tipo === "locador") {
-      setHomeRoute("/home-locador");
-      setIsLocador(true);
+  useLayoutEffect(() => {
+    const usuario = localStorage.getItem("usuario");
+
+    if (usuario) {
+      try {
+        const user = JSON.parse(usuario);
+        if (user?.tipo === "locador") {
+          setHomeRoute("/home-locador");
+          setIsLocador(true);
+        }
+      } catch (e) {
+        console.warn("Erro ao interpretar usuário no MobileNav:", e);
+      }
     }
   }, []);
 
@@ -31,6 +39,7 @@ export default function MobileNav() {
       <Link to="/chat" className={`flex flex-col items-center ${active("/chat")}`}>
         <MessageSquare className="w-5 h-5" />
       </Link>
+
       <Link to="/perfil" className={`flex flex-col items-center ${active("/perfil")}`}>
         <User className="w-5 h-5" />
       </Link>

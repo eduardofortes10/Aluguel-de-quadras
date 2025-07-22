@@ -10,6 +10,7 @@ import {
   FaHeart,
   FaMapMarkerAlt,
 } from "react-icons/fa";
+import MobileNav from "../components/MobileNav";
 
 export default function QuadraDetalhe() {
   const { state } = useLocation();
@@ -68,7 +69,7 @@ const handleFavoritar = async () => {
 } catch (erro) {
   console.error("❌ Erro ao favoritar:", erro);
 
-  if (erro instanceof Error) {
+  if (erro instanceof Error) {36
     alert(`Erro: ${erro.message}`);
   } else {
     alert("Erro inesperado ao favoritar.");
@@ -78,10 +79,25 @@ const handleFavoritar = async () => {
 
 
 
-  return (
-    <div className="flex">
-      <Sidebar />
-      <div className="flex-1 p-4 pl-[80px] md:pl-[100px] lg:pl-[120px]">
+return (
+  <div className="bg-white min-h-screen overflow-y-auto">
+
+
+
+  {/* Sidebar apenas no desktop */}
+  <div className="hidden md:block fixed top-0 left-0 h-full">
+    <Sidebar />
+  </div>
+
+  {/* MobileNav apenas no mobile */}
+ <div className="md:hidden fixed bottom-14 left-0 w-full bg-[#14532d] p-4 flex justify-between items-center z-50 shadow-inner">
+
+    <MobileNav />
+  </div>
+
+  {/* Conteúdo centralizado como card */}
+<div className="max-w-3xl mx-auto px-4 pt-20 pb-28 md:pb-10">
+  <div className="bg-white shadow-2xl rounded-xl p-5">
         {/* Breadcrumb */}
         <div className="flex items-center py-4 overflow-x-auto whitespace-nowrap">
           <Link to="/home" className="text-gray-600 flex items-center hover:underline">
@@ -96,7 +112,8 @@ const handleFavoritar = async () => {
 
         {/* Imagem da quadra */}
         <div className="relative">
-        <img src={quadra.imagem} alt={quadra.nome} className="w-full h-72 object-cover rounded-lg" />
+     <img src={quadra.imagem} alt={quadra.nome} className="w-full h-56 md:h-64 object-cover rounded-2xl" />
+
 
 
           <button
@@ -122,7 +139,7 @@ const handleFavoritar = async () => {
 
         {/* Dono */}
         <div className="mt-6 border-t pt-4">
-          <h2 className="font-semibold mb-2">Informações do Dono</h2>
+          <h2 className="text-lg font-semibold mb-2 text-gray-800 border-b pb-1">Informações do Dono</h2>
           <div className="flex items-center gap-4">
           <img
   src={quadra.dono.foto}
@@ -161,12 +178,18 @@ const handleFavoritar = async () => {
         </div>
 
         {/* Preço e botão */}
-        <div className="mt-6 flex justify-between items-center">
-          <p className="text-green-600 text-lg font-semibold">{quadra.preco}</p>
-          <button className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition">
-            Alugar
-          </button>
-        </div>
+{/* Desktop: botão normal */}
+
+  <p className="text-white text-lg font-semibold">{quadra.preco}</p>
+  <button className="bg-white text-green-800 px-6 py-2 rounded-lg font-semibold shadow hover:bg-green-100 transition">
+    Alugar
+  </button>
+</div>
+{/* Mobile: botão fixo */}
+
+
+
+
       </div>
     </div>
   );

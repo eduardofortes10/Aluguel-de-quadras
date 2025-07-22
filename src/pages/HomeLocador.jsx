@@ -14,7 +14,15 @@ export default function HomeLocador() {
 
     fetch(`http://localhost:5000/api/quadras?dono_id=${usuario.id}`)
       .then((res) => res.json())
-      .then((data) => setQuadras(data))
+    .then((data) => {
+  if (Array.isArray(data)) {
+    setQuadras(data);
+  } else {
+    setQuadras([]);
+    console.warn("Resposta inesperada da API:", data);
+  }
+})
+
       .catch((err) => console.error("Erro ao carregar quadras:", err));
   }, []);
 
@@ -72,10 +80,10 @@ export default function HomeLocador() {
         </div>
 
         {/* Lista de quadras */}
-        {quadras.length === 0 ? (
+       {Array.isArray(quadras) && quadras.length === 0 ? (
           <p className="text-gray-500">Você ainda não cadastrou nenhuma quadra.</p>
         ) : (
-          quadras.map((quadra) => {
+           quadras.map((quadra) => {
             const imagemUrl = quadra.imagem_url?.startsWith("/")
               ? `http://localhost:5000${quadra.imagem_url}`
               : quadra.imagem_url || "/quadras/default.png";

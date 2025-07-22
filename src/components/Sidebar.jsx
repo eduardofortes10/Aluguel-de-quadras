@@ -1,58 +1,107 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Home,
+  Bookmark,
+  MessageSquare,
+  User,
+  Info,
+  Plus,
+  LogOut,
+} from "lucide-react";
 
 export default function Sidebar() {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
-  const [homeRoute, setHomeRoute] = useState("/home");
-  const [isLocador, setIsLocador] = useState(false);
+  const [usuario, setUsuario] = useState(null);
 
   useEffect(() => {
-    const usuario = JSON.parse(localStorage.getItem("usuario"));
-    if (usuario?.tipo === "locador") {
-      setHomeRoute("/home-locador");
-      setIsLocador(true);
-    }
+    const dados = JSON.parse(localStorage.getItem("usuario"));
+    setUsuario(dados);
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("usuario");
+    navigate("/login");
+  };
+
+  const routes = [
+    {
+      path: usuario?.tipo === "locador" ? "/home-locador" : "/home",
+      label: "Início",
+      icon: <Home size={20} />,
+    },
+    ...(usuario?.tipo !== "locador"
+      ? [
+          {
+            path: "/favoritos",
+            label: "Favoritos",
+            icon: <Bookmark size={20} />,
+          },
+        ]
+      : []),
+    {
+      path: "/chat",
+      label: "Chat",
+      icon: <MessageSquare size={20} />,
+    },
+    {
+      path: "/perfil",
+      label: "Perfil",
+      icon: <User size={20} />,
+    },
+    {
+      path: "/sobre",
+      label: "Sobre",
+      icon: <Info size={20} />,
+    },
+  ];
+
   return (
-    <div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-4 space-y-4 fixed h-full z-50">
-      {/* Ícone Home */}
-      <Link to={homeRoute} title="Home" className="p-2 rounded-lg hover:bg-green-700 transition">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5L12 4l9 6.5M4.5 10.5v9a.5.5 0 00.5.5h4.5v-6h5v6H19a.5.5 0 00.5-.5v-9" />
-        </svg>
-      </Link>
+    <div
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+      className={`h-screen fixed top-0 left-0 z-50 bg-green-700 text-white shadow-lg transition-all duration-300 ease-in-out ${
+        isExpanded ? "w-56" : "w-14"
+      }`}
+    >
+      <div className="flex flex-col justify-between h-full py-6">
+        <div className="space-y-2">
+          {routes.map((item, index) => (
+            <Link
+              to={item.path}
+              key={index}
+              className={`flex items-center gap-3 px-4 py-2 hover:bg-green-600 ${
+                location.pathname === item.path ? "bg-green-800" : ""
+              }`}
+            >
+              {item.icon}
+              {isExpanded && <span className="whitespace-nowrap">{item.label}</span>}
+            </Link>
+          ))}
 
-      {/* Ícone de + para locador ou Favoritos para cliente */}
-      <Link
-        to={isLocador ? "/cadastrarquadra" : "/favoritos"}
-        title={isLocador ? "Nova Quadra" : "Favoritos"}
-        className="p-2 rounded-lg hover:bg-green-700 transition"
-      >
-        {isLocador ? (
-          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
-            <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
-            <path d="M6 4a2 2 0 00-2 2v16l8-4 8 4V6a2 2 0 00-2-2H6z" />
-          </svg>
-        )}
-      </Link>
+          {/* Botão de Nova Quadra apenas para locadores */}
+          {usuario?.tipo === "locador" && (
+            <Link
+              to="/cadastrarquadra"
+              className={`flex items-center gap-3 px-4 py-2 hover:bg-green-600`}
+            >
+              <Plus size={20} />
+              {isExpanded && <span>Nova Quadra</span>}
+            </Link>
+          )}
+        </div>
 
-      {/* Ícone Chat */}
-      <Link to="/chat" title="Chat" className="p-2 rounded-lg hover:bg-green-700 transition">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
-          <path d="M2 5a2 2 0 012-2h16a2 2 0 012 2v11a2 2 0 01-2 2H6l-4 4V5z" />
-        </svg>
-      </Link>
-
-      {/* Ícone Perfil */}
-      <button onClick={() => navigate("/perfil")} title="Perfil" className="p-2 rounded-lg hover:bg-green-700 transition">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" className="w-6 h-6" viewBox="0 0 24 24">
-          <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-3.3 0-10 1.7-10 5v1h20v-1c0-3.3-6.7-5-10-5z" />
-        </svg>
-      </button>
+        {/* Botão Sair */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-2 hover:bg-red-600 text-white"
+        >
+          <LogOut size={20} />
+          {isExpanded && <span>Sair</span>}
+        </button>
+      </div>
     </div>
   );
 }

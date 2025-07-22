@@ -1,11 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  User as UserIcon,
+  LogOut,
+  Bell,
+  ChevronDown,
+} from "lucide-react";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [nomeUsuario, setNomeUsuario] = useState("Usuário");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const usuario = localStorage.getItem("usuario");
+    if (usuario) {
+      try {
+        const user = JSON.parse(usuario);
+        if (user?.nome) {
+          setNomeUsuario(user.nome);
+        }
+      } catch (e) {
+        console.warn("Erro ao ler usuário do localStorage:", e);
+      }
+    }
+  }, []);
+
   const handleLogout = () => {
+    localStorage.clear();
     navigate("/login");
   };
 
@@ -13,30 +35,50 @@ export default function UserDropdown() {
     <div className="relative inline-block text-left">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+        className="flex items-center bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 shadow-md"
       >
-        {/* Corrigido: imagem da pasta public */}
-        <img src="/quadras/avatar.png" alt="Avatar" className="w-6 h-6 rounded-full mr-2" />
-        Eduardo
-        <svg className="ml-1 w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-          <path
-            fillRule="evenodd"
-            d="M5.23 7.21a.75.75 0 011.06.02L10 11.584l3.71-4.354a.75.75 0 111.14.976l-4.25 5a.75.75 0 01-1.14 0l-4.25-5a.75.75 0 01.02-1.06z"
-            clipRule="evenodd"
-          />
-        </svg>
+        <img
+          src="/quadras/avatar.png"
+          alt="Avatar"
+          className="w-8 h-8 rounded-full mr-2 border-2 border-white shadow-sm"
+        />
+        <span className="font-medium">{nomeUsuario}</span>
+        <ChevronDown className="ml-1 w-4 h-4" />
       </button>
 
       {isOpen && (
         <div
-          className="absolute right-0 top-full mt-2 w-48 bg-white border rounded-md shadow-lg z-[9999]"
+          className="absolute right-0 top-full mt-2 w-56 bg-white border rounded-lg shadow-xl z-[9999] overflow-hidden"
           onMouseLeave={() => setIsOpen(false)}
         >
-          <a href="/perfil" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</a>
+          <div className="px-4 py-3 border-b bg-gray-50 text-sm text-gray-700">
+            <p className="font-semibold">Olá, {nomeUsuario.split(" ")[0]} 👋</p>
+            <p className="text-gray-500 text-xs">Seja bem-vindo(a)!</p>
+          </div>
+
+          <button
+            onClick={() => navigate("/perfil")}
+            className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+          >
+            <UserIcon className="w-4 h-4 mr-2" />
+            Meus Dados
+          </button>
+
+          <button
+            onClick={() => navigate("/notificacao")}
+            className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
+          >
+            <Bell className="w-4 h-4 mr-2" />
+            Notificações
+          </button>
+
+          
+
           <button
             onClick={handleLogout}
-            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+            className="flex items-center w-full px-4 py-2 text-sm hover:bg-red-100 text-red-600 border-t"
           >
+            <LogOut className="w-4 h-4 mr-2" />
             Sair
           </button>
         </div>

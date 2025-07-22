@@ -5,10 +5,13 @@ import { useNavigate, Link } from "react-router-dom";
 import { quadras, quadrasCarrossel } from "../data/quadras";
 import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
+import Sidebar from "../components/Sidebar";
+import { useLocation } from "react-router-dom";
+
 
 export default function Home() {
   const navigate = useNavigate(); // Correção adicionada
-
+const [nomeUsuario, setNomeUsuario] = useState("");
   const handleQuadraClick = (quadra) => {
   const imagem_nome = quadra.imagem?.split("/").pop(); // extrai apenas o nome do arquivo
   navigate(`/quadra/${quadra.id}`, {
@@ -22,11 +25,40 @@ export default function Home() {
   });
 };
 
+useEffect(() => {
+  const nome = localStorage.getItem("nomeUsuario") || "Usuário(a)";
+  setNomeUsuario(nome);
+}, []);
+const location = useLocation();
+
+useEffect(() => {
+  if (location.state?.loginSucesso) {
+    setMostrarAviso(true);
+    const timeout = setTimeout(() => {
+      setMostrarAviso(false);
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }
+}, [location.state]);
+
+useEffect(() => {
+  const checkCookies = () => {
+    const cookiesAceitos = localStorage.getItem("cookiesAceitos");
+    if (cookiesAceitos === "true") {
+      setMostrarCookies(false);
+    } else {
+      setMostrarCookies(true);
+    }
+  };
+
+  checkCookies();
+}, []);
+
 
 
 
   const [mostrarAviso, setMostrarAviso] = useState(false);
-  const [mostrarCookies, setMostrarCookies] = useState(true);
+  const [mostrarCookies, setMostrarCookies] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   
 
@@ -34,99 +66,35 @@ export default function Home() {
     loop: true,
     slides: { perView: 5, spacing: 16 }
   });
-
-  useEffect(() => {
-    setMostrarAviso(true);
-    const timeout = setTimeout(() => {
-      setMostrarAviso(false);
-    }, 3000);
-    return () => clearTimeout(timeout);
-  }, []);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      instanceRef.current?.next();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [instanceRef]);
   return (
     <div className="flex min-h-screen overflow-x-hidden">
-<div className="w-16 bg-[#1E8449] text-white flex flex-col items-center py-4 space-y-4 fixed h-full">
-
-  
-
-  {/* Ícone Home */}
-  <button title="Home" className="p-2 rounded-lg hover:bg-green-700 transition">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5L12 4l9 6.5M4.5 10.5v9a.5.5 0 00.5.5h4.5v-6h5v6H19a.5.5 0 00.5-.5v-9" />
-    </svg>
-  </button>
-
-  {/* Ícone Favoritos */}
-  <Link to="/favoritos" title="Favoritos" className="p-2 rounded-lg hover:bg-green-700 transition">
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
-    <path d="M6 4a2 2 0 00-2 2v16l8-4 8 4V6a2 2 0 00-2-2H6z" />
-  </svg>
-</Link>
-
- {/* Ícone Chat */}
-<Link to="/chat" title="Chat" className="p-2 rounded-lg hover:bg-green-700 transition">
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="w-6 h-6">
-    <path d="M2 5a2 2 0 012-2h16a2 2 0 012 2v11a2 2 0 01-2 2H6l-4 4V5z" />
-  </svg>
-</Link>
-
-
-  {/* Ícone Perfil */}
-<button
-  title="Perfil"
-  onClick={() => navigate("/perfil")}
-  className="p-2 rounded-lg hover:bg-green-700 transition"
->
-  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" className="w-6 h-6" viewBox="0 0 24 24">
-    <path d="M12 12a5 5 0 100-10 5 5 0 000 10zm0 2c-3.3 0-10 1.7-10 5v1h20v-1c0-3.3-6.7-5-10-5z" />
-  </svg>
-</button>
-
-
-
-  <button title="Quadras" className="p-2 hover:bg-green-700 rounded-lg">
-    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-      <path d="…"/>
-    </svg>
-  </button>
-
-  <button title="Reservas" className="p-2 hover:bg-green-700 rounded-lg">
-    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-      <path d="…"/>
-    </svg>
-  </button>
-
-  <button title="Perfil" className="p-2 hover:bg-green-700 rounded-lg">
-    <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-      <path d="…"/>
-    </svg>
-  </button>
+{/* Sidebar só no desktop */}
+<div className="hidden md:block">
+  <Sidebar />
 </div>
+
+{/* MobileNav só no mobile */}
+<div className="md:hidden fixed top-0 left-0 w-full z-50">
+  <MobileNav />
+</div>
+
+
 
 
       <div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
        {/* AVISO DE SUCESSO */}
 {mostrarAviso && (
-  <div className="fixed top-20 right-6 flex w-full max-w-sm overflow-hidden bg-white rounded-lg shadow-md z-50">
-    <div className="flex items-center justify-center w-12 bg-emerald-500">
-      <svg className="w-6 h-6 text-white fill-current" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 3.33331C10.8 3.33331 3.33337 10.8 3.33337 20C3.33337 29.2 10.8 36.6666 20 36.6666C29.2 36.6666 36.6667 29.2 36.6667 20C36.6667 10.8 29.2 3.33331 20 3.33331ZM16.6667 28.3333L8.33337 20L10.6834 17.65L16.6667 23.6166L29.3167 10.9666L31.6667 13.3333L16.6667 28.3333Z" />
-      </svg>
+  <div className="fixed top-6 right-6 z-50 bg-white border-l-4 border-green-600 shadow-xl rounded-md p-4 flex items-start gap-3 animate-fade-in-down">
+    <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center">
+      ✓
     </div>
-    <div className="px-4 py-2 -mx-3">
-      <div className="mx-3">
-        <span className="font-semibold text-emerald-500">Sucesso</span>
-        <p className="text-sm text-gray-600">Sua conta foi acessada com sucesso!</p>
-      </div>
+    <div>
+      <p className="font-semibold text-green-700">Login realizado!</p>
+      <p className="text-sm text-gray-600">Bem-vindo de volta à plataforma.</p>
     </div>
   </div>
 )}
+
 
 {/* TOPO COM SAUDAÇÃO, AVATAR E BOTÃO DE FILTRO */}
 <div className="relative bg-[#1E8449] text-white p-6 pb-10 rounded-b-3xl shadow-md overflow-visible z-10">
@@ -142,13 +110,14 @@ export default function Home() {
 
 
 
-  <div className="absolute top-4 right-4 z-50">
-    <UserDropdown />
-  </div>
+ <div className="fixed top-4 right-4 z-[9999]">
+  <UserDropdown />
+</div>
+
 
 
   {/* TÍTULO */}
-  <h1 className="text-2xl font-bold text-center">Olá, Usuário(a)</h1>
+<h1 className="text-2xl font-bold text-center">Olá, {nomeUsuario}</h1>
   <p className="text-sm mt-1 text-center">Sua quadra, seu jogo!</p>
 
   {/* BARRA DE PESQUISA + BOTÃO DE FILTRO */}
@@ -240,22 +209,40 @@ export default function Home() {
 
 
         {/* COOKIES */}
-        {mostrarCookies && (
-          <section className="fixed max-w-md p-4 mx-auto bg-[#1E8449] border border-green-900 left-12 bottom-16 rounded-2xl text-white shadow-lg z-50">
-            <h2 className="font-semibold">🍪 Usamos cookies!</h2>
-            <p className="mt-4 text-sm">
-              Este site usa cookies essenciais para funcionar corretamente, e cookies de rastreamento para entender como você interage com ele.{" "}
-              <a href="#" className="font-medium underline hover:text-green-200 transition-colors">Escolher preferências</a>.
-            </p>
-            <p className="mt-3 text-sm">Fechando essa notificação, as configurações padrão serão salvas.</p>
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <button onClick={() => setMostrarCookies(false)} className="text-xs bg-white text-green-800 font-medium rounded-lg hover:bg-green-100 px-4 py-2.5 transition-colors">Aceitar todos</button>
-              <button onClick={() => setMostrarCookies(false)} className="text-xs border border-white text-white hover:bg-green-700 font-medium rounded-lg px-4 py-2.5 transition-colors">Rejeitar todos</button>
-              <button className="text-xs border border-white text-white hover:bg-green-700 font-medium rounded-lg px-4 py-2.5 transition-colors col-span-2">Preferências</button>
-              <button onClick={() => setMostrarCookies(false)} className="text-xs border border-white text-white hover:bg-green-700 font-medium rounded-lg px-4 py-2.5 transition-colors col-span-2">Fechar</button>
-            </div>
-          </section>
-        )}
+       {mostrarCookies && (
+  <section className="fixed bottom-10 left-6 sm:left-12 max-w-md w-[90%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50 transition-all">
+    <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
+    <p className="text-sm mb-3">Usamos cookies para melhorar sua experiência e analisar o tráfego do site.</p>
+    <div className="flex flex-wrap gap-2">
+      <button
+        onClick={() => {
+          localStorage.setItem("cookiesAceitos", "true");
+          setMostrarCookies(false);
+        }}
+        className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+      >
+        Aceitar todos
+      </button>
+      <button
+        onClick={() => {
+  localStorage.setItem("cookiesAceitos", "true");
+  setMostrarCookies(false);
+}}
+
+        className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
+      >
+        Rejeitar
+      </button>
+      <button
+        onClick={() => setMostrarCookies(false)}
+        className="w-full text-center mt-2 text-xs underline text-white/80 hover:text-white"
+      >
+        Fechar
+      </button>
+    </div>
+  </section>
+)}
+
 
         {/* RODAPÉ */}
         <footer className="bg-[#14532d] text-white py-6 mt-12">
