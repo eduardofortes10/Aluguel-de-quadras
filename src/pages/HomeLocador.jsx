@@ -3,6 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
+import { FaPlus, FaTrash } from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function HomeLocador() {
   const [quadras, setQuadras] = useState([]);
@@ -14,16 +17,18 @@ export default function HomeLocador() {
 
     fetch(`http://localhost:5000/api/quadras?dono_id=${usuario.id}`)
       .then((res) => res.json())
-    .then((data) => {
-  if (Array.isArray(data)) {
-    setQuadras(data);
-  } else {
-    setQuadras([]);
-    console.warn("Resposta inesperada da API:", data);
-  }
-})
-
-      .catch((err) => console.error("Erro ao carregar quadras:", err));
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setQuadras(data);
+        } else {
+          setQuadras([]);
+          console.warn("Resposta inesperada da API:", data);
+        }
+      })
+      .catch((err) => {
+        console.error("Erro ao carregar quadras:", err);
+        toast.error("Erro ao carregar quadras.");
+      });
   }, []);
 
   const handleNovaQuadra = () => {
@@ -41,13 +46,13 @@ export default function HomeLocador() {
 
       if (response.ok) {
         setQuadras((prev) => prev.filter((q) => q.id !== id));
-        alert("Quadra excluída com sucesso.");
+        toast.success("Quadra excluída com sucesso!");
       } else {
-        alert("Erro ao excluir quadra.");
+        toast.error("Erro ao excluir quadra.");
       }
     } catch (error) {
       console.error("Erro na exclusão:", error);
-      alert("Erro na conexão com o servidor.");
+      toast.error("Erro na conexão com o servidor.");
     }
   };
 
@@ -73,61 +78,80 @@ export default function HomeLocador() {
           <h1 className="text-2xl font-bold text-green-700">Quadras Cadastradas</h1>
           <button
             onClick={handleNovaQuadra}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full sm:w-auto"
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition w-full sm:w-auto"
           >
-            + Nova Quadra
+            <FaPlus /> Nova Quadra
           </button>
         </div>
 
         {/* Lista de quadras */}
-       {Array.isArray(quadras) && quadras.length === 0 ? (
+        {Array.isArray(quadras) && quadras.length === 0 ? (
           <p className="text-gray-500">Você ainda não cadastrou nenhuma quadra.</p>
         ) : (
-           quadras.map((quadra) => {
-            const imagemUrl = quadra.imagem_url?.startsWith("/")
-              ? `http://localhost:5000${quadra.imagem_url}`
-              : quadra.imagem_url || "/quadras/default.png";
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {quadras.map((quadra) => {
+  let imagemUrl = "/quadras/default.png";
+  try {
+    const imagens = JSON.parse(quadra.imagem_url || "[]");
+    if (Array.isArray(imagens) && imagens.length > 0) {
+      imagemUrl = `http://localhost:5000${imagens[0]}`;
+    }
+  } catch (e) {
+    console.warn("Erro ao processar imagem da quadra:", e);
+  }
 
-            return (
-              <div
-                key={quadra.id}
-                className="block bg-white rounded-xl shadow-md overflow-hidden relative mb-6 w-full max-w-md mx-auto"
-              >
-                <img
-                  src={imagemUrl}
-                  alt={quadra.nome}
-                  className="w-full h-48 object-cover"
-                  onError={(e) => {
-                    e.target.src = "/quadras/default.png";
-                  }}
-                />
-                <div className="p-4">
-                  <h2 className="text-lg font-semibold">{quadra.nome}</h2>
-                  <p className="text-sm text-gray-600">{quadra.local}</p>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-green-700 font-bold">R${quadra.preco}</span>
-                    <span className="text-yellow-500">⭐ {quadra.nota || "4.5"}</span>
-                  </div>
+  return (
+    <div
+      key={quadra.id}
+      className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 transition-transform hover:scale-[1.015] duration-300"
+    >
+      <img
+        src={imagemUrl}
+        alt={quadra.nome}
+        className="w-full h-48 object-cover"
+        onError={(e) => {
+          e.target.src = "/quadras/default.png";
+        }}
+      />
+      <div className="p-4">
+        <h2 className="text-lg font-bold text-gray-800">{quadra.nome}</h2>
+        <p className="text-sm text-gray-600">{quadra.local}</p>
+        <div className="mt-2 flex justify-between items-center">
+          <span className="text-green-600 font-bold">R${quadra.preco}</span>
+          <span className="text-yellow-500">⭐ {quadra.nota || "4.5"}</span>
+        </div>
+        <div className="mt-4 flex justify-between text-sm">
+          <Link
+            to={`/quadra-locador/${quadra.id}`}
+            className="text-blue-600 hover:underline"
+          >
+            Ver detalhes
+          </Link>
+          <button
+            onClick={() => handleExcluirQuadra(quadra.id)}
+            className="text-red-600 flex items-center gap-1 hover:underline"
+          >
+            <FaTrash className="text-sm" /> Excluir
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+})}
 
-                  <div className="flex justify-between mt-4 text-sm">
-                    <Link
-                      to={`/quadra-locador/${quadra.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Ver detalhes
-                    </Link>
-                    <button
-                      onClick={() => handleExcluirQuadra(quadra.id)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
+          </div>
         )}
+
+        {/* Toast container */}
+        <ToastContainer
+          position="top-center"
+          autoClose={2500}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          pauseOnHover
+          theme="colored"
+        />
       </div>
     </div>
   );

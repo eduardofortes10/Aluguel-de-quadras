@@ -19,21 +19,34 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 /* ===== POST - Cadastrar quadra ===== */
-router.post('/', upload.single('imagem'), (req, res) => {
-  const { nome, local, preco, tipo, descricao, dono_id, nota } = req.body;
-  const imagem_url = req.file ? `/uploads/${req.file.filename}` : null;
+router.post("/", upload.array("imagens", 10), async (req, res) => {
+    console.log("📩 Rota POST /api/quadras chamada"); // <== isso
+  try {
+    const { nome, local, preco, tipo, descricao, dono_id, nota } = req.body;
+    const imagens = req.files?.map((file) => `/uploads/${file.filename}`);
+    const imagens_json = JSON.stringify(imagens); // armazenar array como texto
 
-  const query = `
-    INSERT INTO quadras (nome, local, preco, tipo, descricao, dono_id, nota, imagem_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-  db.query(query, [nome, local, preco, tipo, descricao, dono_id, nota, imagem_url], (err) => {
-    if (err) {
-      console.error("Erro ao cadastrar quadra:", err);
-      return res.status(500).json({ error: "Erro ao cadastrar quadra" });
-    }
-    res.status(200).json({ message: "Quadra cadastrada com sucesso" });
-  });
+    const query = `
+      INSERT INTO quadras (nome, local, preco, tipo, descricao, dono_id, nota, imagem_url)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(
+      query,
+      [nome, local, preco, tipo, descricao, dono_id, nota, imagens_json],
+      (err) => {
+        if (err) {
+          console.error("Erro ao cadastrar quadra:", err);
+          return res.status(500).json({ error: "Erro ao cadastrar quadra" });
+        }
+
+        return res.status(200).json({ message: "Quadra cadastrada com sucesso" });
+      }
+    );
+  } catch (err) {
+    console.error("Erro inesperado:", err);
+    res.status(500).json({ error: "Erro inesperado no servidor" });
+  }
 });
 
 /* ===== GET - Listar todas ou por dono_id ===== */

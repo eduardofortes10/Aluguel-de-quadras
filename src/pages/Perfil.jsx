@@ -9,6 +9,7 @@ import {
   Lock,
   Info,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 
 export default function Perfil() {
@@ -36,6 +37,11 @@ export default function Perfil() {
     { path: "/privacidade", label: "Privacidade", icon: <Lock className="w-5 h-5" /> },
     { path: "/sobre", label: "Sobre nós", icon: <Info className="w-5 h-5" /> },
   ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("usuario");
+    navigate("/login");
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -72,6 +78,18 @@ export default function Perfil() {
               <ChevronRight className="w-4 h-4 text-gray-400" />
             </button>
           ))}
+
+          {/* Botão de sair */}
+          <button
+            onClick={handleLogout}
+            className="flex justify-between items-center p-4 bg-red-50 border border-red-300 rounded-xl shadow-sm hover:bg-red-100 w-full"
+          >
+            <div className="flex items-center gap-3 text-red-700 font-semibold">
+              <LogOut className="w-5 h-5" />
+              <span>Sair</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-red-400" />
+          </button>
         </div>
       </div>
 
