@@ -16,27 +16,33 @@ import { quadras } from "./data/quadras";
 import HomeLocador from "./pages/HomeLocador";
 import CadastrarQuadra from "./pages/CadastrarQuadra";
 import DetalheQuadraLocador from "./pages/DetalheQuadraLocador";
+import { Toaster } from 'react-hot-toast';
 const App = () => {
   return (
-    <Routes>
-        <Route path="/" element={<Login />} /> {/* 👈 Define o caminho inicial */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/home" element={<Home />} />
-      <Route path="/favoritos" element={<Favoritos />} />
-      <Route path="/perfil" element={<Perfil />} />
-      <Route path="/conta" element={<Conta />} />
-      <Route path="/pagamento" element={<Pagamento />} />
-      <Route path="/notificacao" element={<Notificacao />} />
-      <Route path="/privacidade" element={<Privacidade />} />
-      <Route path="/chat" element={<Chat />} />
-      <Route path="/sobre" element={<Sobre />} />
-      <Route path="/quadra/:id" element={<QuadraDetalhe />} />
-      <Route path="/home-locador" element={<HomeLocador />} />
-      <Route path="/cadastrarquadra" element={<CadastrarQuadra/>} />
-      <Route path="/quadra-locador/:id" element={<DetalheQuadraLocador />} />
+    <>
+      <Toaster position="top-center" reverseOrder={false} />
+
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/favoritos" element={<Favoritos />} />
+        <Route path="/perfil" element={<Perfil />} />
+        <Route path="/conta" element={<Conta />} />
+        <Route path="/pagamento" element={<Pagamento />} />
+        <Route path="/notificacao" element={<Notificacao />} />
+        <Route path="/privacidade" element={<Privacidade />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/sobre" element={<Sobre />} />
+        <Route path="/quadra/:id" element={<QuadraDetalhe />} />
+        <Route path="/home-locador" element={<HomeLocador />} />
+        <Route path="/cadastrarquadra" element={<CadastrarQuadra />} />
+        <Route path="/quadra-locador/:id" element={<DetalheQuadraLocador />} />
       </Routes>
+    </>
   );
 };
+
 
 export default App;
