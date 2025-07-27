@@ -11,7 +11,6 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const [nomeUsuario, setNomeUsuario] = useState("");
-  const [mostrarAviso, setMostrarAviso] = useState(false);
   const [mostrarCookies, setMostrarCookies] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState("Todos");
@@ -44,13 +43,7 @@ export default function Home() {
     setNomeUsuario(nome);
   }, []);
 
-  useEffect(() => {
-    if (location.state?.loginSucesso) {
-      setMostrarAviso(true);
-      const timeout = setTimeout(() => setMostrarAviso(false), 3000);
-      return () => clearTimeout(timeout);
-    }
-  }, [location.state]);
+ 
 
   useEffect(() => {
     const cookiesAceitos = localStorage.getItem("cookiesAceitos");
@@ -68,15 +61,7 @@ export default function Home() {
       </div>
 
       <div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
-        {mostrarAviso && (
-          <div className="fixed top-6 right-6 z-50 bg-white border-l-4 border-green-600 shadow-xl rounded-md p-4 flex items-start gap-3 animate-fade-in-down">
-            <div className="bg-green-600 text-white rounded-full w-8 h-8 flex items-center justify-center">✓</div>
-            <div>
-              <p className="font-semibold text-green-700">Login realizado!</p>
-              <p className="text-sm text-gray-600">Bem-vindo de volta à plataforma.</p>
-            </div>
-          </div>
-        )}
+       
 
         <div className="relative bg-gradient-to-b from-[#1E8449] to-[#14532d] text-white p-6 pb-10 rounded-b-3xl shadow-md z-10">
           <Link to="/notificacao" className="absolute top-6 left-4 sm:left-16">
@@ -106,7 +91,8 @@ export default function Home() {
 
             <button
               className="ml-2 p-3 bg-white rounded-xl shadow-md hover:bg-green-100"
-              onClick={() => setMostrarModal(true)}
+              onClick={() => navigate("/filtro")}
+
             >
               <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6l-6.2 7.9V19a1 1 0 01-1.6.8l-2-1.5a1 1 0 01-.4-.8v-5.8L3.2 5.6A1 1 0 013 4z" />
@@ -248,100 +234,7 @@ export default function Home() {
             © 2025 Aluguel de Quadras — Todos os direitos reservados.
           </div>
         </footer>
-      {mostrarModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center">
-          <div className="bg-white w-[90%] max-w-md rounded-2xl p-6 relative overflow-y-auto max-h-[90vh]">
-            <button
-              className="absolute top-4 right-4 text-gray-600 hover:text-red-500"
-              onClick={() => setMostrarModal(false)}
-            >
-              ✕
-            </button>
-
-            <h2 className="text-xl font-bold text-green-700 mb-4">Filtros</h2>
-
-            <div className="mb-4">
-              <h3 className="font-semibold text-sm mb-2">Tipo de quadra</h3>
-              <div className="flex flex-wrap gap-2">
-                {["Todos", "Futsal", "Society", "Campo", "Quadra"].map((tipo, i) => (
-                  <button
-                    key={i}
-                    className="px-3 py-1 rounded-full bg-gray-100 hover:bg-green-100 text-sm text-gray-800"
-                  >
-                    {tipo}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-4">
-              <h3 className="font-semibold text-sm mb-2">Número de Estrelas</h3>
-              <div className="flex flex-col gap-1">
-                {[5, 4, 3, 2, 1].map((star) => (
-                  <label key={star} className="flex items-center gap-2">
-                    <input type="checkbox" />
-                    {Array.from({ length: star }, (_, i) => (
-                      <span key={i}>⭐</span>
-                    ))}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="font-semibold text-sm mb-2">Linha de preço</h3>
-              <input type="range" min={0} max={1000} className="w-full accent-green-600" />
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>R$0</span>
-                <span>R$1000</span>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="font-semibold text-sm mb-2">Horas</h3>
-              <div className="flex flex-wrap gap-2">
-                {["Todos", 1, 2, 3, 4, "5+"].map((hora, i) => (
-                  <button
-                    key={i}
-                    className="px-3 py-1 rounded-full bg-gray-100 hover:bg-green-100 text-sm text-gray-800"
-                  >
-                    {hora}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mb-6">
-              <h3 className="font-semibold text-sm mb-2">Banheiros</h3>
-              <div className="flex flex-wrap gap-2">
-                {["Todos", 1, 2, 3, 4, "5+"].map((banheiro, i) => (
-                  <button
-                    key={i}
-                    className="px-3 py-1 rounded-full bg-gray-100 hover:bg-green-100 text-sm text-gray-800"
-                  >
-                    {banheiro}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="font-semibold text-sm mb-2 text-blue-900">Distância até você</h3>
-              <input type="range" min={10} max={2000} className="w-full accent-green-600" />
-              <div className="flex justify-between text-xs text-gray-600">
-                <span>100m</span>
-                <span>2000m+</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setMostrarModal(false)}
-              className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg"
-            >
-              Aplicar Filtro
-                       </button>
-          </div>
-        </div>
-      )}
+     
          </div> 
     </div> 
   );

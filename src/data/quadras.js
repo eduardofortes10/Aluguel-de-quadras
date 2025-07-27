@@ -16,12 +16,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 102,
-    nome: "Quadra de Tênis Pro",
+    nome: "Quadra de Futsal",
     imagem: "/quadras/quadra2.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Futsal",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -31,12 +31,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 103,
-    nome: "Quadra de Tênis Pro",
+    nome: "Quadra de Scociety",
     imagem: "/quadras/quadra3.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Society",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -46,12 +46,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 104,
-    nome: "Quadra de Tênis Pro",
+    nome: "Quadra de Futsal",
     imagem: "/quadras/quadra4.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Futsal",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -61,12 +61,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 105,
-    nome: "Quadra de Tênis Pro",
+    nome: "Campo de golfe",
     imagem: "/quadras/quadra5.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Golfe",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -76,12 +76,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 106,
-    nome: "Quadra de Tênis Pro",
+    nome: "Campo de Golfe",
     imagem: "/quadras/quadra6.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Golfe",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -91,12 +91,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 107,
-    nome: "Quadra de Tênis Pro",
+    nome: "Campo de futebol",
     imagem: "/quadras/quadra7.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Futebol",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -106,12 +106,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 108,
-    nome: "Quadra de Tênis Pro",
+    nome: "Campo de Futebol",
     imagem: "/quadras/quadra8.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Futebol",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -136,12 +136,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 110,
-    nome: "Quadra de Tênis Pro",
+    nome: "Quadra Poliesportiva",
     imagem: "/quadras/quadra10.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Poliesportiva",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -181,12 +181,12 @@ export const quadrasCarrossel = [
   },
   {
     id: 113,
-    nome: "Quadra de Tênis Pro",
+    nome: "Quadra de Society",
     imagem: "/quadras/quadra13.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
     avaliacao: 4.9,
-    tipo: "Tênis",
+    tipo: "Society",
     dono: {
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -211,7 +211,7 @@ export const quadrasCarrossel = [
   },
   {
     id: 115,
-    nome: "Quadra de Tênis Pro",
+    nome: "Quadra de Society",
     imagem: "/quadras/quadra15.png",
     local: "Jardins, São Paulo",
     preco: "R$200 /hora",
@@ -223,18 +223,90 @@ export const quadrasCarrossel = [
       email: "luciana@email.com",
       telefone: "(11) 98888-2222"
     }
-  }
+  },
+   {
+    id: 116,
+    nome: "Quadra de Vôlei Pro",
+    imagem: "/quadras/quadra16.png",
+    local: "Jardins, São Paulo",
+    preco: "R$200 /hora",
+    avaliacao: 4.9,
+    tipo: "Vôlei",
+    dono: {
+      nome: "Luciana Prado",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "luciana@email.com",
+      telefone: "(11) 98888-2222"
+    }
+  },
+  {
+    id: 117,
+    nome: "Quadra de Vôlei Pro",
+    imagem: "/quadras/quadra17.png",
+    local: "Canal 3 , Santos",
+    preco: "R$200 /hora",
+    avaliacao: 4.9,
+    tipo: "Vôlei",
+    dono: {
+      nome: "Luciana Prado",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "luciana@email.com",
+      telefone: "(11) 98888-2222"
+    }
+  },{
+    id: 118,
+    nome: "Quadra de Vôlei de areia Pro",
+    imagem: "/quadras/quadra18.png",
+    local: "Canal 1 , Santos",
+    preco: "R$200 /hora",
+    avaliacao: 4.9,
+    tipo: "Vôlei",
+    dono: {
+      nome: "Luciana Prado",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "luciana@email.com",
+      telefone: "(11) 98888-2222"
+    }
+  },{
+    id: 119,
+    nome: "Quadra de Basquete Pro",
+    imagem: "/quadras/quadra19.png",
+    local: "Jardins, São Paulo",
+    preco: "R$200 /hora",
+    avaliacao: 4.9,
+    tipo: "Basquete",
+    dono: {
+      nome: "Luciana Prado",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "luciana@email.com",
+      telefone: "(11) 98888-2222"
+    }
+  },{
+    id: 120,
+    nome: "Quadra de Basquete Pro",
+    imagem: "/quadras/quadra20.png",
+    local: "Jardins, São Paulo",
+    preco: "R$200 /hora",
+    avaliacao: 4.9,
+    tipo: "Basquete",
+    dono: {
+      nome: "Luciana Prado",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "luciana@email.com",
+      telefone: "(11) 98888-2222"
+    }
+  },
 ];
 
 export const quadras = [
   {
     id: 1,
-    nome: "Quadra Eng.Coelho",
+    nome: "Quadra PoliEsportiva",
     imagem: "/quadras/quadras4.png",
     local: "Engenheiro Coelho, R. São Bento, 328",
     preco: "R$150 /hora",
     avaliacao: 4.6,
-    tipo: "Quadra de basquete , Futsal e Vôlei",
+    tipo: "Poliesportiva",
     dono: {
       nome: "Paulo Scholl",
       foto: "https://i.imgur.com/XZ0yU1w.png",
@@ -249,7 +321,7 @@ export const quadras = [
     local: "Fortaleza, Blumenau",
     preco: "R$240 /hora",
     avaliacao: 4.1,
-    tipo: "Quadra poliesportiva",
+    tipo: "Poliesportiva",
     dono: {
       nome: "Dono Genérico",
       foto: "https://i.imgur.com/ZvWYkBa.png",
@@ -259,12 +331,12 @@ export const quadras = [
   },
   {
     id: 3,
-    nome: "Quadra Poliesportiva B",
+    nome: "Campo de Golfe",
     imagem: "/quadras/imagem11.png",
     local: "Fortaleza, Blumenau",
     preco: "R$240 /hora",
     avaliacao: 4.1,
-    tipo: "Quadra poliesportiva",
+    tipo: "Golfe",
     dono: {
       nome: "Dono Genérico",
       foto: "https://i.imgur.com/ZvWYkBa.png",
@@ -274,12 +346,12 @@ export const quadras = [
   },
   {
     id: 4,
-    nome: "Quadra Poliesportiva C",
+    nome: "Society",
     imagem: "/quadras/quadras2.png",
     local: "Fortaleza, Blumenau",
     preco: "R$240 /hora",
     avaliacao: 4.1,
-    tipo: "Quadra poliesportiva",
+    tipo: "Society",
     dono: {
       nome: "Dono Genérico",
       foto: "https://i.imgur.com/ZvWYkBa.png",
@@ -289,12 +361,12 @@ export const quadras = [
   },
   {
     id: 5,
-    nome: "Quadra Poliesportiva D",
+    nome: "Quadra Poliesportiva ",
     imagem: "/quadras/quadras10.png",
     local: "Fortaleza, Blumenau",
     preco: "R$240 /hora",
-    avaliacao: 4.1,
-    tipo: "Quadra poliesportiva",
+    avaliacao: 3.1,
+    tipo: "Poliesportiva",
     dono: {
       nome: "Dono Genérico",
       foto: "https://i.imgur.com/ZvWYkBa.png",
@@ -304,12 +376,12 @@ export const quadras = [
   },
   {
     id: 0,
-    nome: "Quadra de areia",
+    nome: "Quadra de Tênis",
     imagem: "/quadras/quadras3.png",
     local: "Itoupava, Blumenau",
     preco: "R$140 /hora",
     avaliacao: 4.2,
-    tipo: "Quadra de areia para vôlei ou futevôlei",
+    tipo: "tênis",
     dono: {
       nome: "Dono Genérico",
       foto: "https://i.imgur.com/ZvWYkBa.png",

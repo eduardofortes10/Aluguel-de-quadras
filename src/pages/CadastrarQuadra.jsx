@@ -5,7 +5,6 @@ import MobileNav from "../components/MobileNav";
 import { FaSpinner, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 
-
 export default function CadastrarQuadra() {
   const [nome, setNome] = useState("");
   const [local, setLocal] = useState("");
@@ -28,19 +27,20 @@ export default function CadastrarQuadra() {
   };
 
   const handleCadastrar = async () => {
-  if (!nome || !local || !preco || !tipo || imagens.length < 3) {
-  toast.error("Preencha todos os campos e envie no mínimo 3 imagens da quadra.");
-  return;
-}
-
-
+    if (!nome || !local || !preco || !tipo || imagens.length < 3) {
+      toast.error("Preencha todos os campos e envie no mínimo 3 imagens da quadra.");
+      return;
+    }
 
     setCarregando(true);
     const formData = new FormData();
+
+    const tipoFormatado = tipo.charAt(0).toUpperCase() + tipo.slice(1).toLowerCase();
+
     formData.append("nome", nome);
     formData.append("local", local);
-    formData.append("preco", preco);
-    formData.append("tipo", tipo);
+    formData.append("preco", parseFloat(preco));
+    formData.append("tipo", tipoFormatado);
     formData.append("descricao", descricao);
     formData.append("dono_id", usuario?.id || 1);
     formData.append("nota", 0);
@@ -52,15 +52,25 @@ export default function CadastrarQuadra() {
         body: formData,
       });
 
+      let resultado = {};
+      try {
+        const text = await response.text();
+        resultado = text && text.trim() !== "" ? JSON.parse(text) : {};
+      } catch (e) {
+        console.warn("⚠️ Erro ao tentar ler resposta como JSON:", e);
+      }
+
+      console.log("🟢 Resposta do servidor:", resultado);
+
       if (response.ok) {
-        navigate("/home-Locador");
+        toast.success("Quadra cadastrada com sucesso!");
+        navigate("/home-locador");
       } else {
-        const erro = await response.json();
-        alert(erro.error || "Erro ao cadastrar quadra");
+        toast.error(resultado.error || "Erro ao cadastrar quadra");
       }
     } catch (err) {
-      console.error("Erro na requisição:", err);
-      alert("Erro ao conectar com o servidor");
+      console.error("❌ Erro na requisição:", err);
+      toast.error("Erro ao conectar com o servidor");
     } finally {
       setCarregando(false);
     }
@@ -71,11 +81,9 @@ export default function CadastrarQuadra() {
       <div className="hidden md:block">
         <Sidebar />
       </div>
-
       <MobileNav />
 
       <div className="flex-1 p-4 md:ml-64 pb-24">
-        {/* Breadcrumb */}
         <div className="mb-4 flex items-center text-sm text-gray-500 gap-1">
           <Link to="/home-locador" className="text-gray-600 hover:underline flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -86,7 +94,6 @@ export default function CadastrarQuadra() {
           <span className="text-blue-600 font-medium">Cadastrar Quadra</span>
         </div>
 
-        {/* Formulário */}
         <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
           <h1 className="text-2xl font-bold text-green-700 mb-6">Cadastrar Nova Quadra</h1>
 
@@ -140,10 +147,14 @@ export default function CadastrarQuadra() {
               </select>
             </div>
 
-            {/* Imagens */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">Imagens da Quadra</label>
-              <label htmlFor="imagens" className={`flex flex-col items-center justify-center w-full p-6 text-center border-2 border-dashed rounded-lg cursor-pointer transition ${imagens.length > 0 ? "border-green-400 bg-green-50" : "border-gray-300 bg-white"}`}>
+              <label
+                htmlFor="imagens"
+                className={`flex flex-col items-center justify-center w-full p-6 text-center border-2 border-dashed rounded-lg cursor-pointer transition ${
+                  imagens.length > 0 ? "border-green-400 bg-green-50" : "border-gray-300 bg-white"
+                }`}
+              >
                 <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3" />
                 </svg>
@@ -179,7 +190,6 @@ export default function CadastrarQuadra() {
               )}
             </div>
 
-            {/* Descrição */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700">Descrição</label>
               <textarea
@@ -195,7 +205,9 @@ export default function CadastrarQuadra() {
                 type="button"
                 onClick={handleCadastrar}
                 disabled={carregando}
-                className={`w-full py-3 rounded text-white font-semibold transition ${carregando ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
+                className={`w-full py-3 rounded text-white font-semibold transition ${
+                  carregando ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+                }`}
               >
                 {carregando ? (
                   <span className="flex items-center justify-center gap-2">

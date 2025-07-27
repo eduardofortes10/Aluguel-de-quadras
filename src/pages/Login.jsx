@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Toaster, toast } from "react-hot-toast";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Login() {
   const navigate = useNavigate();
@@ -53,7 +54,7 @@ function Login() {
 
   return (
     <div className="flex h-screen">
-      <Toaster position="top-right" />
+      <ToastContainer position="top-center" autoClose={2500} theme="colored" />
 
       {/* Lado esquerdo */}
       <div

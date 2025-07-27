@@ -19,7 +19,6 @@ export default function DetalheQuadraLocador() {
     },
   });
 
-  // Atualiza responsividade ao redimensionar a janela
   useEffect(() => {
     const handleResize = () => {
       setPerView(window.innerWidth < 640 ? 1 : 3);
@@ -33,12 +32,7 @@ export default function DetalheQuadraLocador() {
     fetch(`http://localhost:5000/api/quadras/${id}`)
       .then((res) => res.json())
       .then((data) => {
-        try {
-          data.imagem_url = JSON.parse(data.imagem_url || "[]");
-        } catch {
-          data.imagem_url = [];
-        }
-        setQuadra(data);
+        setQuadra(data); // imagens já vêm tratadas do backend
       })
       .catch((err) =>
         console.error("Erro ao carregar detalhes da quadra:", err)
@@ -49,12 +43,10 @@ export default function DetalheQuadraLocador() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-100">
-      {/* Sidebar apenas em telas grandes */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      {/* MobileNav apenas em telas pequenas */}
       <div className="md:hidden w-full">
         <MobileNav />
       </div>
@@ -66,7 +58,7 @@ export default function DetalheQuadraLocador() {
             ref={sliderRef}
             className="keen-slider flex justify-center items-center overflow-visible min-h-[220px]"
           >
-            {quadra.imagem_url?.map((url, index) => {
+            {quadra.imagens?.map((url, index) => {
               const slide = instanceRef.current?.track?.details?.slides[index];
               const isCenter = slide?.portion > 0.5;
               const isMobile = window.innerWidth < 640;
@@ -74,8 +66,8 @@ export default function DetalheQuadraLocador() {
               return (
                 <div
                   key={index}
-                 className={`keen-slider__slide flex justify-center items-center transition-all duration-500 ease-in-out ${
-  isCenter ? "z-30" : "z-10"
+                  className={`keen-slider__slide flex justify-center items-center transition-all duration-500 ease-in-out ${
+                    isCenter ? "z-30" : "z-10"
                   }`}
                   style={{
                     width: isMobile ? "90vw" : isCenter ? "500px" : "260px",
@@ -121,17 +113,14 @@ export default function DetalheQuadraLocador() {
           {/* Informações da quadra */}
           <div className="p-6 space-y-4">
             <div className="flex justify-between items-center">
-              <h1 className="text-2xl font-bold text-gray-800">
-                {quadra.nome}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-800">{quadra.nome}</h1>
               <div className="text-yellow-500 font-semibold">
                 ⭐ {quadra.nota || "4.5"}
               </div>
             </div>
 
             <div className="flex items-center text-gray-600 gap-1">
-              📍
-              <span className="text-sm">{quadra.local}</span>
+              📍 <span className="text-sm">{quadra.local}</span>
             </div>
 
             <div>

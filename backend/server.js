@@ -23,6 +23,14 @@ app.use('/api/conversas', conversasRoutes); // Chat
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Inicialização do servidor
+process.on('uncaughtException', (err) => {
+  console.error('❌ Erro não tratado:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('❌ Promessa rejeitada:', err);
+});
+
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);

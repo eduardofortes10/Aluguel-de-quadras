@@ -16,6 +16,8 @@ import { quadras } from "./data/quadras";
 import HomeLocador from "./pages/HomeLocador";
 import CadastrarQuadra from "./pages/CadastrarQuadra";
 import DetalheQuadraLocador from "./pages/DetalheQuadraLocador";
+
+
 import { Toaster } from 'react-hot-toast';
 const App = () => {
   return (
