@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
+import { FaHome } from "react-icons/fa";
 
 export default function Favoritos() {
   const [favoritos, setFavoritos] = useState([]);
@@ -9,19 +10,24 @@ export default function Favoritos() {
   const usuario_id = localStorage.getItem("usuario_id");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!usuario_id) return;
-    fetch(`http://localhost:5000/api/favoritos/${usuario_id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setFavoritos(data);
-        setCarregando(false);
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar favoritos:", err);
-        setCarregando(false);
-      });
-  }, [usuario_id]);
+ useEffect(() => {
+  if (!usuario_id) return;
+
+  console.log("🔍 Buscando favoritos do usuário:", usuario_id);
+
+  fetch(`http://localhost:5000/api/favoritos/${usuario_id}`)
+    .then((res) => res.json())
+    .then((data) => {
+      console.log("✅ Dados recebidos:", data);
+      setFavoritos(data);
+      setCarregando(false);
+    })
+    .catch((err) => {
+      console.error("❌ Erro ao buscar favoritos:", err);
+      setCarregando(false);
+    });
+}, [usuario_id]);
+
 
   const removerFavorito = async (id) => {
     try {
@@ -47,9 +53,7 @@ export default function Favoritos() {
       <div className="flex-1 p-6 md:pl-20 max-w-7xl mx-auto">
         <div className="flex items-center text-sm text-gray-500 mb-6 space-x-2">
           <Link to="/home" className="hover:underline hover:text-green-600 flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7..." />
-            </svg>
+            <FaHome className="w-4 h-4 mr-1" />
             Início
           </Link>
           <span>/</span>
@@ -61,7 +65,9 @@ export default function Favoritos() {
         {carregando ? (
           <p className="animate-pulse text-gray-500">Carregando quadras favoritas...</p>
         ) : favoritos.length === 0 ? (
-          <p className="text-center text-gray-500 text-sm mt-10">💤 Você ainda não adicionou nenhuma quadra aos favoritos.</p>
+          <p className="text-center text-gray-500 text-sm mt-10">
+            💤 Você ainda não adicionou nenhuma quadra aos favoritos.
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {favoritos.map((quadra) => (
@@ -73,7 +79,7 @@ export default function Favoritos() {
                   src={
                     quadra.imagem_url?.startsWith("/")
                       ? quadra.imagem_url
-                      : `/quadras/${quadra.imagem_url}`
+                      : `/quadras/${quadra.imagem_url || "sem-imagem.png"}`
                   }
                   alt={quadra.nome}
                   className="w-full h-48 object-cover"
@@ -83,7 +89,7 @@ export default function Favoritos() {
                   <h2 className="text-lg font-semibold text-gray-800">{quadra.nome}</h2>
                   <p className="text-sm text-gray-600">{quadra.local}</p>
                   <div className="flex justify-between items-center mt-2">
-                    <span className="text-green-700 font-bold">R${quadra.preco}</span>
+                    <span className="text-green-700 font-bold">R$ {quadra.preco}</span>
                     <span className="text-yellow-500">⭐ {quadra.nota || "4.5"}</span>
                   </div>
                   <div className="mt-2">

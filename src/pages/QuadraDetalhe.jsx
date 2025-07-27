@@ -23,35 +23,41 @@ export default function QuadraDetalhe() {
   if (!quadra) return <div className="p-4">Quadra não encontrada.</div>;
 
   const handleFavoritar = async () => {
-    const usuario_id = Number(localStorage.getItem("usuario_id"));
-    if (!usuario_id || usuario_id === 0) {
-      alert("Você precisa estar logado para favoritar quadras.");
+  const usuario_id = Number(localStorage.getItem("usuario_id"));
+  if (!usuario_id || usuario_id === 0) {
+    alert("Você precisa estar logado para favoritar quadras.");
+    return;
+  }
+
+  const dadosFavorito = {
+    usuario_id,
+    quadra_id: quadra.id || quadra.quadra_id || 0,
+    nome: quadra.nome,
+    preco: quadra.preco.replace("R$", "").replace("/hora", "").trim(),
+    local: quadra.local,
+    imagem_url: quadra.imagem_url?.split("/").pop() || quadra.imagem?.split("/").pop() || "sem-imagem.png",
+    nota: quadra.avaliacao || 4.5,
+  };
+
+  console.log("📦 Enviando favorito:", dadosFavorito); // <-- AQUI
+
+  try {
+    const resposta = await fetch("http://localhost:5000/api/favoritos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dadosFavorito),
+    });
+    const data = await resposta.json();
+    if (!resposta.ok) {
+      toast.error(`Erro: ${data.erro}`);
       return;
     }
-    try {
-      const resposta = await fetch("http://localhost:5000/api/favoritos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          usuario_id,
-          quadra_id: quadra.id,
-          nome: quadra.nome,
-          preco: quadra.preco.replace("R$", "").replace("/hora", "").trim(),
-          local: quadra.local,
-          imagem_url: quadra.imagem_url?.split("/").pop() || quadra.imagem?.split("/").pop() || "sem-imagem.png",
-          nota: quadra.avaliacao || 4.5,
-        }),
-      });
-      const data = await resposta.json();
-      if (!resposta.ok) {
-        toast.error(`Erro: ${data.erro}`);
-        return;
-      }
-      toast.success("Quadra favoritada com sucesso!");
-    } catch (erro) {
-      alert("Erro inesperado ao favoritar.");
-    }
-  };
+    toast.success("Quadra favoritada com sucesso!");
+  } catch (erro) {
+    alert("Erro inesperado ao favoritar.");
+  }
+};
+
 
   return (
     <div className="relative min-h-screen w-full overflow-y-auto">
