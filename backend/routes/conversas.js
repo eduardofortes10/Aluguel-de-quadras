@@ -3,16 +3,16 @@ const router = express.Router();
 const db = require("../db");
 
 // ✅ Criar uma nova conversa (se ainda não existir) e adicionar mensagem
+// ✅ Criar uma nova conversa (se ainda não existir) e adicionar mensagem
 router.post("/", async (req, res) => {
   const { cliente_id, locador_id, autor_id, mensagem } = req.body;
 
   try {
     // Verifica se a conversa já existe
     const [conversasExistentes] = await db.query(
-  "SELECT * FROM conversas WHERE cliente_id = ? AND locador_id = ?",
-  [cliente_id, locador_id]
-);
-
+      "SELECT * FROM conversas WHERE cliente_id = ? AND locador_id = ?",
+      [cliente_id, locador_id]
+    );
 
     let conversaId;
 
@@ -31,6 +31,18 @@ router.post("/", async (req, res) => {
     await db.query(
       "INSERT INTO mensagens (conversa_id, autor_id, mensagem, data_envio) VALUES (?, ?, ?, NOW())",
       [conversaId, autor_id, mensagem]
+    );
+
+    // 🔔 Enviar notificação para o destinatário
+    const destinatario_id = autor_id === cliente_id ? locador_id : cliente_id;
+
+    await db.query(
+      "INSERT INTO notificacoes (usuario_id, tipo, mensagem) VALUES (?, ?, ?)",
+      [
+        destinatario_id,
+        "mensagem",
+        "Você recebeu uma nova mensagem.",
+      ]
     );
 
     res.status(201).json({ sucesso: true, conversa_id: conversaId });
