@@ -15,6 +15,8 @@ import QuadraDetalhe from "./pages/QuadraDetalhe";
 import { quadras } from "./data/quadras";
 import HomeLocador from "./pages/HomeLocador";
 import CadastrarQuadra from "./pages/CadastrarQuadra";
+import Filtro from "./pages/Filtro";
+import Resultados from "./pages/Resultados";
 import DetalheQuadraLocador from "./pages/DetalheQuadraLocador";
 
 
@@ -40,6 +42,8 @@ const App = () => {
         <Route path="/quadra/:id" element={<QuadraDetalhe />} />
         <Route path="/home-locador" element={<HomeLocador />} />
         <Route path="/cadastrarquadra" element={<CadastrarQuadra />} />
+        <Route path="/filtro" element={<Filtro />} />
+        <Route path="/resultados" element={<Resultados />} />
         <Route path="/quadra-locador/:id" element={<DetalheQuadraLocador />} />
       </Routes>
     </>

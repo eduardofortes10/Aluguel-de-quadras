@@ -193,9 +193,72 @@ router.get("/imagens", async (req, res) => {
     const [results] = await db.query(query, params);
     res.json(results);
   } catch (err) {
+    console.error("❌ Erro ao buscar quadras filtradas:", err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
+// ROTA POST /api/quadras/imagens — filtro com tipos personalizados
+router.post("/imagens", async (req, res) => {
+  const { tipo, precoMaximo, avaliacaoMinima, local } = req.body;
+console.log("📥 Filtros recebidos:", req.body);
+
+  // Mapas personalizados de tipos
+  const mapaTipos = {
+    Futsal: ["futsal", "poliesportiva"],
+    Basquete: ["basquete", "poliesportiva"],
+    Vôlei: ["vôlei", "poliesportiva"],
+    Poliesportiva: ["futsal", "vôlei", "basquete", "poliesportiva"],
+    Campo: ["futebol", "golfe"],
+    Tênis: ["tênis"],
+    Futebol: ["futebol"],
+    Golfe: ["golfe"]
+  };
+
+  let query = "SELECT * FROM imagens_quadras WHERE 1=1";
+  const params = [];
+
+  // FILTRO POR TIPO
+  if (tipo && tipo.length > 0) {
+    let condicoes = [];
+    tipo.forEach((filtro) => {
+      const valores = mapaTipos[filtro] || [];
+      valores.forEach((v) => {
+        condicoes.push("LOWER(tipo) LIKE ?");
+        params.push(`%${v.toLowerCase()}%`);
+      });
+    });
+    if (condicoes.length > 0) {
+      query += " AND (" + condicoes.join(" OR ") + ")";
+    }
+  }
+
+  // PREÇO
+  if (precoMaximo) {
+    query += " AND preco <= ?";
+    params.push(precoMaximo);
+  }
+
+  // AVALIAÇÃO
+if (avaliacaoMinima) {
+  query += " AND avaliacao >= ?";
+  params.push(parseFloat(avaliacaoMinima));
+}
+
+
+  // LOCAL
+  if (local) {
+    query += " AND LOWER(local) LIKE ?";
+    params.push(`%${local.toLowerCase()}%`);
+  }
+
+  try {
+    const [results] = await db.query(query, params);
+    res.json(results);
+  } catch (err) {
     console.error("❌ Erro ao buscar quadras filtradas:", err);
     res.status(500).json({ error: "Erro ao buscar quadras filtradas" });
   }
 });
+
 
 module.exports = router;
