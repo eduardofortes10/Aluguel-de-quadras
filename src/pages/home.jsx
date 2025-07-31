@@ -6,6 +6,7 @@ import { quadras, quadrasCarrossel } from "../data/quadras";
 import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
 import Sidebar from "../components/Sidebar";
+import axios from "axios";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function Home() {
   const [mostrarCookies, setMostrarCookies] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState("Todos");
-
+  const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0); // Simulado, pode vir do backend no futuro
   const [sliderRef] = useKeenSlider({
   loop: true,
   slides: { perView: 5, spacing: 16 },
@@ -24,6 +25,27 @@ export default function Home() {
     }, 5000);
   },
 });
+useEffect(() => {
+  const usuario = JSON.parse(localStorage.getItem("usuario"));
+  if (!usuario) return;
+
+  const buscarTodasNotificacoes = () => {
+    axios
+      .get(`http://localhost:5000/api/notificacoes/${usuario.id}`)
+      .then((res) => {
+        const total = res.data?.length || 0;
+        setNotificacoesNaoLidas(total);
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar notificações:", err);
+      });
+  };
+
+  buscarTodasNotificacoes();
+  const intervalo = setInterval(buscarTodasNotificacoes, 15000);
+  return () => clearInterval(intervalo);
+}, []);
+
 
   const handleQuadraClick = (quadra) => {
     const imagem_nome = quadra.imagem?.split("/").pop();
@@ -65,11 +87,20 @@ export default function Home() {
 
         <div className="relative bg-gradient-to-b from-[#1E8449] to-[#14532d] text-white p-6 pb-10 rounded-b-3xl shadow-md z-10">
           <Link to="/notificacao" className="absolute top-6 left-4 sm:left-16">
-            <div className="w-10 h-10 rounded-full overflow-hidden shadow-md bg-white flex items-center justify-center">
-              <img src="/quadras/bellIcon.png" alt="Notificações" className="w-6 h-6 object-contain" />
-            </div>
-          </Link>
+  <div className="relative group">
+    <div className="bg-white rounded-full w-10 h-10 shadow flex items-center justify-center group-hover:scale-105 transition">
+      <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M10 2a6 6 0 00-6 6v2.586l-.707.707A1 1 0 004 13h12a1 1 0 00.707-1.707L16 10.586V8a6 6 0 00-6-6zm0 16a2 2 0 001.995-1.85L12 16H8a2 2 0 001.85 1.995L10 18z" />
+      </svg>
+    </div>
+    {notificacoesNaoLidas > 0 && (
+  <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-semibold px-1.5 py-[1px] rounded-full shadow">
+    {notificacoesNaoLidas}
+  </span>
+)}
 
+  </div>
+</Link>
           <div className="fixed top-4 right-4 z-[9999]">
             <UserDropdown />
           </div>

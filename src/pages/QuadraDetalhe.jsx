@@ -4,6 +4,8 @@ import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { enviarNotificacao } from "../services/notificacoes";
+
 
 import {
   FaStar,
@@ -39,7 +41,7 @@ export default function QuadraDetalhe() {
     nota: quadra.avaliacao || 4.5,
   };
 
-  console.log("📦 Enviando favorito:", dadosFavorito); // <-- AQUI
+  console.log("📦 Enviando favorito:", dadosFavorito);
 
   try {
     const resposta = await fetch("http://localhost:5000/api/favoritos", {
@@ -52,11 +54,33 @@ export default function QuadraDetalhe() {
       toast.error(`Erro: ${data.erro}`);
       return;
     }
+
     toast.success("Quadra favoritada com sucesso!");
+
+      // 🔔 Enviar notificação
+    await enviarNotificacao({
+      usuario_id,
+      tipo: "favorito",
+      mensagem: `Você favoritou a quadra ${quadra.nome}`,
+    });
+
+    // ✅ Fechando o primeiro try
   } catch (erro) {
     alert("Erro inesperado ao favoritar.");
+    return;
+  }
+
+  // Atualizar contador de notificações não lidas
+  try {
+    const res = await fetch(`http://localhost:5000/api/notificacoes/nao-lidas/${usuario_id}`);
+    const dados = await res.json();
+    console.log("🔄 Atualizando contador de notificações:", dados.total);
+    // Aqui você pode usar Context ou estado global depois
+  } catch (err) {
+    console.error("❌ Erro ao atualizar contador de notificações:", err);
   }
 };
+
 
 
   return (
@@ -179,9 +203,22 @@ export default function QuadraDetalhe() {
             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold text-sm">
               {quadra.preco}
             </span>
-            <button className="mt-4 w-full bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition">
-              Alugar agora
-            </button>
+           <button
+  onClick={async () => {
+    toast.success("Aluguel realizado com sucesso!");
+
+    // Notificação de aluguel
+    await enviarNotificacao({
+      usuario_id: Number(localStorage.getItem("usuario_id")),
+      tipo: "aluguel",
+      mensagem: `Você alugou a quadra ${quadra.nome}`,
+    });
+  }}
+  className="mt-4 w-full bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+>
+  Alugar agora
+</button>
+
          </div>
 <ToastContainer
   position="top-center"

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const app = express();
+const notificacoesRoutes = require('./routes/notificacoes');
 
 // Rotas externas
 const authRoutes = require('./routes/auth');
@@ -18,6 +19,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/favoritos', favoritosRoutes);
 app.use('/api/quadras', quadrasRoutes);
 app.use('/api/conversas', conversasRoutes); // Chat
+app.use('/api/notificacoes', notificacoesRoutes);
 
 // Uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

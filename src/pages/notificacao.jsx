@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
@@ -8,42 +8,58 @@ import {
   FaCalendarAlt,
   FaMoneyCheckAlt,
   FaTrashAlt,
+  FaBell,
 } from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import axios from "axios";
 
 export default function Notificacoes() {
-  const [notificacoes, setNotificacoes] = useState([
-    {
-      id: 1,
-      tipo: "aprovacao",
-      mensagem: "Sua quadra foi aprovada e já está disponível no sistema.",
-      data: "10/07/2025",
-    },
-    {
-      id: 2,
-      tipo: "reserva",
-      mensagem: "Novo pedido de reserva na quadra 'Arena 1'.",
-      data: "09/07/2025",
-    },
-    {
-      id: 3,
-      tipo: "pagamento",
-      mensagem: "Pagamento confirmado para reserva em 'Quadra Central'.",
-      data: "08/07/2025",
-    },
-  ]);
+  const [notificacoes, setNotificacoes] = useState([]);
+
+  useEffect(() => {
+    const userId = localStorage.getItem("usuario_id");
+    console.log("🆔 Usuário ID do localStorage:", userId);
+
+    if (!userId) return;
+
+    const buscarNotificacoes = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/notificacoes/${userId}`);
+     console.log("🔔 Notificações recebidas do backend:", res.data);
+setNotificacoes(res.data);
+
+      } catch (error) {
+  console.error("❌ Erro ao buscar notificações:", error.response?.data || error.message);
+}
+
+    };
+
+    buscarNotificacoes();
+  }, []);
 
   const icones = {
     aprovacao: <FaCheckCircle className="text-green-500 w-6 h-6" />,
     reserva: <FaCalendarAlt className="text-blue-500 w-6 h-6" />,
     pagamento: <FaMoneyCheckAlt className="text-yellow-500 w-6 h-6" />,
+    favorito: <FaCheckCircle className="text-pink-500 w-6 h-6" />,
+    aluguel: <FaCalendarAlt className="text-purple-500 w-6 h-6" />,
   };
 
-  const excluirNotificacao = (id) => {
+const excluirNotificacao = async (id) => {
+  try {
+    await axios.delete(`http://localhost:5000/api/notificacoes/${id}`);
     setNotificacoes((prev) => prev.filter((n) => n.id !== id));
-  };
-
+    toast.success("Notificação excluída com sucesso!");
+  } catch (error) {
+    console.error("❌ Erro ao excluir notificação:", error);
+    toast.error("Erro ao excluir notificação.");
+  }
+};
   return (
     <div className="flex">
+      <ToastContainer />
+
       {/* Sidebar (desktop) */}
       <div className="md:block hidden">
         <Sidebar />
@@ -55,8 +71,16 @@ export default function Notificacoes() {
           <MobileNav />
         </div>
 
-        {/* Topo com dropdown */}
-        <div className="flex justify-end items-center mb-4">
+        {/* Topo com dropdown e sino de notificação */}
+        <div className="flex justify-end items-center mb-4 gap-4">
+          <div className="relative">
+            <FaBell className="text-gray-700 w-6 h-6" />
+            {notificacoes.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">
+                {notificacoes.length}
+              </span>
+            )}
+          </div>
           <UserDropdown />
         </div>
 
@@ -83,29 +107,38 @@ export default function Notificacoes() {
         </h1>
 
         {/* Lista de notificações */}
-        <div className="space-y-4">
-          {notificacoes.map((n) => (
-            <div
-              key={n.id}
-              className="flex items-start justify-between p-4 bg-white border-l-4 border-green-600 shadow rounded-lg hover:bg-green-50 transition-all"
-            >
-              <div className="flex items-start gap-4">
-                <div>{icones[n.tipo]}</div>
-                <div>
-                  <p className="text-gray-800 font-medium">{n.mensagem}</p>
-                  <span className="text-sm text-gray-500">{n.data}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => excluirNotificacao(n.id)}
-                className="text-red-600 hover:text-red-800 p-2 rounded-full transition"
-                title="Excluir notificação"
-              >
-                <FaTrashAlt />
-              </button>
-            </div>
-          ))}
+<div className="space-y-4">
+  {notificacoes.map((n) => {
+    console.log("🔍 Notificação:", n); // <-- Correto aqui dentro
+
+    return (
+      <div
+        key={n.id}
+        className="flex items-start justify-between p-4 bg-white border-l-4 border-green-600 shadow rounded-lg hover:bg-green-50 transition-all"
+      >
+        <div className="flex items-start gap-4">
+          <div>{icones[n.tipo] || <FaCheckCircle className="text-gray-400 w-6 h-6" />}</div>
+          <div>
+            <p className="text-gray-800 font-medium">{n.mensagem}</p>
+            {n.data && (
+              <span className="text-sm text-gray-500">
+                {new Date(n.data).toLocaleString("pt-BR")}
+              </span>
+            )}
+          </div>
         </div>
+        <button
+          onClick={() => excluirNotificacao(n.id)}
+          className="text-red-600 hover:text-red-800 p-2 rounded-full transition"
+          title="Excluir notificação"
+        >
+          <FaTrashAlt />
+        </button>
+      </div>
+    );
+  })}
+</div>
+
       </div>
     </div>
   );
