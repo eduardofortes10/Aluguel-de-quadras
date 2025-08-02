@@ -4,7 +4,6 @@ import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import { FaSpinner, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
-
 export default function CadastrarQuadra() {
   const [nome, setNome] = useState("");
   const [local, setLocal] = useState("");
@@ -15,12 +14,11 @@ export default function CadastrarQuadra() {
   const [carregando, setCarregando] = useState(false);
   const navigate = useNavigate();
   const usuario = JSON.parse(localStorage.getItem("usuario"));
-
   const handleImagemChange = (e) => {
+    
     const files = Array.from(e.target.files);
     setImagens((prev) => [...prev, ...files]);
   };
-
   const handleRemoverImagem = (index) => {
     const novasImagens = imagens.filter((_, i) => i !== index);
     setImagens(novasImagens);

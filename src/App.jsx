@@ -19,10 +19,6 @@ import Filtro from "./pages/Filtro";
 import Resultados from "./pages/Resultados";
 import DetalheQuadraLocador from "./pages/DetalheQuadraLocador";
 import MinhasQuadras from "./pages/MinhasQuadras";
-
-
-
-
 import { Toaster } from 'react-hot-toast';
 const App = () => {
   return (
