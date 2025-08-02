@@ -5,6 +5,7 @@ import MobileNav from "../components/MobileNav";
 
 export default function Filtro() {
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const [filtros, setFiltros] = useState({
     tipo: [],

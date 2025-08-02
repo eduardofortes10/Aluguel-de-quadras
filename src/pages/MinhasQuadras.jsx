@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
+const API_URL = import.meta.env.VITE_API_URL;
 
 function MinhasQuadras() {
   const [alugueis, setAlugueis] = useState([]);
@@ -10,8 +11,8 @@ function MinhasQuadras() {
 
   useEffect(() => {
     if (usuario?.id) {
-      axios
-        .get(`/api/alugueis/minhas-quadras/${usuario.id}`)
+    axios.get(`${API_URL}/api/alugueis/minhas-quadras/${usuario.id}`)
+
         .then((res) => setAlugueis(res.data))
         .catch((err) => console.error("Erro ao buscar aluguéis:", err));
     }

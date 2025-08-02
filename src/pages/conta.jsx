@@ -10,6 +10,7 @@ import "react-toastify/dist/ReactToastify.css";
 export default function Conta() {
   const navigate = useNavigate();
   const usuarioId = localStorage.getItem("usuario_id");
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const [dados, setDados] = useState({
     nome: "",
@@ -21,7 +22,7 @@ export default function Conta() {
   useEffect(() => {
     const buscarDados = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/usuarios/${usuarioId}`);
+        const res = await axios.get(`${API_URL}/api/usuarios/${usuarioId}`);
 
         const dadosUsuario = res.data;
         if (dadosUsuario.data_nascimento) {
@@ -45,7 +46,7 @@ export default function Conta() {
   const salvarAlteracoes = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(`http://localhost:5000/api/usuarios/${usuarioId}`, dados);
+    await axios.put(`${API_URL}/api/usuarios/${usuarioId}`, dados);
       toast.success("✅ Dados atualizados com sucesso!", {
         position: "top-right",
         autoClose: 3000,

@@ -13,7 +13,8 @@ export default function Chat() {
 
   const [params] = useSearchParams();
   const destinatarioIdParam = params.get("id");
-  const API_URL = "http://localhost:5000";
+ const API_URL = import.meta.env.VITE_API_URL;
+
 
   const [conversas, setConversas] = useState([]);
   const [destinatario, setDestinatario] = useState(null);

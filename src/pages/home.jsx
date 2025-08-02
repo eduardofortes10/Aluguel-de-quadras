@@ -15,6 +15,7 @@ export default function Home() {
   const [mostrarCookies, setMostrarCookies] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [tipoSelecionado, setTipoSelecionado] = useState("Todos");
+  const API_URL = import.meta.env.VITE_API_URL;
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0); // Simulado, pode vir do backend no futuro
   const [sliderRef] = useKeenSlider({
   loop: true,
@@ -31,7 +32,7 @@ useEffect(() => {
 
   const buscarTodasNotificacoes = () => {
     axios
-      .get(`http://localhost:5000/api/notificacoes/${usuario.id}`)
+  .get(`${API_URL}/api/notificacoes/${usuario.id}`)
       .then((res) => {
         const total = res.data?.length || 0;
         setNotificacoesNaoLidas(total);

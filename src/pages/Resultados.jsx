@@ -8,11 +8,13 @@ export default function Resultados() {
   const { state: filtros } = useLocation();
   const [quadrasFiltradas, setQuadrasFiltradas] = useState([]);
   const navigate = useNavigate();
+const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const buscarQuadras = async () => {
       try {
-        const response = await axios.post("http://localhost:5000/api/quadras/imagens", filtros);
+      const response = await axios.post(`${API_URL}/api/quadras/imagens`, filtros);
+
         setQuadrasFiltradas(response.data);
       } catch (error) {
         console.error("Erro ao buscar quadras filtradas:", error);

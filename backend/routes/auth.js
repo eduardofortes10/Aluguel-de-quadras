@@ -50,12 +50,14 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ erro: 'Senha incorreta' });
     }
 
-    res.json({
-      mensagem: 'Login bem-sucedido',
-      id: usuario.id,
-      nome: usuario.nome,
-      tipo_usuario: usuario.tipo_usuario
-    });
+  res.json({
+  mensagem: 'Login bem-sucedido',
+  usuario: {
+    id: usuario.id,
+    nome: usuario.nome,
+    tipo_usuario: usuario.tipo_usuario
+  }
+});
   } catch (err) {
     console.error("Erro no login:", err);
     res.status(500).json({ erro: 'Erro ao tentar fazer login' });

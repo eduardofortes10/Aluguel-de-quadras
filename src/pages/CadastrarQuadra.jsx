@@ -47,7 +47,8 @@ export default function CadastrarQuadra() {
     imagens.forEach((img) => formData.append("imagens", img));
 
     try {
-      const response = await fetch("http://localhost:5000/api/quadras", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/quadras`, {
+
         method: "POST",
         body: formData,
       });

@@ -19,6 +19,8 @@ import {
 import MobileNav from "../components/MobileNav";
 
 export default function QuadraDetalhe() {
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const navigate = useNavigate();
   const [mostrarModal, setMostrarModal] = useState(false);
   const [dataAluguel, setDataAluguel] = useState("");
@@ -60,7 +62,8 @@ const [observacoes, setObservacoes] = useState("");
   console.log("📦 Enviando favorito:", dadosFavorito);
 
   try {
-    const resposta = await fetch("http://localhost:5000/api/favoritos", {
+   const resposta = await fetch(`${API_URL}/api/favoritos`, {
+
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(dadosFavorito),
@@ -88,7 +91,7 @@ const [observacoes, setObservacoes] = useState("");
 
   // Atualizar contador de notificações não lidas
   try {
-    const res = await fetch(`http://localhost:5000/api/notificacoes/nao-lidas/${usuario_id}`);
+    const res = await fetch(`${API_URL}/api/notificacoes/nao-lidas/${usuario_id}`);
     const dados = await res.json();
     console.log("🔄 Atualizando contador de notificações:", dados.total);
     // Aqui você pode usar Context ou estado global depois
@@ -344,7 +347,8 @@ useEffect(() => {
           onClick={async () => {
             const usuario_id = Number(localStorage.getItem("usuario_id"));
             try {
-              const resposta = await fetch("http://localhost:5000/api/alugueis", {
+              const resposta = await fetch(`${API_URL}/api/alugueis`, {
+
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

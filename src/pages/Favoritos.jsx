@@ -15,7 +15,8 @@ export default function Favoritos() {
 
   console.log("🔍 Buscando favoritos do usuário:", usuario_id);
 
-  fetch(`http://localhost:5000/api/favoritos/${usuario_id}`)
+  fetch(`${import.meta.env.VITE_API_URL}/api/favoritos/${usuario_id}`)
+
     .then((res) => res.json())
     .then((data) => {
       console.log("✅ Dados recebidos:", data);
@@ -31,7 +32,7 @@ export default function Favoritos() {
 
   const removerFavorito = async (id) => {
     try {
-      await fetch(`http://localhost:5000/api/favoritos/${id}`, {
+   await fetch(`${import.meta.env.VITE_API_URL}/api/favoritos/${id}`, {
         method: "DELETE",
       });
       setFavoritos(favoritos.filter((q) => q.id !== id));

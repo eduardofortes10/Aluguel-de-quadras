@@ -9,6 +9,8 @@ import { toast } from "react-hot-toast";
 export default function HomeLocador() {
   const [quadras, setQuadras] = useState([]);
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL;
+
 
   useEffect(() => {
     const usuario = JSON.parse(localStorage.getItem("usuario"));
@@ -19,7 +21,7 @@ export default function HomeLocador() {
       return;
     }
 
-    fetch(`http://localhost:5000/api/quadras?dono_id=${usuario.id}`)
+    fetch(`${API_URL}/api/quadras?dono_id=${usuario.id}`)
       .then((res) => res.json())
       .then((data) => {
         console.log("📥 Quadras recebidas:", data);
@@ -44,7 +46,7 @@ export default function HomeLocador() {
     if (!window.confirm("Tem certeza que deseja excluir esta quadra?")) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/quadras/${id}`, {
+      const response = await fetch(`${API_URL}/api/quadras/${id}`, {
         method: "DELETE",
       });
 
@@ -102,7 +104,7 @@ export default function HomeLocador() {
               }
 
               if (imagens.length > 0) {
-                imagemUrl = `http://localhost:5000${imagens[0]}`;
+                imagemUrl = `${API_URL}${imagens[0]}`;
               }
 
               return (

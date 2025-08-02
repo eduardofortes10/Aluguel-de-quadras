@@ -4,6 +4,7 @@ import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
 export default function Privacidade() {
   const [authMethod, setAuthMethod] = useState("email");
+const API_URL = import.meta.env.VITE_API_URL;
 
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">

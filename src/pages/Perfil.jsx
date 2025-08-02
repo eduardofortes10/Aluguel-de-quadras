@@ -12,6 +12,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Perfil() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function Perfil() {
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (usuario?.id) {
       axios
-        .get(`/api/fotos-perfil/${usuario.id}`)
+        .get(`${API_URL}/api/fotos-perfil/${usuario.id}`)
         .then((res) => setImagemPerfil(res.data?.imagem_url))
         .catch(() => {});
     }
@@ -57,7 +58,8 @@ export default function Perfil() {
     );
 
     try {
-      await axios.post("/api/fotos-perfil/upload", formData);
+     await axios.post(`${API_URL}/api/fotos-perfil/upload`, formData);
+
       window.location.reload();
     } catch (error) {
       console.error("Erro ao enviar imagem:", error);

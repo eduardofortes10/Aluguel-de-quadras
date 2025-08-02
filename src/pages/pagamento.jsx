@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
 export default function Pagamento() {
+  const API_URL = import.meta.env.VITE_API_URL;
+
   return (
     <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
        {/* Sidebar sempre visível em desktop, oculta no mobile por padrão (ajuste se tiver menu mobile) */}

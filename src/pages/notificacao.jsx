@@ -16,6 +16,7 @@ import axios from "axios";
 
 export default function Notificacoes() {
   const [notificacoes, setNotificacoes] = useState([]);
+const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const userId = localStorage.getItem("usuario_id");
@@ -25,7 +26,7 @@ export default function Notificacoes() {
 
     const buscarNotificacoes = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/notificacoes/${userId}`);
+        const res = await axios.get(`${API_URL}/api/notificacoes/${userId}`);
      console.log("🔔 Notificações recebidas do backend:", res.data);
 setNotificacoes(res.data);
 
@@ -48,7 +49,7 @@ setNotificacoes(res.data);
 
 const excluirNotificacao = async (id) => {
   try {
-    await axios.delete(`http://localhost:5000/api/notificacoes/${id}`);
+    await axios.delete(`${API_URL}/api/notificacoes/${id}`);
     setNotificacoes((prev) => prev.filter((n) => n.id !== id));
     toast.success("Notificação excluída com sucesso!");
   } catch (error) {

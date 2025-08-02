@@ -13,7 +13,12 @@ const fotosPerfilRoutes = require('./routes/fotosPerfil');
 const notificacoesRoutes = require('./routes/notificacoes');
 const usuariosRoutes = require('./routes/usuarios');
 // Middlewares
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:5173", "https://aluguel-de-quadras.netlify.app", "https://aluguel-de-quadras.onrender.com"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Rotas principais

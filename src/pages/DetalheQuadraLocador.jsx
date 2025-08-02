@@ -4,6 +4,7 @@ import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import "keen-slider/keen-slider.min.css";
 import { useKeenSlider } from "keen-slider/react";
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function DetalheQuadraLocador() {
   const { id } = useParams();
@@ -30,7 +31,8 @@ export default function DetalheQuadraLocador() {
   }, []);
 
   useEffect(() => {
-    fetch(`http://localhost:5000/api/quadras/${id}`)
+    fetch(`${API_URL}/api/quadras/${id}`)
+
       .then((res) => res.json())
       .then((data) => {
         setQuadra(data); // imagens já vêm tratadas do backend
@@ -83,7 +85,7 @@ export default function DetalheQuadraLocador() {
                 >
                   <img
                     onClick={() => setImagemSelecionada(url)}
-                    src={`http://localhost:5000${url}`}
+                    src={`${API_URL}${url}`}
                     className="w-full h-full object-cover rounded-xl shadow-2xl cursor-pointer"
                     alt={`Quadra ${index + 1}`}
                   />
@@ -103,7 +105,7 @@ export default function DetalheQuadraLocador() {
                   &times;
                 </button>
                 <img
-                  src={`http://localhost:5000${imagemSelecionada}`}
+                  src={`${API_URL}${imagemSelecionada}`}
                   alt="Imagem ampliada"
                   className="w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
                 />
