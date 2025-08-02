@@ -6,10 +6,12 @@ import {
   Bell,
   ChevronDown,
 } from "lucide-react";
+import axios from "axios";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const [nomeUsuario, setNomeUsuario] = useState("Usuário");
+  const [imagemPerfil, setImagemPerfil] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,8 +19,12 @@ export default function UserDropdown() {
     if (usuario) {
       try {
         const user = JSON.parse(usuario);
-        if (user?.nome) {
-          setNomeUsuario(user.nome);
+        if (user?.nome) setNomeUsuario(user.nome);
+        if (user?.id) {
+          axios
+            .get(`/api/fotos-perfil/${user.id}`)
+            .then((res) => setImagemPerfil(res.data?.imagem_url))
+            .catch(() => {});
         }
       } catch (e) {
         console.warn("Erro ao ler usuário do localStorage:", e);
@@ -38,7 +44,11 @@ export default function UserDropdown() {
         className="flex items-center bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 shadow-md"
       >
         <img
-          src="/quadras/avatar.png"
+          src={
+            imagemPerfil
+              ? `/avatars/${imagemPerfil}`
+              : "/quadras/avatar.png"
+          }
           alt="Avatar"
           className="w-8 h-8 rounded-full mr-2 border-2 border-white shadow-sm"
         />
@@ -71,8 +81,6 @@ export default function UserDropdown() {
             <Bell className="w-4 h-4 mr-2" />
             Notificações
           </button>
-
-          
 
           <button
             onClick={handleLogout}

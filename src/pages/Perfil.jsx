@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import {
@@ -15,6 +16,8 @@ import {
 export default function Perfil() {
   const navigate = useNavigate();
   const [nomeUsuario, setNomeUsuario] = useState("Usuário");
+  const [imagemPerfil, setImagemPerfil] = useState(null);
+  const [novaImagem, setNovaImagem] = useState(null);
 
   useEffect(() => {
     const usuario = localStorage.getItem("usuario");
@@ -30,12 +33,59 @@ export default function Perfil() {
     }
   }, []);
 
+  useEffect(() => {
+    const usuario = JSON.parse(localStorage.getItem("usuario"));
+    if (usuario?.id) {
+      axios
+        .get(`/api/fotos-perfil/${usuario.id}`)
+        .then((res) => setImagemPerfil(res.data?.imagem_url))
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setNovaImagem(URL.createObjectURL(file));
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+    formData.append(
+      "usuario_id",
+      JSON.parse(localStorage.getItem("usuario")).id
+    );
+
+    try {
+      await axios.post("/api/fotos-perfil/upload", formData);
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao enviar imagem:", error);
+    }
+  };
+
   const opcoes = [
     { path: "/conta", label: "Conta", icon: <User className="w-5 h-5" /> },
-    { path: "/pagamento", label: "Pagamento", icon: <CreditCard className="w-5 h-5" /> },
-    { path: "/notificacao", label: "Notificações", icon: <Bell className="w-5 h-5" /> },
-    { path: "/privacidade", label: "Privacidade", icon: <Lock className="w-5 h-5" /> },
-    { path: "/sobre", label: "Sobre nós", icon: <Info className="w-5 h-5" /> },
+    {
+      path: "/pagamento",
+      label: "Pagamento",
+      icon: <CreditCard className="w-5 h-5" />,
+    },
+    {
+      path: "/notificacao",
+      label: "Notificações",
+      icon: <Bell className="w-5 h-5" />,
+    },
+    {
+      path: "/privacidade",
+      label: "Privacidade",
+      icon: <Lock className="w-5 h-5" />,
+    },
+    {
+      path: "/sobre",
+      label: "Sobre nós",
+      icon: <Info className="w-5 h-5" />,
+    },
   ];
 
   const handleLogout = () => {
@@ -53,14 +103,26 @@ export default function Perfil() {
       <div className="flex-1 px-4 pt-4 pb-20 md:pl-20">
         {/* Header com fundo e avatar */}
         <div className="relative bg-gradient-to-br from-green-500 to-green-700 rounded-b-3xl py-8 text-white text-center shadow-md">
-          <div className="w-24 h-24 md:w-28 md:h-28 mx-auto rounded-full border-4 border-white bg-white overflow-hidden shadow-lg">
+          <div className="relative w-24 h-24 md:w-28 md:h-28 mx-auto rounded-full border-4 border-white bg-white overflow-hidden shadow-lg group">
             <img
-              src="/quadras/avatar.png"
+              src={
+                novaImagem
+                  ? novaImagem
+                  : imagemPerfil
+                  ? `/avatars/${imagemPerfil}`
+                  : "/quadras/avatar.png"
+              }
               alt="Avatar"
               className="object-cover w-full h-full"
             />
+            <label className="absolute inset-0 bg-black bg-opacity-30 text-white text-xs md:text-sm flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition">
+              Trocar
+              <input type="file" className="hidden" onChange={handleUpload} />
+            </label>
           </div>
-          <h1 className="mt-4 text-xl md:text-2xl font-semibold">{nomeUsuario}</h1>
+          <h1 className="mt-4 text-xl md:text-2xl font-semibold">
+            {nomeUsuario}
+          </h1>
         </div>
 
         {/* Botões com opções */}
