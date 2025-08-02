@@ -5,6 +5,9 @@ import UserDropdown from "../components/DropdownUser";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { enviarNotificacao } from "../services/notificacoes";
+import { useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+
 import {
   FaStar,
   FaEnvelope,
@@ -16,6 +19,7 @@ import {
 import MobileNav from "../components/MobileNav";
 
 export default function QuadraDetalhe() {
+  const navigate = useNavigate();
   const [mostrarModal, setMostrarModal] = useState(false);
   const [dataAluguel, setDataAluguel] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
@@ -27,11 +31,17 @@ const [valorTotal, setValorTotal] = useState(0);
 const [duracaoHoras, setDuracaoHoras] = useState(0);
 const [observacoes, setObservacoes] = useState("");
 
+
   if (!quadra) return <div className="p-4">Quadra não encontrada.</div>;
 
 
   const handleFavoritar = async () => {
   const usuario_id = Number(localStorage.getItem("usuario_id"));
+  const usuario = {
+  id: Number(usuario_id),
+  tipo: localStorage.getItem("usuario_tipo"),
+};
+
   if (!usuario_id || usuario_id === 0) {
     alert("Você precisa estar logado para favoritar quadras.");
     return;
@@ -192,7 +202,22 @@ useEffect(() => {
               <div className="ml-auto flex gap-3 text-green-700 text-xl">
                 <a href={`mailto:${quadra.dono.email}`}><FaEnvelope /></a>
                 <a href={`tel:${quadra.dono.telefone}`}><FaPhone /></a>
-                <Link to="/chat" title="Conversar" className="hover:text-green-900"><FaCommentDots /></Link>
+             <button
+  onClick={() => {
+    if (!quadra?.dono?.id) {
+      console.error("❌ ID do locador não encontrado:", quadra?.dono);
+      alert("Erro: ID do dono da quadra não encontrado.");
+      return;
+    }
+    navigate(`/chat?id=${quadra.dono.id}`);
+  }}
+  className="hover:text-green-900"
+  title="Conversar"
+>
+  <FaCommentDots />
+</button>
+
+
               </div>
             </div>
           </div>

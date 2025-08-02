@@ -8,10 +8,11 @@ export const quadrasCarrossel = [
     avaliacao: 4.7,
     tipo: "Society",
     dono: {
-      nome: "Carlos Almeida",
-      foto: "https://i.imgur.com/ZvWYkBa.png",
-      email: "carlos@email.com",
-      telefone: "(11) 99999-1111"
+    id: 2, 
+      nome: "Vasco Silva",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "vasco1@gmail.com",
+      telefone: "(47) 99999-9999"
     }
   },
   {
@@ -23,6 +24,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Futsal",
     dono: {
+      id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -38,6 +40,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Society",
     dono: {
+      id: 2, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -68,6 +71,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Golfe",
     dono: {
+      id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -83,6 +87,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Golfe",
     dono: {
+      id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -98,6 +103,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Futebol",
     dono: {
+      id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -113,6 +119,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Futebol",
     dono: {
+      id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -128,6 +135,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Tênis",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -143,6 +151,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Poliesportiva",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -158,6 +167,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Tênis",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -173,6 +183,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Tênis",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -188,6 +199,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Society",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -203,6 +215,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Tênis",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -218,6 +231,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Tênis",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -233,6 +247,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Vôlei",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -248,6 +263,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Vôlei",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -262,6 +278,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Vôlei",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -276,6 +293,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Basquete",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -290,6 +308,7 @@ export const quadrasCarrossel = [
     avaliacao: 4.9,
     tipo: "Basquete",
     dono: {
+       id: 6, 
       nome: "Luciana Prado",
       foto: "https://i.imgur.com/XZ0yU1w.png",
       email: "luciana@email.com",
@@ -308,9 +327,10 @@ export const quadras = [
     avaliacao: 4.6,
     tipo: "Poliesportiva",
     dono: {
-      nome: "Paulo Scholl",
+       id: 2, 
+      nome: "Vasco Silva",
       foto: "https://i.imgur.com/XZ0yU1w.png",
-      email: "paulo@email.com",
+      email: "vasco1@gmail.com",
       telefone: "(47) 99999-9999"
     }
   },
@@ -323,10 +343,11 @@ export const quadras = [
     avaliacao: 4.1,
     tipo: "Poliesportiva",
     dono: {
-      nome: "Dono Genérico",
-      foto: "https://i.imgur.com/ZvWYkBa.png",
-      email: "dono@email.com",
-      telefone: "(47) 98888-8888"
+      id: 2, 
+      nome: "Vasco Silva",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "vasco1@gmail.com",
+      telefone: "(47) 99999-9999"
     }
   },
   {
@@ -338,10 +359,11 @@ export const quadras = [
     avaliacao: 4.1,
     tipo: "Golfe",
     dono: {
-      nome: "Dono Genérico",
-      foto: "https://i.imgur.com/ZvWYkBa.png",
-      email: "dono@email.com",
-      telefone: "(47) 98888-8888"
+    id: 2, 
+      nome: "Vasco Silva",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "vasco1@gmail.com",
+      telefone: "(47) 99999-9999"
     }
   },
   {
@@ -353,10 +375,11 @@ export const quadras = [
     avaliacao: 4.1,
     tipo: "Society",
     dono: {
-      nome: "Dono Genérico",
-      foto: "https://i.imgur.com/ZvWYkBa.png",
-      email: "dono@email.com",
-      telefone: "(47) 98888-8888"
+    id: 2, 
+      nome: "Vasco Silva",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "vasco1@gmail.com",
+      telefone: "(47) 99999-9999"
     }
   },
   {
@@ -368,10 +391,11 @@ export const quadras = [
     avaliacao: 3.1,
     tipo: "Poliesportiva",
     dono: {
-      nome: "Dono Genérico",
-      foto: "https://i.imgur.com/ZvWYkBa.png",
-      email: "dono@email.com",
-      telefone: "(47) 98888-8888"
+      id: 2, 
+      nome: "Vasco Silva",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "vasco1@gmail.com",
+      telefone: "(47) 99999-9999"
     }
   },
   {
@@ -383,10 +407,11 @@ export const quadras = [
     avaliacao: 4.2,
     tipo: "tênis",
     dono: {
-      nome: "Dono Genérico",
-      foto: "https://i.imgur.com/ZvWYkBa.png",
-      email: "dono@email.com",
-      telefone: "(47) 98888-8888"
+     id: 2, 
+      nome: "Vasco Silva",
+      foto: "https://i.imgur.com/XZ0yU1w.png",
+      email: "vasco1@gmail.com",
+      telefone: "(47) 99999-9999"
     }
   }
 ];
