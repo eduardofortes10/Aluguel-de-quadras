@@ -121,5 +121,19 @@ router.delete("/mensagens/:id", async (req, res) => {
     res.status(500).json({ erro: "Erro ao excluir mensagem." });
   }
 });
+// Deletar uma conversa por ID
+// ✅ Correto:
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query('DELETE FROM mensagens WHERE conversa_id = ?', [id]); // remove mensagens primeiro
+    await db.query('DELETE FROM conversas WHERE id = ?', [id]);
+    res.sendStatus(204); // sucesso, sem conteúdo
+  } catch (err) {
+    console.error("Erro ao deletar conversa:", err);
+    res.status(500).json({ error: "Erro ao deletar conversa" });
+  }
+});
+
 
 module.exports = router;

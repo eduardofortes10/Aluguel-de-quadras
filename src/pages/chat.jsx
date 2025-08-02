@@ -21,9 +21,22 @@ export default function Chat() {
   const [novaMensagem, setNovaMensagem] = useState("");
   const mensagensRef = useRef(null);
   const [menuAbertoId, setMenuAbertoId] = useState(null);
+  const [filtro, setFiltro] = useState("");
 
+const excluirConversa = async (conversaId) => {
+  try {
+    await axios.delete(`${API_URL}/api/conversas/${conversaId}`);
+    toast.success("Conversa excluída com sucesso");
+    setDestinatario(null);
+    carregarContatos();
+  } catch (err) {
+    toast.error("Erro ao excluir conversa");
+  }
+};
+
+const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/conversas/ultimas/${usuarioId}`)
+    axios.get(`${API_URL}/api/conversas/ultimas/${usuarioId}`)
       .then(res => setConversas(res.data))
       .catch(err => console.error(err));
   }, [usuarioId]);
@@ -35,12 +48,11 @@ export default function Chat() {
         .catch(err => console.error(err));
     }
   }, [destinatario]);
-
-  const formatarData = (dataString) => {
-    const data = new Date(dataString);
-    return data.toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' });
-  };
-
+useEffect(() => {
+  const handleResize = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener("resize", handleResize);
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
   useEffect(() => {
     if (!usuario?.id || !destinatarioIdParam) return;
     const iniciarConversa = async () => {
@@ -176,89 +188,172 @@ export default function Chat() {
     }
   };
 
-  return (
-    <div className="flex bg-gray-100 min-h-screen pb-16 md:pb-0">
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-      <MobileNav />
-      <div className="flex-1 md:ml-64 flex flex-col md:flex-row">
-        {!destinatario || window.innerWidth >= 768 ? (
-          <div className="w-full md:w-1/3 border-r bg-white p-4 overflow-y-auto max-h-[calc(100dvh-80px)]">
-            <h2 className="text-lg font-semibold mb-4">Conversas</h2>
-            {conversas.length === 0 && <p className="text-gray-500">Nenhuma conversa iniciada.</p>}
-            {conversas.map((c) => (
-              <button
+  const formatarDataMensagem = (dataString) => {
+    const data = new Date(dataString);
+    const hoje = new Date();
+    const ontem = new Date();
+    ontem.setDate(hoje.getDate() - 1);
+    if (data.toDateString() === hoje.toDateString()) return "Hoje";
+    if (data.toDateString() === ontem.toDateString()) return "Ontem";
+    return data.toLocaleDateString("pt-BR");
+  };
+
+ return (
+  <div className="flex bg-gray-100 min-h-screen pb-16 md:pb-0">
+    <div className="hidden md:block">
+      <Sidebar />
+    </div>
+    <MobileNav />
+    <div className="flex-1 md:ml-64 flex flex-col md:flex-row">
+      {!destinatario || window.innerWidth >= 768 ? (
+        <div className="w-full md:w-1/3 border-r bg-white p-4 overflow-y-auto max-h-[calc(100dvh-80px)]">
+          <h2 className="text-lg font-semibold mb-4">Conversas</h2>
+          <input
+            type="text"
+            placeholder="Buscar por nome..."
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+            className="w-full mb-4 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
+          />
+          {conversas
+            .filter(c =>
+              c.nome.toLowerCase().includes(filtro.toLowerCase())
+            )
+            .map((c) => (
+              <div
                 key={c.conversa_id}
+                className={`group relative block w-full text-left px-4 py-3 rounded-lg mb-3 shadow-sm transition cursor-pointer
+                  ${
+                    destinatario?.conversa_id === c.conversa_id
+                      ? "bg-green-100 font-bold border-l-4 border-green-600"
+                      : "hover:bg-gray-50"
+                  }
+                `}
                 onClick={() => {
                   setDestinatario(c);
                   carregarMensagens(c.conversa_id);
                 }}
-                className={`block w-full text-left px-4 py-3 rounded-lg mb-2 shadow-sm transition ${
-                  destinatario?.conversa_id === c.conversa_id
-                    ? "bg-green-100 font-bold border-l-4 border-green-600"
-                    : "hover:bg-gray-50"
-                }`}
-              >
-                <div className="font-medium text-gray-800 truncate">{c.nome}</div>
-                <p className="text-sm text-gray-500 truncate">{c.ultima_mensagem}</p>
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="flex-1 flex flex-col bg-white h-[calc(100dvh-96px)] md:h-auto">
-          {destinatario && (
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-white md:hidden">
-              <button onClick={() => setDestinatario(null)} className="text-green-600 text-sm">← Voltar</button>
-              <h3 className="font-semibold text-base text-gray-800 truncate">{destinatario?.nome}</h3>
-            </div>
-          )}
-
-          <div className="flex-grow overflow-y-auto p-4 mb-16 md:mb-0" ref={mensagensRef}>
-            {mensagens.map((msg) => (
-              <div
-                key={msg.id}
-                className={`mb-3 px-4 py-3 rounded-2xl shadow max-w-xs sm:max-w-sm ${
-                  msg.autor_id === usuario.id
-                    ? "bg-green-500 text-white ml-auto rounded-br-none"
-                    : "bg-gray-100 text-gray-800 rounded-bl-none"
-                }`}
               >
                 <div className="flex justify-between items-center">
-                  <span className="break-words max-w-[220px]">{msg.mensagem}</span>
-                  {msg.autor_id === usuario.id && (
-                    <div className="relative ml-2">
-                      <FaEllipsisV
-                        className="cursor-pointer text-white/80 hover:text-white"
-                        onClick={() =>
-                          setMenuAbertoId(menuAbertoId === msg.id ? null : msg.id)
-                        }
-                      />
-                      {menuAbertoId === msg.id && (
-                        <div className="absolute right-0 mt-1 bg-white border rounded shadow-md z-10">
-                          <button
-                            onClick={() => excluirMensagem(msg.id)}
-                            className="flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-100 w-full"
-                          >
-                            <FaTrash className="mr-2" /> Excluir
-                          </button>
-                        </div>
+                  <div>
+                    <div className="font-medium text-gray-800 truncate">{c.nome}</div>
+                    <p className="text-sm text-gray-500">
+                      {c.ultima_mensagem || "Mensagem vazia"}
+                      {c.data_envio && (
+                        <span className="ml-2 text-xs text-gray-400">
+                          {formatarHora(c.data_envio)}
+                        </span>
                       )}
-                    </div>
-                  )}
-                </div>
-                <div className="text-xs text-white/80 mt-1">
-                  {formatarHora(msg.data_envio)}
-                  {msg.autor_id === usuario.id && msg.lida && (
-                    <span className="text-green-200 ml-2">✓ Visto</span>
-                  )}
+                    </p>
+                  </div>
+                  <div className="relative">
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      setMenuAbertoId(menuAbertoId === c.conversa_id ? null : c.conversa_id);
+    }}
+    className="text-gray-600 hover:text-gray-900 p-2 rounded-full"
+  >
+    <FaEllipsisV />
+  </button>
+
+  {menuAbertoId === c.conversa_id && (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="absolute right-0 mt-2 w-36 bg-white border rounded-md shadow-lg z-20"
+    >
+      <button
+        onClick={() => excluirConversa(c.conversa_id)}
+        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+      >
+        Excluir conversa
+      </button>
+    </div>
+  )}
+</div>
+
                 </div>
               </div>
             ))}
+          {conversas.length === 0 && (
+            <p className="text-gray-500">Nenhuma conversa iniciada.</p>
+          )}
+        </div>
+      ) : null}
+
+      <div className="flex-1 flex flex-col bg-white h-screen md:h-auto overflow-hidden">
+        {destinatario && (
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
+            <button
+              onClick={() => setDestinatario(null)}
+              className="text-green-600 text-sm hover:underline"
+            >
+              ← Voltar
+            </button>
+            <h3 className="font-semibold text-base text-gray-800 truncate">
+              {destinatario?.nome}
+            </h3>
           </div>
-          {destinatario && (
-            <div className="p-4 border-t flex bg-white fixed bottom-14 w-full md:static md:w-auto">
+        )}
+
+        {destinatario ? (
+          <>
+            <div className="flex-grow overflow-y-auto p-4 mb-24" ref={mensagensRef}>
+              {mensagens.map((msg, index) => {
+                const atual = new Date(msg.data_envio);
+                const anterior = index > 0 ? new Date(mensagens[index - 1].data_envio) : null;
+                const mudouData = !anterior || atual.toDateString() !== anterior.toDateString();
+
+                return (
+                  <React.Fragment key={msg.id}>
+                    {mudouData && (
+                      <div className="text-center text-sm text-gray-400 my-2">
+                        {formatarDataMensagem(msg.data_envio)}
+                      </div>
+                    )}
+                    <div
+                      className={`mb-3 px-4 py-3 rounded-2xl shadow max-w-xs sm:max-w-sm ${
+                        msg.autor_id === usuario.id
+                          ? "bg-green-500 text-white ml-auto rounded-br-none"
+                          : "bg-gray-100 text-gray-800 rounded-bl-none"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="break-words max-w-[220px]">{msg.mensagem}</span>
+                        {msg.autor_id === usuario.id && (
+                          <div className="relative ml-2">
+                            <FaEllipsisV
+                              className="cursor-pointer text-white/80 hover:text-white"
+                              onClick={() =>
+                                setMenuAbertoId(menuAbertoId === msg.id ? null : msg.id)
+                              }
+                            />
+                            {menuAbertoId === msg.id && (
+                              <div className="absolute right-0 mt-1 bg-white border rounded shadow-md z-10">
+                                <button
+                                  onClick={() => excluirMensagem(msg.id)}
+                                  className="flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-100 w-full"
+                                >
+                                  <FaTrash className="mr-2" /> Excluir
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-xs mt-1 text-right">
+                        {formatarHora(msg.data_envio)}
+                        {msg.autor_id === usuario.id && msg.lida && (
+                          <span className="text-green-200 ml-2">✓ Visto</span>
+                        )}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            <div className="p-4 border-t flex bg-white w-full md:static md:w-auto z-10">
               <input
                 type="text"
                 value={novaMensagem}
@@ -273,9 +368,15 @@ export default function Chat() {
                 Enviar
               </button>
             </div>
-          )}
-        </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            Selecione uma conversa para começar
+          </div>
+        )}
       </div>
     </div>
-  );
+  </div>
+);
+
 }
