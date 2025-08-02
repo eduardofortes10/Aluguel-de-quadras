@@ -1,13 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { enviarNotificacao } from "../services/notificacoes";
-import { useState } from "react";
-
-
 import {
   FaStar,
   FaEnvelope,
@@ -26,6 +23,9 @@ export default function QuadraDetalhe() {
   const { state } = useLocation();
   const quadra = state?.quadra;
   const usuario_id = localStorage.getItem("usuario_id");
+const [valorTotal, setValorTotal] = useState(0);
+const [duracaoHoras, setDuracaoHoras] = useState(0);
+const [observacoes, setObservacoes] = useState("");
 
   if (!quadra) return <div className="p-4">Quadra não encontrada.</div>;
 
@@ -87,7 +87,24 @@ export default function QuadraDetalhe() {
   }
 };
 
+useEffect(() => {
+  if (horaInicio && horaFim && quadra.preco) {
+    const [h1, m1] = horaInicio.split(":").map(Number);
+    const [h2, m2] = horaFim.split(":").map(Number);
+    const inicio = h1 * 60 + m1;
+    const fim = h2 * 60 + m2;
 
+    if (fim > inicio) {
+      const duracao = (fim - inicio) / 60;
+      setDuracaoHoras(duracao);
+      const preco = parseFloat(quadra.preco.replace("R$", "").replace("/hora", "").trim());
+      setValorTotal((duracao * preco).toFixed(2));
+    } else {
+      setDuracaoHoras(0);
+      setValorTotal(0);
+    }
+  }
+}, [horaInicio, horaFim]);
 
   return (
     <div className="relative min-h-screen w-full overflow-y-auto">
@@ -235,100 +252,119 @@ export default function QuadraDetalhe() {
 
 {/* Modal de agendamento */}
 {mostrarModal && (
-  <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4">
-    <div className="bg-white rounded-lg p-6 w-full max-w-md relative shadow-lg">
+  <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-md relative shadow-2xl animate-fade-in">
       <button
         onClick={() => setMostrarModal(false)}
-        className="absolute top-2 right-3 text-gray-500 text-2xl font-bold"
+        className="absolute top-2 right-3 text-gray-500 text-2xl font-bold hover:text-red-500 transition"
       >
         &times;
       </button>
-      <h2 className="text-xl font-semibold mb-4">Agendar Quadra</h2>
+      <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">Agendar Quadra</h2>
 
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Data</label>
+          <label className="block text-sm font-semibold text-gray-700">Data</label>
           <input
             type="date"
             value={dataAluguel}
             onChange={(e) => setDataAluguel(e.target.value)}
-            className="w-full border rounded px-3 py-2 mt-1"
+            className="w-full border rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-400"
           />
+        </div>
+
+        <div className="flex gap-3">
+          <div className="w-1/2">
+            <label className="block text-sm font-semibold text-gray-700">Hora início</label>
+            <input
+              type="time"
+              value={horaInicio}
+              onChange={(e) => setHoraInicio(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-400"
+            />
+          </div>
+          <div className="w-1/2">
+            <label className="block text-sm font-semibold text-gray-700">Hora fim</label>
+            <input
+              type="time"
+              value={horaFim}
+              onChange={(e) => setHoraFim(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 mt-1 focus:outline-none focus:ring-2 focus:ring-green-400"
+            />
+          </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700">Hora de início</label>
-          <input
-            type="time"
-            value={horaInicio}
-            onChange={(e) => setHoraInicio(e.target.value)}
-            className="w-full border rounded px-3 py-2 mt-1"
-          />
+          <label className="block text-sm font-semibold text-gray-700">Observações</label>
+          <textarea
+  placeholder="Ex: Levar bola, jogo amistoso..."
+  value={observacoes}
+  onChange={(e) => setObservacoes(e.target.value)}
+  className="w-full border rounded-lg px-3 py-2 mt-1 h-20 resize-none focus:outline-none focus:ring-2 focus:ring-green-400"
+/>
+
         </div>
+{duracaoHoras > 0 && (
+  <div className="text-center mt-2 bg-green-50 border border-green-300 rounded-xl px-4 py-2">
+    <p className="text-sm text-gray-600">
+      Duração: <span className="font-semibold">{duracaoHoras} hora(s)</span>
+    </p>
+    <p className="text-md font-bold text-green-700">
+      Total a pagar: R$ {valorTotal}
+    </p>
+  </div>
+)}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Hora de fim</label>
-          <input
-            type="time"
-            value={horaFim}
-            onChange={(e) => setHoraFim(e.target.value)}
-            className="w-full border rounded px-3 py-2 mt-1"
-          />
-        </div>
-<button
-  onClick={async () => {
-    console.log("🟢 Enviando aluguel com quadra_id:", quadra.id, "ou", quadra.quadra_id);
-    const usuario_id = Number(localStorage.getItem("usuario_id"));
-
-    // 1. Salvar no banco de dados
-    try {
-    const data_hora = `${dataAluguel} ${horaInicio}`; // Combina data e hora
-
-const resposta =await fetch("http://localhost:5000/api/alugueis", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
+        <button
+          onClick={async () => {
+            const usuario_id = Number(localStorage.getItem("usuario_id"));
+            try {
+              const resposta = await fetch("http://localhost:5000/api/alugueis", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
   quadra_id: quadra.id || quadra.quadra_id || 0,
   cliente_id: usuario_id,
   data: dataAluguel,
   hora_inicio: horaInicio,
   hora_fim: horaFim,
-  imagem_url: quadra.imagem?.split("/").pop() || "sem-imagem.png", // 🔥 ESSENCIAL!
-  nome: quadra.nome, // também útil
+  imagem_url: quadra.imagem?.split("/").pop() || "sem-imagem.png",
+  nome: quadra.nome,
+  valor_pago: valorTotal,
+  observacoes: observacoes,
 }),
 
-});
 
-      if (!resposta.ok) {
-        const erro = await resposta.json();
-        toast.error(`Erro ao alugar: ${erro.erro}`);
-        return;
-      }
-    } catch (err) {
-      console.error("❌ Erro ao salvar aluguel:", err);
-      toast.error("Erro inesperado ao salvar aluguel.");
-      return;
-    }
+              });
 
-    // 2. Enviar notificação
-    await enviarNotificacao({
-      usuario_id,
-      tipo: "aluguel",
-      mensagem: `Você alugou a quadra ${quadra.nome}`,
-    });
+              if (!resposta.ok) {
+                const erro = await resposta.json();
+                toast.error(`Erro ao alugar: ${erro.erro}`);
+                return;
+              }
 
-    toast.success("Aluguel realizado com sucesso!");
-    setMostrarModal(false);
-  }}
-  className="w-full bg-green-600 text-white mt-4 py-2 rounded hover:bg-green-700 transition"
->
-  Confirmar Aluguel
-</button>
+              await enviarNotificacao({
+                usuario_id,
+                tipo: "aluguel",
+                mensagem: `Você alugou a quadra ${quadra.nome}`,
+              });
 
+              toast.success("Aluguel realizado com sucesso!");
+              setMostrarModal(false);
+            } catch (err) {
+              console.error("❌ Erro ao salvar aluguel:", err);
+              toast.error("Erro inesperado ao salvar aluguel.");
+            }
+          }}
+          className="w-full bg-green-600 text-white font-semibold py-2 rounded-lg shadow hover:bg-green-700 transform active:scale-95 transition-all duration-200"
+        >
+          Confirmar Aluguel
+        </button>
       </div>
     </div>
   </div>
 )}
+
 
         </div>
 
