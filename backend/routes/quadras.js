@@ -260,5 +260,24 @@ if (avaliacaoMinima) {
   }
 });
 
+// backend/routes/quadras.js
+
+router.get("/minhas-quadras/:cliente_id", async (req, res) => {
+  const { cliente_id } = req.params;
+
+  try {
+    const [alugueis] = await db.execute(
+      "SELECT * FROM alugueis WHERE cliente_id = ? ORDER BY data DESC",
+      [cliente_id]
+    );
+
+    res.json(alugueis);
+  } catch (error) {
+    console.error("Erro ao buscar aluguéis:", error);
+    res.status(500).json({ erro: "Erro interno ao buscar aluguéis" });
+  }
+});
+
+
 
 module.exports = router;

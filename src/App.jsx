@@ -18,6 +18,8 @@ import CadastrarQuadra from "./pages/CadastrarQuadra";
 import Filtro from "./pages/Filtro";
 import Resultados from "./pages/Resultados";
 import DetalheQuadraLocador from "./pages/DetalheQuadraLocador";
+import MinhasQuadras from "./pages/MinhasQuadras";
+
 
 
 import { Toaster } from 'react-hot-toast';
@@ -45,6 +47,7 @@ const App = () => {
         <Route path="/filtro" element={<Filtro />} />
         <Route path="/resultados" element={<Resultados />} />
         <Route path="/quadra-locador/:id" element={<DetalheQuadraLocador />} />
+        <Route path="/minhas-quadras" element={<MinhasQuadras />} />
       </Routes>
     </>
   );

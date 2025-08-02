@@ -1,6 +1,13 @@
 import React, { useLayoutEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, Bookmark, MessageSquare, User, Plus } from "lucide-react";
+import {
+  Home,
+  Bookmark,
+  MessageSquare,
+  User,
+  Plus,
+  CalendarDays,
+} from "lucide-react";
 
 export default function MobileNav() {
   const location = useLocation();
@@ -28,19 +35,47 @@ export default function MobileNav() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-md flex justify-around items-center h-14 md:hidden z-50">
-      <Link to={homeRoute} className={`flex flex-col items-center ${active(homeRoute)}`}>
+      <Link
+        to={homeRoute}
+        className={`flex flex-col items-center ${active(homeRoute)}`}
+      >
         <Home className="w-5 h-5" />
       </Link>
 
-      <Link to={isLocador ? "/cadastrarquadra" : "/favoritos"} className={`flex flex-col items-center ${active(isLocador ? "/cadastrarquadra" : "/favoritos")}`}>
-        {isLocador ? <Plus className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
+      <Link
+        to={isLocador ? "/cadastrarquadra" : "/favoritos"}
+        className={`flex flex-col items-center ${active(
+          isLocador ? "/cadastrarquadra" : "/favoritos"
+        )}`}
+      >
+        {isLocador ? (
+          <Plus className="w-5 h-5" />
+        ) : (
+          <Bookmark className="w-5 h-5" />
+        )}
       </Link>
 
-      <Link to="/chat" className={`flex flex-col items-center ${active("/chat")}`}>
+      {/* Somente para clientes: botão "Minhas Quadras" */}
+      {!isLocador && (
+        <Link
+          to="/minhas-quadras"
+          className={`flex flex-col items-center ${active("/minhas-quadras")}`}
+        >
+          <CalendarDays className="w-5 h-5" />
+        </Link>
+      )}
+
+      <Link
+        to="/chat"
+        className={`flex flex-col items-center ${active("/chat")}`}
+      >
         <MessageSquare className="w-5 h-5" />
       </Link>
 
-      <Link to="/perfil" className={`flex flex-col items-center ${active("/perfil")}`}>
+      <Link
+        to="/perfil"
+        className={`flex flex-col items-center ${active("/perfil")}`}
+      >
         <User className="w-5 h-5" />
       </Link>
     </div>

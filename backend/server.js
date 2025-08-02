@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth');
 const quadrasRoutes = require('./routes/quadras');
 const favoritosRoutes = require('./routes/favoritos');
 const conversasRoutes = require('./routes/conversas'); // Chat
+const alugueisRoutes = require('./routes/alugueis');
 
 // Middlewares
 app.use(cors());
@@ -20,7 +21,7 @@ app.use('/api/favoritos', favoritosRoutes);
 app.use('/api/quadras', quadrasRoutes);
 app.use('/api/conversas', conversasRoutes); // Chat
 app.use('/api/notificacoes', notificacoesRoutes);
-
+app.use('/api/alugueis', alugueisRoutes);
 // Uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

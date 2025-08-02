@@ -10,6 +10,7 @@ export default function DetalheQuadraLocador() {
   const [quadra, setQuadra] = useState(null);
   const [imagemSelecionada, setImagemSelecionada] = useState(null);
   const [perView, setPerView] = useState(window.innerWidth < 640 ? 1 : 3);
+  
 
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,

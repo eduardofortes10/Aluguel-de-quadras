@@ -5,6 +5,7 @@ import UserDropdown from "../components/DropdownUser";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { enviarNotificacao } from "../services/notificacoes";
+import { useState } from "react";
 
 
 import {
@@ -18,11 +19,16 @@ import {
 import MobileNav from "../components/MobileNav";
 
 export default function QuadraDetalhe() {
+  const [mostrarModal, setMostrarModal] = useState(false);
+  const [dataAluguel, setDataAluguel] = useState("");
+  const [horaInicio, setHoraInicio] = useState("");
+  const [horaFim, setHoraFim] = useState("");
   const { state } = useLocation();
   const quadra = state?.quadra;
   const usuario_id = localStorage.getItem("usuario_id");
 
   if (!quadra) return <div className="p-4">Quadra não encontrada.</div>;
+
 
   const handleFavoritar = async () => {
   const usuario_id = Number(localStorage.getItem("usuario_id"));
@@ -203,22 +209,7 @@ export default function QuadraDetalhe() {
             <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold text-sm">
               {quadra.preco}
             </span>
-           <button
-  onClick={async () => {
-    toast.success("Aluguel realizado com sucesso!");
-
-    // Notificação de aluguel
-    await enviarNotificacao({
-      usuario_id: Number(localStorage.getItem("usuario_id")),
-      tipo: "aluguel",
-      mensagem: `Você alugou a quadra ${quadra.nome}`,
-    });
-  }}
-  className="mt-4 w-full bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
->
-  Alugar agora
-</button>
-
+ 
          </div>
 <ToastContainer
   position="top-center"
@@ -229,8 +220,118 @@ export default function QuadraDetalhe() {
   pauseOnHover
   theme="colored"
 />
+{/* Botão de ação principal */}
+<div className="mt-6 text-center">
+  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full font-bold text-sm">
+    {quadra.preco}
+  </span>
+  <button
+    onClick={() => setMostrarModal(true)}
+    className="w-full bg-green-600 text-white mt-4 py-2 rounded hover:bg-green-700 transition"
+  >
+    Alugar agora
+  </button>
+</div>
+
+{/* Modal de agendamento */}
+{mostrarModal && (
+  <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center px-4">
+    <div className="bg-white rounded-lg p-6 w-full max-w-md relative shadow-lg">
+      <button
+        onClick={() => setMostrarModal(false)}
+        className="absolute top-2 right-3 text-gray-500 text-2xl font-bold"
+      >
+        &times;
+      </button>
+      <h2 className="text-xl font-semibold mb-4">Agendar Quadra</h2>
+
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Data</label>
+          <input
+            type="date"
+            value={dataAluguel}
+            onChange={(e) => setDataAluguel(e.target.value)}
+            className="w-full border rounded px-3 py-2 mt-1"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Hora de início</label>
+          <input
+            type="time"
+            value={horaInicio}
+            onChange={(e) => setHoraInicio(e.target.value)}
+            className="w-full border rounded px-3 py-2 mt-1"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Hora de fim</label>
+          <input
+            type="time"
+            value={horaFim}
+            onChange={(e) => setHoraFim(e.target.value)}
+            className="w-full border rounded px-3 py-2 mt-1"
+          />
+        </div>
+<button
+  onClick={async () => {
+    console.log("🟢 Enviando aluguel com quadra_id:", quadra.id, "ou", quadra.quadra_id);
+    const usuario_id = Number(localStorage.getItem("usuario_id"));
+
+    // 1. Salvar no banco de dados
+    try {
+    const data_hora = `${dataAluguel} ${horaInicio}`; // Combina data e hora
+
+const resposta =await fetch("http://localhost:5000/api/alugueis", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+  quadra_id: quadra.id || quadra.quadra_id || 0,
+  cliente_id: usuario_id,
+  data: dataAluguel,
+  hora_inicio: horaInicio,
+  hora_fim: horaFim,
+  imagem_url: quadra.imagem?.split("/").pop() || "sem-imagem.png", // 🔥 ESSENCIAL!
+  nome: quadra.nome, // também útil
+}),
+
+});
+
+      if (!resposta.ok) {
+        const erro = await resposta.json();
+        toast.error(`Erro ao alugar: ${erro.erro}`);
+        return;
+      }
+    } catch (err) {
+      console.error("❌ Erro ao salvar aluguel:", err);
+      toast.error("Erro inesperado ao salvar aluguel.");
+      return;
+    }
+
+    // 2. Enviar notificação
+    await enviarNotificacao({
+      usuario_id,
+      tipo: "aluguel",
+      mensagem: `Você alugou a quadra ${quadra.nome}`,
+    });
+
+    toast.success("Aluguel realizado com sucesso!");
+    setMostrarModal(false);
+  }}
+  className="w-full bg-green-600 text-white mt-4 py-2 rounded hover:bg-green-700 transition"
+>
+  Confirmar Aluguel
+</button>
+
+      </div>
+    </div>
+  </div>
+)}
 
         </div>
+
       </div>
     </div>
   );

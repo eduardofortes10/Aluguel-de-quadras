@@ -8,6 +8,7 @@ import {
   Info,
   Plus,
   LogOut,
+  CalendarDays,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -38,6 +39,11 @@ export default function Sidebar() {
             path: "/favoritos",
             label: "Favoritos",
             icon: <Bookmark size={20} />,
+          },
+          {
+            path: "/minhas-quadras",
+            label: "Minhas Quadras",
+            icon: <CalendarDays size={20} />,
           },
         ]
       : []),
@@ -81,7 +87,7 @@ export default function Sidebar() {
             </Link>
           ))}
 
-          {/* Botão de Nova Quadra apenas para locadores */}
+          {/* Botão Nova Quadra apenas para locadores */}
           {usuario?.tipo === "locador" && (
             <Link
               to="/cadastrarquadra"
