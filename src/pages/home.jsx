@@ -133,19 +133,33 @@ useEffect(() => {
           </div>
 
           <div className="flex gap-6 mt-6 justify-center flex-wrap">
-            {[
-              { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
-              { nome: "Basquete", img: "/quadras/imagem1logo.png" },
-              { nome: "Vôlei", img: "/quadras/imagem4logo.png" },
-              { nome: "Tênis", img: "/quadras/imagem3logo.png" }
-            ].map(({ nome, img }) => (
-              <div key={nome} className="flex flex-col items-center">
-                <div className="bg-white rounded-full p-2 shadow-md hover:scale-105 transition-transform duration-200">
-                  <img src={img} alt={nome} className="w-10 h-10 object-contain" />
-                </div>
-                <span className="text-sm mt-1 capitalize text-white drop-shadow">{nome}</span>
-              </div>
-            ))}
+          {[
+  { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
+  { nome: "Basquete", img: "/quadras/imagem1logo.png" },
+  { nome: "Vôlei", img: "/quadras/imagem4logo.png" },
+  { nome: "Tênis", img: "/quadras/imagem3logo.png" }
+].map(({ nome, img }) => (
+  <div
+    key={nome}
+    onClick={() =>
+      navigate("/resultados", {
+        state: {
+          tipo: [nome],
+          precoMaximo: "",
+          avaliacaoMinima: "",
+          local: ""
+        }
+      })
+    }
+    className="flex flex-col items-center cursor-pointer"
+  >
+    <div className="bg-white rounded-full p-2 shadow-md hover:scale-105 transition-transform duration-200">
+      <img src={img} alt={nome} className="w-10 h-10 object-contain" />
+    </div>
+    <span className="text-sm mt-1 capitalize text-white drop-shadow">{nome}</span>
+  </div>
+))}
+
           </div>
         </div>
 
