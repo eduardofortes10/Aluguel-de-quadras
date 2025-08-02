@@ -7,15 +7,19 @@ const router = express.Router();
 // ✅ Registro com async/await
 router.post('/register', async (req, res) => {
   try {
-    const { nome, email, senha, tipo_usuario } = req.body;
+    const { nome, email, senha, tipo_usuario, telefone, data_nascimento } = req.body;
 
-    if (!nome || !email || !senha || !tipo_usuario) {
-      return res.status(400).json({ erro: 'Preencha todos os campos' });
-    }
+if (!nome || !email || !senha || !tipo_usuario) {
+  return res.status(400).json({ erro: 'Preencha todos os campos obrigatórios' });
+}
 
-    const hash = await bcrypt.hash(senha, 10);
-    const sql = "INSERT INTO usuarios (nome, email, senha, tipo_usuario) VALUES (?, ?, ?, ?)";
-    await db.query(sql, [nome, email, hash, tipo_usuario]);
+const hash = await bcrypt.hash(senha, 10);
+const sql = `
+  INSERT INTO usuarios (nome, email, senha, tipo_usuario, telefone, data_nascimento)
+  VALUES (?, ?, ?, ?, ?, ?)
+`;
+await db.query(sql, [nome, email, hash, tipo_usuario, telefone || null, data_nascimento || null]);
+
 
     res.json({ mensagem: 'Usuário registrado com sucesso!' });
   } catch (err) {

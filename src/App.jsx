@@ -22,6 +22,7 @@ import MinhasQuadras from "./pages/MinhasQuadras";
 
 
 
+
 import { Toaster } from 'react-hot-toast';
 const App = () => {
   return (
@@ -48,6 +49,8 @@ const App = () => {
         <Route path="/resultados" element={<Resultados />} />
         <Route path="/quadra-locador/:id" element={<DetalheQuadraLocador />} />
         <Route path="/minhas-quadras" element={<MinhasQuadras />} />
+            
+
       </Routes>
     </>
   );
