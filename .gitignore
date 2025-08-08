@@ -1,0 +1,30 @@
+# Node (geral)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Front build
+front/dist/
+dist/
+
+# Backend uploads/logs temporários
+backend/uploads/
+*.log
+
+# Ambientes
+.env
+.env.*
+front/.env
+front/.env.*
+backend/.env
+backend/.env.*
+
+# Sistemas/IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Arquivos de banco/backup locais (se tiver)
+db/*.sql
