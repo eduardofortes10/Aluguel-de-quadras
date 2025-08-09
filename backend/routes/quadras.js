@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db"); // conexão com mysql2/promise
+const db = require("../db"); 
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -90,6 +90,103 @@ router.get("/", async (req, res) => {
   }
 });
 
+/* ===== GET - Filtro usando imagens_quadras ===== */
+router.get("/imagens", async (req, res) => {
+  const { tipo, preco, avaliacao } = req.query;
+  let query = "SELECT * FROM imagens_quadras WHERE 1=1";
+  const params = [];
+
+  if (tipo && tipo.toLowerCase() !== "todos") {
+    const tipoLower = tipo.toLowerCase();
+    if (["futsal", "vôlei", "volei", "basquete"].includes(tipoLower)) {
+      query += " AND LOWER(tipo) = 'poliesportiva'";
+    } else if (tipoLower === "campo") {
+      query += " AND (LOWER(tipo) = 'futebol' OR LOWER(tipo) = 'golfe')";
+    } else {
+      query += " AND LOWER(tipo) = ?";
+      params.push(tipoLower);
+    }
+  }
+
+  if (preco) {
+    query += " AND preco <= ?";
+    params.push(Number(preco));
+  }
+
+  if (avaliacao) {
+    const avaliacoes = Array.isArray(avaliacao) ? avaliacao : [avaliacao];
+    if (avaliacoes.length > 0) {
+      query += ` AND FLOOR(avaliacao) IN (${avaliacoes.map(() => "?").join(",")})`;
+      params.push(...avaliacoes.map(Number));
+    }
+  }
+
+  try {
+    const [results] = await db.query(query, params);
+    res.json(results);
+  } catch (err) {
+    console.error("❌ Erro ao buscar quadras filtradas:", err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/* ===== POST - Filtro com tipos personalizados ===== */
+router.post("/imagens", async (req, res) => {
+  const { tipo, precoMaximo, avaliacaoMinima, local } = req.body;
+  console.log("📥 Filtros recebidos:", req.body);
+
+  const mapaTipos = {
+    Futsal: ["futsal", "poliesportiva"],
+    Basquete: ["basquete", "poliesportiva"],
+    Vôlei: ["vôlei", "poliesportiva"],
+    Poliesportiva: ["futsal", "vôlei", "basquete", "poliesportiva"],
+    Campo: ["futebol", "golfe"],
+    Tênis: ["tênis"],
+    Futebol: ["futebol"],
+    Golfe: ["golfe"]
+  };
+
+  let query = "SELECT * FROM imagens_quadras WHERE 1=1";
+  const params = [];
+
+  if (tipo && tipo.length > 0) {
+    let condicoes = [];
+    tipo.forEach((filtro) => {
+      const valores = mapaTipos[filtro] || [];
+      valores.forEach((v) => {
+        condicoes.push("LOWER(tipo) LIKE ?");
+        params.push(`%${v.toLowerCase()}%`);
+      });
+    });
+    if (condicoes.length > 0) {
+      query += " AND (" + condicoes.join(" OR ") + ")";
+    }
+  }
+
+  if (precoMaximo) {
+    query += " AND preco <= ?";
+    params.push(precoMaximo);
+  }
+
+  if (avaliacaoMinima) {
+    query += " AND avaliacao >= ?";
+    params.push(parseFloat(avaliacaoMinima));
+  }
+
+  if (local) {
+    query += " AND LOWER(local) LIKE ?";
+    params.push(`%${local.toLowerCase()}%`);
+  }
+
+  try {
+    const [results] = await db.query(query, params);
+    res.json(results);
+  } catch (err) {
+    console.error("❌ Erro ao buscar quadras filtradas:", err);
+    res.status(500).json({ error: "Erro ao buscar quadras filtradas" });
+  }
+});
+
 /* ===== GET - Detalhes de uma quadra ===== */
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
@@ -157,111 +254,5 @@ router.delete("/:id", async (req, res) => {
     res.status(500).json({ error: "Erro ao deletar quadra" });
   }
 });
-
-/* ===== GET - Filtro usando imagens_quadras ===== */
-router.get("/imagens", async (req, res) => {
-  const { tipo, preco, avaliacao } = req.query;
-  let query = "SELECT * FROM imagens_quadras WHERE 1=1";
-  const params = [];
-
-  if (tipo && tipo.toLowerCase() !== "todos") {
-    const tipoLower = tipo.toLowerCase();
-    if (["futsal", "vôlei", "volei", "basquete"].includes(tipoLower)) {
-      query += " AND LOWER(tipo) = 'poliesportiva'";
-    } else if (tipoLower === "campo") {
-      query += " AND (LOWER(tipo) = 'futebol' OR LOWER(tipo) = 'golfe')";
-    } else {
-      query += " AND LOWER(tipo) = ?";
-      params.push(tipoLower);
-    }
-  }
-
-  if (preco) {
-    query += " AND preco <= ?";
-    params.push(Number(preco));
-  }
-
-  if (avaliacao) {
-    const avaliacoes = Array.isArray(avaliacao) ? avaliacao : [avaliacao];
-    if (avaliacoes.length > 0) {
-      query += ` AND FLOOR(avaliacao) IN (${avaliacoes.map(() => "?").join(",")})`;
-      params.push(...avaliacoes.map(Number));
-    }
-  }
-
-  try {
-    const [results] = await db.query(query, params);
-    res.json(results);
-  } catch (err) {
-    console.error("❌ Erro ao buscar quadras filtradas:", err.message, err.stack);
-    res.status(500).json({ error: err.message });
-  }
-});
-// ROTA POST /api/quadras/imagens — filtro com tipos personalizados
-router.post("/imagens", async (req, res) => {
-  const { tipo, precoMaximo, avaliacaoMinima, local } = req.body;
-console.log("📥 Filtros recebidos:", req.body);
-
-  // Mapas personalizados de tipos
-  const mapaTipos = {
-    Futsal: ["futsal", "poliesportiva"],
-    Basquete: ["basquete", "poliesportiva"],
-    Vôlei: ["vôlei", "poliesportiva"],
-    Poliesportiva: ["futsal", "vôlei", "basquete", "poliesportiva"],
-    Campo: ["futebol", "golfe"],
-    Tênis: ["tênis"],
-    Futebol: ["futebol"],
-    Golfe: ["golfe"]
-  };
-
-  let query = "SELECT * FROM imagens_quadras WHERE 1=1";
-  const params = [];
-
-  // FILTRO POR TIPO
-  if (tipo && tipo.length > 0) {
-    let condicoes = [];
-    tipo.forEach((filtro) => {
-      const valores = mapaTipos[filtro] || [];
-      valores.forEach((v) => {
-        condicoes.push("LOWER(tipo) LIKE ?");
-        params.push(`%${v.toLowerCase()}%`);
-      });
-    });
-    if (condicoes.length > 0) {
-      query += " AND (" + condicoes.join(" OR ") + ")";
-    }
-  }
-
-  // PREÇO
-  if (precoMaximo) {
-    query += " AND preco <= ?";
-    params.push(precoMaximo);
-  }
-
-  // AVALIAÇÃO
-if (avaliacaoMinima) {
-  query += " AND avaliacao >= ?";
-  params.push(parseFloat(avaliacaoMinima));
-}
-
-
-  // LOCAL
-  if (local) {
-    query += " AND LOWER(local) LIKE ?";
-    params.push(`%${local.toLowerCase()}%`);
-  }
-
-  try {
-    const [results] = await db.query(query, params);
-    res.json(results);
-  } catch (err) {
-    console.error("❌ Erro ao buscar quadras filtradas:", err);
-    res.status(500).json({ error: "Erro ao buscar quadras filtradas" });
-  }
-});
-
-// backend/routes/quadras.js
-
-
 
 module.exports = router;

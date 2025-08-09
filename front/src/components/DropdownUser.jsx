@@ -1,5 +1,6 @@
-console.log('[Dropdown] build marker v5');
-import React, { useState, useEffect } from "react";
+// src/components/DropdownUser.jsx
+console.log('[Dropdown] build marker v6');
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, LogOut, Bell, ChevronDown } from "lucide-react";
 import { api } from "../services/api";
@@ -10,35 +11,48 @@ export default function UserDropdown() {
   const [imagemPerfil, setImagemPerfil] = useState(null);
   const navigate = useNavigate();
 
-  const FILES_ORIGIN = import.meta.env.VITE_FILES_ORIGIN;
+  const ORIGIN =
+    import.meta.env.VITE_FILES_ORIGIN?.replace(/\/+$/, "") ||
+    (typeof window !== "undefined" ? window.location.origin : "");
 
-  const normalize = (val) => {
-    if (!val) return null;
-    // Evita URL duplicada
-    if (val.startsWith("http")) return val;
-    return `${FILES_ORIGIN}/avatars/${val.replace(/^\/+/, "")}`;
-  };
-useEffect(() => {
-  console.log('[Drop] imagemPerfil state:', imagemPerfil);
-}, [imagemPerfil]);
+  const avatarFallback = `${ORIGIN}/avatars/default.png`;
+
+  const normalize = useCallback(
+    (val) => {
+      if (!val) return null;
+      // já é absoluta
+      if (/^https?:\/\//i.test(val)) return val;
+      // começa com / -> juntar com ORIGIN sem duplicar barras
+      if (val.startsWith("/")) return `${ORIGIN}${val}`;
+      // apenas filename ou caminho relativo -> apontar para /avatars
+      return `${ORIGIN}/avatars/${val.replace(/^\/+/, "")}`;
+    },
+    [ORIGIN]
+  );
 
   useEffect(() => {
     const usuario = localStorage.getItem("usuario");
     if (!usuario) return;
+
     try {
       const user = JSON.parse(usuario);
       if (user?.nome) setNomeUsuario(user.nome);
-      if (user?.id) {
-        api.get(`/fotos-perfil/${user.id}`)
-          .then(({ data }) => {
-            setImagemPerfil(normalize(data?.imagem_url));
-          })
-          .catch(() => {});
-      }
-    } catch {}
-  }, []);
 
-  const avatarFallback = `${FILES_ORIGIN}/avatars/default.png`;
+      if (user?.id) {
+        api
+          .get(`/fotos-perfil/${user.id}`)
+          .then(({ data }) => {
+            const url = data?.imagem_url || null;
+            setImagemPerfil(normalize(url) || avatarFallback);
+          })
+          .catch(() => setImagemPerfil(avatarFallback));
+      } else {
+        setImagemPerfil(avatarFallback);
+      }
+    } catch {
+      setImagemPerfil(avatarFallback);
+    }
+  }, [normalize]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogout = () => {
     localStorage.clear();
@@ -48,15 +62,20 @@ useEffect(() => {
   return (
     <div className="relative inline-block text-left">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((v) => !v)}
         className="flex items-center bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 shadow-md"
       >
         <img
           src={imagemPerfil || avatarFallback}
           alt="Avatar"
-          className="w-8 h-8 rounded-full mr-2 border-2 border-white shadow-sm"
+          className="w-8 h-8 rounded-full mr-2 border-2 border-white shadow-sm object-cover"
+          onError={(e) => {
+            if (e.currentTarget.src !== avatarFallback) {
+              e.currentTarget.src = avatarFallback;
+            }
+          }}
         />
-        <span className="font-medium">{nomeUsuario}</span>
+        <span className="font-medium max-w-[140px] truncate">{nomeUsuario}</span>
         <ChevronDown className="ml-1 w-4 h-4" />
       </button>
 
@@ -71,7 +90,10 @@ useEffect(() => {
           </div>
 
           <button
-            onClick={() => navigate("/perfil")}
+            onClick={() => {
+              setIsOpen(false);
+              navigate("/perfil");
+            }}
             className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
           >
             <UserIcon className="w-4 h-4 mr-2" />
@@ -79,7 +101,10 @@ useEffect(() => {
           </button>
 
           <button
-            onClick={() => navigate("/notificacao")}
+            onClick={() => {
+              setIsOpen(false);
+              navigate("/notificacao");
+            }}
             className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
           >
             <Bell className="w-4 h-4 mr-2" />
