@@ -65,41 +65,26 @@ router.post("/upload", upload.single("avatar"), async (req, res) => {
 
 // ...
 /** Busca última foto do usuário (ou default.png) */
-router.get("/:usuarioId", async (req, res) => {
+router.get("/fotos-perfil/:usuarioId", async (req, res) => {
+  const { usuarioId } = req.params;
   try {
-    const usuarioId = Number(req.params.usuarioId);
-    const ORIGIN = getOrigin(req);
+    const [rows] = await db.query(
+      "SELECT imagem_url FROM fotos_perfil WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT 1",
+      [usuarioId]
+    );
 
-    if (!usuarioId) {
-      return res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
+    if (rows.length > 0) {
+      return res.json({
+        imagem_url: `${process.env.FILES_ORIGIN}/avatars/${rows[0].imagem_url}`,
+      });
+    } else {
+      return res.json({
+        imagem_url: `${process.env.FILES_ORIGIN}/avatars/default.png`,
+      });
     }
-
-    let rows;
-    try {
-      [rows] = await db.execute(
-        "SELECT imagem_url FROM fotos_perfil WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT 1",
-        [usuarioId]
-      );
-    } catch {
-      [rows] = await db.execute(
-        "SELECT imagem_url FROM fotos_perfil WHERE usuario_id = ? ORDER BY id DESC LIMIT 1",
-        [usuarioId]
-      );
-    }
-
-    if (!rows || rows.length === 0 || !rows[0].imagem_url) {
-      return res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
-    }
-
-    // 🔒 blindagem: garante que vamos responder sempre /avatars/<arquivo>
-    const raw = String(rows[0].imagem_url || "").trim();
-    const base = path.basename(raw); // ex: "user_1754....png"
-    const full = `${ORIGIN}/avatars/${base}`;
-
-    return res.json({ imagem_url: full });
-  } catch (err) {
-    console.error("Erro ao buscar foto de perfil:", err);
-    return res.status(500).json({ erro: "Erro ao buscar foto de perfil" });
+  } catch (error) {
+    console.error("Erro ao buscar foto de perfil:", error);
+    res.status(500).json({ error: "Erro interno" });
   }
 });
 
