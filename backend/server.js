@@ -10,31 +10,39 @@ const app = express();
 // --------- CORS ----------
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://aluguel-de-quadras-xomr.vercel.app', // prod
-  /\.vercel\.app$/, // qualquer preview da Vercel
+  'https://aluguel-de-quadras-xomr.vercel.app',        // prod vercel
+  /\.vercel\.app$/,                                     // qualquer preview *.vercel.app
 ];
 
-// melhora cache do CORS em proxies/CDN
 app.use((req, res, next) => {
-  res.setHeader('Vary', 'Origin');
+  res.setHeader('Vary', 'Origin'); // para proxies/CDN
   next();
 });
 
 const corsOptions = {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // healthcheck/curl
+    if (!origin) return cb(null, true); // curl/healthcheck
     const ok = allowedOrigins.some((o) =>
       o instanceof RegExp ? o.test(origin) : o === origin
     );
-    return ok ? cb(null, true) : cb(new Error('Not allowed by CORS: ' + origin));
+    if (ok) {
+      return cb(null, true);
+    } else {
+      console.warn('[CORS] blocked origin:', origin);
+      // em vez de lançar erro (que derruba headers), retornamos false:
+      return cb(null, false);
+    }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
+
+// aplica CORS antes de tudo
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // <- SEM https://* ! Apenas '*'
+// garante preflight em qualquer rota
+app.options('*', cors(corsOptions));
 
 // --------- Body parser ----------
 app.use(express.json({ limit: '10mb' }));
