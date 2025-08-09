@@ -11,33 +11,35 @@ export default function UserDropdown() {
 
   const FILES_ORIGIN = import.meta.env.VITE_FILES_ORIGIN;
 
+  const normalize = (val) => {
+    if (!val) return null;
+    // Evita URL duplicada
+    if (val.startsWith("http")) return val;
+    return `${FILES_ORIGIN}/avatars/${val.replace(/^\/+/, "")}`;
+  };
+
   useEffect(() => {
     const usuario = localStorage.getItem("usuario");
     if (!usuario) return;
-
     try {
       const user = JSON.parse(usuario);
       if (user?.nome) setNomeUsuario(user.nome);
-
       if (user?.id) {
         api.get(`/fotos-perfil/${user.id}`)
           .then(({ data }) => {
-            const url = data?.imagem_url;
-            if (!url) return;
-            // API já pode devolver URL absoluta. Use direto.
-            setImagemPerfil(url);
+            setImagemPerfil(normalize(data?.imagem_url));
           })
           .catch(() => {});
       }
     } catch {}
   }, []);
 
+  const avatarFallback = `${FILES_ORIGIN}/avatars/default.png`;
+
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login");
   };
-
-  const avatarFallback = `${FILES_ORIGIN}/avatars/default.png`;
 
   return (
     <div className="relative inline-block text-left">

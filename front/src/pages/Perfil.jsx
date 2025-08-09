@@ -3,23 +3,24 @@ import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import {
-  User,
-  CreditCard,
-  Bell,
-  Lock,
-  Info,
-  ChevronRight,
-  LogOut,
+  User, CreditCard, Bell, Lock, Info, ChevronRight, LogOut,
 } from "lucide-react";
 import { api } from "../services/api";
 
 export default function Perfil() {
   const navigate = useNavigate();
   const [nomeUsuario, setNomeUsuario] = useState("Usuário");
-  const [imagemPerfil, setImagemPerfil] = useState(null);
+  const [imagemPerfil, setImagemPerfil] = useState(null); // sempre ABSOLUTA aqui
   const [novaPreview, setNovaPreview] = useState(null);
 
   const FILES_ORIGIN = import.meta.env.VITE_FILES_ORIGIN; // ex: https://aluguel-de-quadras.onrender.com
+
+  const normalize = (val) => {
+    if (!val) return null;
+    if (val.startsWith("http")) return val;
+    if (val.startsWith("/")) return `${FILES_ORIGIN}${val}`;
+    return `${FILES_ORIGIN}/avatars/${val}`;
+  };
 
   useEffect(() => {
     const raw = localStorage.getItem("usuario");
@@ -38,27 +39,16 @@ export default function Perfil() {
       if (!user?.id) return;
 
       api.get(`/fotos-perfil/${user.id}`)
-        .then(({ data }) => setImagemPerfil(data?.imagem_url || null))
+        .then(({ data }) => {
+          setImagemPerfil(normalize(data?.imagem_url));
+        })
         .catch(() => {});
     } catch {}
   }, []);
 
   const srcAvatar = () => {
     if (novaPreview) return novaPreview;
-
-    if (!imagemPerfil) {
-      return `${FILES_ORIGIN}/avatars/default.png`;
-    }
-
-    if (imagemPerfil.startsWith("http")) {
-      return imagemPerfil; // já é absoluta
-    }
-
-    if (imagemPerfil.startsWith("/")) {
-      return `${FILES_ORIGIN}${imagemPerfil}`; // caminho relativo do back
-    }
-
-    return `${FILES_ORIGIN}/avatars/${imagemPerfil}`; // só o nome do arquivo
+    return imagemPerfil || `${FILES_ORIGIN}/avatars/default.png`;
   };
 
   const handleUpload = async (e) => {
@@ -81,12 +71,12 @@ export default function Perfil() {
       });
 
       if (data?.imagem_url) {
-        setImagemPerfil(data.imagem_url); // absoluta
+        setImagemPerfil(normalize(data.imagem_url));
       } else if (data?.url) {
-        setImagemPerfil(`${FILES_ORIGIN}/avatars/${data.url}`);
+        setImagemPerfil(normalize(data.url));
       } else {
         const { data: got } = await api.get(`/fotos-perfil/${user.id}`);
-        setImagemPerfil(got?.imagem_url || null);
+        setImagemPerfil(normalize(got?.imagem_url));
       }
     } catch (err) {
       console.error("Erro ao enviar imagem:", err);
@@ -110,10 +100,7 @@ export default function Perfil() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
-
+      <div className="hidden md:block"><Sidebar /></div>
       <div className="flex-1 px-4 pt-4 pb-20 md:pl-20">
         <div className="relative bg-gradient-to-br from-green-500 to-green-700 rounded-b-3xl py-8 text-white text-center shadow-md">
           <div className="relative w-24 h-24 md:w-28 md:h-28 mx-auto rounded-full border-4 border-white bg-white overflow-hidden shadow-lg group">
@@ -153,7 +140,6 @@ export default function Perfil() {
           </button>
         </div>
       </div>
-
       <MobileNav />
     </div>
   );
