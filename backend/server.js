@@ -67,10 +67,12 @@ app.use('/api/notificacoes', notificacoesRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 
 // --------- Arquivos estáticos (sempre PATH, nunca URL) ----------
+// --------- Arquivos estáticos ----------
 app.use('/quadras', express.static(path.join(__dirname, 'public', 'quadras')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/avatars', express.static(path.join(__dirname, 'uploads/avatars')));
-app.use('/avatars', express.static(path.join(__dirname, 'public', 'avatars')));
+
+// ❌ remova se existir: app.use('/avatars', express.static(path.join(__dirname, 'uploads/avatars')));
+app.use('/avatars', express.static(path.join(__dirname, 'public', 'avatars'))); // ✅ mantenha só este
 
 // --------- Health ----------
 app.get('/api/health', (req, res) => {

@@ -32,11 +32,14 @@ export default function Perfil() {
     [ORIGIN]
   );
 
-  const bust = useCallback((url) => {
-    if (!url) return avatarFallback;
-    const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}t=${Date.now()}`;
-  }, [avatarFallback]);
+  const bust = useCallback(
+    (url) => {
+      if (!url) return avatarFallback;
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}t=${Date.now()}`;
+    },
+    [avatarFallback]
+  );
 
   const srcAvatar = useMemo(() => {
     if (novaPreview) return novaPreview;
@@ -61,7 +64,8 @@ export default function Perfil() {
       const user = JSON.parse(raw);
       if (!user?.id) return;
 
-      api.get(`/fotos-perfil/${user.id}`)
+      api
+        .get(`/fotos-perfil/${user.id}`)
         .then(({ data }) => {
           const url = normalize(data?.imagem_url) || avatarFallback;
           const finalUrl = bust(url);
@@ -129,7 +133,9 @@ export default function Perfil() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <div className="hidden md:block"><Sidebar /></div>
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
 
       <div className="flex-1 px-4 pt-4 pb-20 md:pl-20">
         <div className="relative bg-gradient-to-br from-green-500 to-green-700 rounded-b-3xl py-8 text-white text-center shadow-md">

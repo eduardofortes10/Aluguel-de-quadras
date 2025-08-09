@@ -65,28 +65,66 @@ router.post("/upload", upload.single("avatar"), async (req, res) => {
 
 // ...
 /** Busca última foto do usuário (ou default.png) */
-router.get("/fotos-perfil/:usuarioId", async (req, res) => {
-  const { usuarioId } = req.params;
+// Busca última foto do usuário (ou default.png)
+router.get("/:usuarioId", async (req, res) => {
   try {
-    const [rows] = await db.query(
-      "SELECT imagem_url FROM fotos_perfil WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT 1",
+    const usuarioId = Number(req.params.usuarioId);
+    const ORIGIN = getOrigin(req);
+
+    if (!usuarioId) {
+      return res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
+    }
+
+    const [rows] = await db.execute(
+      "SELECT imagem_url FROM fotos_perfil WHERE usuario_id = ? ORDER BY id DESC LIMIT 1",
       [usuarioId]
     );
 
-    if (rows.length > 0) {
-      return res.json({
-        imagem_url: `${process.env.FILES_ORIGIN}/avatars/${rows[0].imagem_url}`,
-      });
-    } else {
-      return res.json({
-        imagem_url: `${process.env.FILES_ORIGIN}/avatars/default.png`,
-      });
+    if (!rows || rows.length === 0 || !rows[0].imagem_url) {
+      return res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
     }
-  } catch (error) {
-    console.error("Erro ao buscar foto de perfil:", error);
-    res.status(500).json({ error: "Erro interno" });
+
+    const base = path.basename(String(rows[0].imagem_url || "").trim());
+    return res.json({ imagem_url: `${ORIGIN}/avatars/${base}` });
+
+  } catch (err) {
+    console.error("Erro ao buscar foto de perfil:", err);
+    return res.status(500).json({ erro: "Erro ao buscar foto de perfil" });
   }
 });
+router.get("/_debug/:usuarioId", async (req, res) => {
+  try {
+    const usuarioId = Number(req.params.usuarioId);
+    if (!usuarioId) return res.status(400).json({ erro: "usuarioId inválido" });
 
+    // pegue SEMPRE o mais recente por id
+    const [rows] = await db.execute(
+      "SELECT id, imagem_url, criado_em FROM fotos_perfil WHERE usuario_id = ? ORDER BY id DESC LIMIT 1",
+      [usuarioId]
+    );
+
+    if (!rows.length) {
+      return res.json({ hasRow: false, existsOnDisk: false, message: "Sem foto para esse usuário" });
+    }
+
+    const fileName = String(rows[0].imagem_url || "").trim();
+    const diskPath = path.join(AVATAR_DIR, path.basename(fileName));
+    const exists = fs.existsSync(diskPath);
+
+    const ORIGIN = (process.env.FILES_ORIGIN || `${(req.headers["x-forwarded-proto"] || req.protocol).split(",")[0].trim()}://${(req.headers["x-forwarded-host"] || req.get("host")).split(",")[0].trim()}`).replace(/\/+$/, "");
+    const publicUrl = `${ORIGIN}/avatars/${path.basename(fileName)}`;
+
+    return res.json({
+      hasRow: true,
+      row: rows[0],
+      diskPath,
+      existsOnDisk: exists,
+      publicUrl
+    });
+  } catch (e) {
+    console.error("DEBUG avatar error:", e);
+    res.status(500).json({ erro: "debug failed" });
+  }
+});
 
 module.exports = router;
