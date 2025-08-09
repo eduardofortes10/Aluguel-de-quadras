@@ -43,29 +43,30 @@ router.post("/upload", upload.single("avatar"), async (req, res) => {
 });
 
 // GET - Obter imagem atual (com padrão caso não exista)
-router.get("/:usuario_id", async (req, res) => {
-  const { usuario_id } = req.params;
+// backend/routes/fotosPerfil.js (trecho GET)
+router.get('/:usuario_id', async (req, res) => {
   try {
+    const { usuario_id } = req.params;
+    const ORIGIN = process.env.FILES_ORIGIN || 'https://aluguel-de-quadras.onrender.com';
+
     const [rows] = await db.execute(
       "SELECT imagem_url FROM fotos_perfil WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT 1",
       [usuario_id]
     );
 
-    if (rows.length === 0) {
-      // Retorna imagem padrão
-      return res.json({
-        imagem_url: `${process.env.VITE_FILES_ORIGIN || "https://aluguel-de-quadras.onrender.com"}/avatars/default.png`,
-      });
+    if (!rows.length || !rows[0]?.imagem_url) {
+      return res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
     }
 
-    // Retorna imagem do banco com URL completa
-    res.json({
-      imagem_url: `${process.env.VITE_FILES_ORIGIN || "https://aluguel-de-quadras.onrender.com"}/avatars/${rows[0].imagem_url}`,
-    });
+    const value = rows[0].imagem_url;
+    // se já vier absoluta, usa; senão prefixa
+    const full = value.startsWith('http') ? value : `${ORIGIN}/avatars/${value}`;
+    return res.json({ imagem_url: full });
   } catch (err) {
-    console.error("Erro ao buscar imagem:", err);
-    res.status(500).json({ erro: "Erro ao buscar imagem" });
+    console.error('Erro ao buscar foto de perfil:', err);
+    return res.status(500).json({ erro: 'Erro ao buscar foto de perfil' });
   }
 });
+
 
 module.exports = router;

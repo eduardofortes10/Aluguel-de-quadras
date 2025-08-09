@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, LogOut, Bell, ChevronDown } from "lucide-react";
-import { api } from "../services/api"; // << usa a instância com baseURL
+import { api } from "../services/api";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,7 +9,7 @@ export default function UserDropdown() {
   const [imagemPerfil, setImagemPerfil] = useState(null);
   const navigate = useNavigate();
 
-  const FILES_ORIGIN = import.meta.env.VITE_FILES_ORIGIN; // ex: https://aluguel-de-quadras.onrender.com
+  const FILES_ORIGIN = import.meta.env.VITE_FILES_ORIGIN;
 
   useEffect(() => {
     const usuario = localStorage.getItem("usuario");
@@ -20,26 +20,16 @@ export default function UserDropdown() {
       if (user?.nome) setNomeUsuario(user.nome);
 
       if (user?.id) {
-        // usa a API com baseURL correta (Render)
-        api
-          .get(`/fotos-perfil/${user.id}`)
-          .then((res) => {
-            const url = res.data?.imagem_url;
+        api.get(`/fotos-perfil/${user.id}`)
+          .then(({ data }) => {
+            const url = data?.imagem_url;
             if (!url) return;
-
-            // se o backend já devolve URL absoluta, usa direto
-            // se vier só o nome do arquivo, monta a URL completa
-            const finalUrl = url.startsWith("http")
-              ? url
-              : `${FILES_ORIGIN}/avatars/${url}`;
-
-            setImagemPerfil(finalUrl);
+            // API já pode devolver URL absoluta. Use direto.
+            setImagemPerfil(url);
           })
           .catch(() => {});
       }
-    } catch (e) {
-      console.warn("Erro ao ler usuário do localStorage:", e);
-    }
+    } catch {}
   }, []);
 
   const handleLogout = () => {
@@ -47,7 +37,7 @@ export default function UserDropdown() {
     navigate("/login");
   };
 
-  const avatarFallback = `${FILES_ORIGIN}/avatars/default.png`; // garanta esse arquivo no backend/public/avatars
+  const avatarFallback = `${FILES_ORIGIN}/avatars/default.png`;
 
   return (
     <div className="relative inline-block text-left">
