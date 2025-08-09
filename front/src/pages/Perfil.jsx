@@ -1,5 +1,5 @@
 // src/pages/Perfil.jsx
-console.log('[Perfil] build marker v6');
+console.log('[Perfil] build marker v7');
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -10,7 +10,7 @@ import { api } from "../services/api";
 export default function Perfil() {
   const navigate = useNavigate();
   const [nomeUsuario, setNomeUsuario] = useState("Usuário");
-  const [imagemPerfil, setImagemPerfil] = useState(null); // URL absoluta ou null
+  const [imagemPerfil, setImagemPerfil] = useState(null);
   const [novaPreview, setNovaPreview] = useState(null);
 
   const ORIGIN = useMemo(
@@ -32,6 +32,12 @@ export default function Perfil() {
     [ORIGIN]
   );
 
+  const bust = useCallback((url) => {
+    if (!url) return avatarFallback;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}t=${Date.now()}`;
+  }, [avatarFallback]);
+
   const srcAvatar = useMemo(() => {
     if (novaPreview) return novaPreview;
     return imagemPerfil || avatarFallback;
@@ -47,7 +53,7 @@ export default function Perfil() {
     } catch {}
   }, []);
 
-  // busca foto de perfil atual
+  // busca foto
   useEffect(() => {
     const raw = localStorage.getItem("usuario");
     if (!raw) return;
@@ -55,23 +61,24 @@ export default function Perfil() {
       const user = JSON.parse(raw);
       if (!user?.id) return;
 
-      api
-        .get(`/fotos-perfil/${user.id}`)
+      api.get(`/fotos-perfil/${user.id}`)
         .then(({ data }) => {
-          const url = data?.imagem_url || null;
-          setImagemPerfil(normalize(url) || avatarFallback);
+          const url = normalize(data?.imagem_url) || avatarFallback;
+          const finalUrl = bust(url);
+          setImagemPerfil(finalUrl);
+          localStorage.setItem("avatar_url", finalUrl);
+          window.dispatchEvent(new Event("avatar-updated"));
         })
         .catch(() => setImagemPerfil(avatarFallback));
     } catch {
       setImagemPerfil(avatarFallback);
     }
-  }, [normalize, avatarFallback]);
+  }, [normalize, avatarFallback, bust]);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // preview imediata
     setNovaPreview(URL.createObjectURL(file));
 
     const raw = localStorage.getItem("usuario");
@@ -88,18 +95,19 @@ export default function Perfil() {
       });
 
       const returned = data?.imagem_url || data?.url || null;
-      if (returned) {
-        setImagemPerfil(normalize(returned) || avatarFallback);
-      } else {
-        // força refresh da última imagem do banco
-        const { data: got } = await api.get(`/fotos-perfil/${user.id}`);
-        setImagemPerfil(normalize(got?.imagem_url) || avatarFallback);
-      }
-      setNovaPreview(null); // já temos a definitiva do servidor
+      const normalized = normalize(returned) || avatarFallback;
+      const finalUrl = bust(normalized);
+
+      setImagemPerfil(finalUrl);
+      setNovaPreview(null);
+
+      // sincroniza com o Dropdown e demais componentes
+      localStorage.setItem("avatar_url", finalUrl);
+      window.dispatchEvent(new Event("avatar-updated"));
     } catch (err) {
       console.error("Erro ao enviar imagem:", err);
-      // volta fallback se der erro
       setImagemPerfil(avatarFallback);
+      setNovaPreview(null);
     }
   };
 
@@ -115,6 +123,7 @@ export default function Perfil() {
     localStorage.removeItem("usuario");
     localStorage.removeItem("usuario_id");
     localStorage.removeItem("nomeUsuario");
+    localStorage.removeItem("avatar_url");
     navigate("/login");
   };
 
@@ -123,7 +132,6 @@ export default function Perfil() {
       <div className="hidden md:block"><Sidebar /></div>
 
       <div className="flex-1 px-4 pt-4 pb-20 md:pl-20">
-        {/* Cabeçalho com avatar */}
         <div className="relative bg-gradient-to-br from-green-500 to-green-700 rounded-b-3xl py-8 text-white text-center shadow-md">
           <div className="relative w-24 h-24 md:w-28 md:h-28 mx-auto rounded-full border-4 border-white bg-white overflow-hidden shadow-lg group">
             <img
@@ -144,7 +152,6 @@ export default function Perfil() {
           <h1 className="mt-4 text-xl md:text-2xl font-semibold">{nomeUsuario}</h1>
         </div>
 
-        {/* Lista de opções */}
         <div className="mt-8 space-y-4 max-w-md mx-auto px-2">
           {opcoes.map((item) => (
             <button

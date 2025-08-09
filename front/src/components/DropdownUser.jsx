@@ -1,5 +1,5 @@
 // src/components/DropdownUser.jsx
-console.log('[Dropdown] build marker v6');
+console.log('[Dropdown] build marker v7');
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, LogOut, Bell, ChevronDown } from "lucide-react";
@@ -20,39 +20,64 @@ export default function UserDropdown() {
   const normalize = useCallback(
     (val) => {
       if (!val) return null;
-      // já é absoluta
       if (/^https?:\/\//i.test(val)) return val;
-      // começa com / -> juntar com ORIGIN sem duplicar barras
       if (val.startsWith("/")) return `${ORIGIN}${val}`;
-      // apenas filename ou caminho relativo -> apontar para /avatars
       return `${ORIGIN}/avatars/${val.replace(/^\/+/, "")}`;
     },
     [ORIGIN]
   );
 
-  useEffect(() => {
-    const usuario = localStorage.getItem("usuario");
-    if (!usuario) return;
+  // adiciona cache-busting
+  const bust = useCallback((url) => {
+    if (!url) return avatarFallback;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}t=${Date.now()}`;
+  }, [avatarFallback]);
 
+  const loadFromServer = useCallback(async (id) => {
     try {
-      const user = JSON.parse(usuario);
-      if (user?.nome) setNomeUsuario(user.nome);
-
-      if (user?.id) {
-        api
-          .get(`/fotos-perfil/${user.id}`)
-          .then(({ data }) => {
-            const url = data?.imagem_url || null;
-            setImagemPerfil(normalize(url) || avatarFallback);
-          })
-          .catch(() => setImagemPerfil(avatarFallback));
-      } else {
-        setImagemPerfil(avatarFallback);
-      }
+      const { data } = await api.get(`/fotos-perfil/${id}`);
+      const url = normalize(data?.imagem_url) || avatarFallback;
+      const finalUrl = bust(url);
+      setImagemPerfil(finalUrl);
+      // opcional: sincroniza com outros componentes
+      localStorage.setItem("avatar_url", finalUrl);
     } catch {
       setImagemPerfil(avatarFallback);
     }
-  }, [normalize]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [normalize, avatarFallback, bust]);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("usuario");
+    if (!raw) return;
+    try {
+      const user = JSON.parse(raw);
+      if (user?.nome) setNomeUsuario(user.nome);
+
+      // 1) tenta pegar o que o Perfil salvou
+      const lsAvatar = localStorage.getItem("avatar_url");
+      if (lsAvatar) setImagemPerfil(lsAvatar);
+
+      // 2) busca do backend (garante consistência)
+      if (user?.id) loadFromServer(user.id);
+    } catch {
+      setImagemPerfil(avatarFallback);
+    }
+  }, [loadFromServer, avatarFallback]);
+
+  // escuta atualização vinda do Perfil.jsx
+  useEffect(() => {
+    const onUpdated = () => {
+      const lsAvatar = localStorage.getItem("avatar_url");
+      if (lsAvatar) setImagemPerfil(lsAvatar);
+    };
+    window.addEventListener("avatar-updated", onUpdated);
+    window.addEventListener("storage", onUpdated);
+    return () => {
+      window.removeEventListener("avatar-updated", onUpdated);
+      window.removeEventListener("storage", onUpdated);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -90,10 +115,7 @@ export default function UserDropdown() {
           </div>
 
           <button
-            onClick={() => {
-              setIsOpen(false);
-              navigate("/perfil");
-            }}
+            onClick={() => { setIsOpen(false); navigate("/perfil"); }}
             className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
           >
             <UserIcon className="w-4 h-4 mr-2" />
@@ -101,10 +123,7 @@ export default function UserDropdown() {
           </button>
 
           <button
-            onClick={() => {
-              setIsOpen(false);
-              navigate("/notificacao");
-            }}
+            onClick={() => { setIsOpen(false); navigate("/notificacao"); }}
             className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
           >
             <Bell className="w-4 h-4 mr-2" />
