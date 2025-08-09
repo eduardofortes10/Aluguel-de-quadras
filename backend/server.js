@@ -3,18 +3,38 @@ const cors = require('cors');
 const path = require('path');
 const app = express();
 
-// ===== Middlewares =====
-app.use(cors({
-  origin: [
-    "https://aluguel-de-quadras-xomr.vercel.app", // frontend no Vercel
-    "http://localhost:5173" // desenvolvimento local
-  ],
-  credentials: true
-}));
- // CORS liberado provisoriamente
+// ------- CORS -------
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://aluguel-de-quadras-xomr.vercel.app', // prod
+  /\.vercel\.app$/ // qualquer preview da Vercel
+];
+
+// melhora cache do CORS em proxies/CDN
+app.use((req, res, next) => {
+  res.setHeader('Vary', 'Origin');
+  next();
+});
+
+const corsOptions = {
+  origin: (origin, cb) => {
+    // requests sem Origin (ex: curl, healthcheck) - libera
+    if (!origin) return cb(null, true);
+    const ok = allowedOrigins.some((o) =>
+      o instanceof RegExp ? o.test(origin) : o === origin
+    );
+    return ok ? cb(null, true) : cb(new Error('Not allowed by CORS: ' + origin));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // responde preflight
 app.use(express.json());
 
-// ===== Rotas externas =====
+// ------- Rotas -------
 const authRoutes = require('./routes/auth');
 const quadrasRoutes = require('./routes/quadras');
 const favoritosRoutes = require('./routes/favoritos');
@@ -24,7 +44,6 @@ const fotosPerfilRoutes = require('./routes/fotosPerfil');
 const notificacoesRoutes = require('./routes/notificacoes');
 const usuariosRoutes = require('./routes/usuarios');
 
-// ===== Rotas principais =====
 app.use('/api/auth', authRoutes);
 app.use('/api/quadras', quadrasRoutes);
 app.use('/api/favoritos', favoritosRoutes);
@@ -33,29 +52,23 @@ app.use('/api/alugueis', alugueisRoutes);
 app.use('/api/fotos-perfil', fotosPerfilRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
 app.use('/api/usuarios', usuariosRoutes);
-// Servir imagens de quadras
-app.use('/quadras', express.static(path.join(__dirname, 'public', 'quadras')));
 
-// ===== Uploads =====
+// arquivos estáticos
+app.use('/quadras', express.static(path.join(__dirname, 'public', 'quadras')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/avatars', express.static(path.join(__dirname, 'uploads/avatars')));
 app.use('/avatars', express.static(path.join(__dirname, 'public', 'avatars')));
 
-// ===== Health check =====
+// health
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, env: process.env.NODE_ENV || 'dev' });
 });
 
-// ===== Tratamento de erros não tratados =====
-process.on('uncaughtException', (err) => {
-  console.error('❌ Erro não tratado:', err);
-});
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Promessa rejeitada:', err);
-});
+// errors
+process.on('uncaughtException', (err) => console.error('❌ uncaught:', err));
+process.on('unhandledRejection', (err) => console.error('❌ unhandled:', err));
 
-// ===== Inicialização =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`🚀 API on ${PORT}`);
 });
