@@ -11,7 +11,7 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
-import { api } from "../services/api"; // não precisamos mais do fileURL
+import { api } from "../services/api";
 
 export default function Perfil() {
   const navigate = useNavigate();
@@ -19,7 +19,6 @@ export default function Perfil() {
   const [imagemPerfil, setImagemPerfil] = useState(null);
   const [novaPreview, setNovaPreview] = useState(null);
 
-  // origem de arquivos estáticos (sem /api)
   const FILES_ORIGIN = import.meta.env.VITE_FILES_ORIGIN; // ex: https://aluguel-de-quadras.onrender.com
 
   // Nome do usuário
@@ -59,16 +58,16 @@ export default function Perfil() {
     }
 
     if (imagemPerfil.startsWith("http")) {
-      // já é URL absoluta
+      // já é URL absoluta (igual vem da API)
       return imagemPerfil;
     }
 
     if (imagemPerfil.startsWith("/")) {
-      // caminho relativo vindo do backend (/avatars/... ou /uploads/...)
+      // caminho relativo (/avatars/... ou /uploads/...)
       return `${FILES_ORIGIN}${imagemPerfil}`;
     }
 
-    // veio apenas o nome do arquivo
+    // veio só o nome do arquivo
     return `${FILES_ORIGIN}/avatars/${imagemPerfil}`;
   };
 
@@ -92,14 +91,12 @@ export default function Perfil() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // seu endpoint atual retorna { url: "nome-do-arquivo.png" }
-      // mas pode retornar { imagem_url: "https://..." } caso você mude
+      // seu endpoint pode retornar { imagem_url: "https://..." } OU { url: "arquivo.png" }
       if (data?.imagem_url) {
         setImagemPerfil(data.imagem_url); // já absoluta
       } else if (data?.url) {
         setImagemPerfil(`${FILES_ORIGIN}/avatars/${data.url}`);
       } else {
-        // refaz a busca pra garantir
         const { data: got } = await api.get(`/fotos-perfil/${user.id}`);
         setImagemPerfil(got?.imagem_url || null);
       }
