@@ -21,6 +21,20 @@ export default function Perfil() {
     if (val.startsWith("/")) return `${FILES_ORIGIN}${val}`;
     return `${FILES_ORIGIN}/avatars/${val}`;
   };
+useEffect(() => {
+  console.log('[Perfil] build marker v3');  // mude o número se precisar
+}, []);
+useEffect(() => {
+  console.log('[Perfil] imagemPerfil state:', imagemPerfil);
+}, [imagemPerfil]);
+
+useEffect(() => {
+  // mostre a src final que vai para o <img>
+  const src = novaPreview
+    ? novaPreview
+    : imagemPerfil || `${FILES_ORIGIN}/avatars/default.png`;
+  console.log('[Perfil] IMG SRC final:', src);
+}, [imagemPerfil, novaPreview]);
 
   useEffect(() => {
     const raw = localStorage.getItem("usuario");

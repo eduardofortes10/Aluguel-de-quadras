@@ -17,6 +17,9 @@ export default function UserDropdown() {
     if (val.startsWith("http")) return val;
     return `${FILES_ORIGIN}/avatars/${val.replace(/^\/+/, "")}`;
   };
+useEffect(() => {
+  console.log('[Drop] imagemPerfil state:', imagemPerfil);
+}, [imagemPerfil]);
 
   useEffect(() => {
     const usuario = localStorage.getItem("usuario");
