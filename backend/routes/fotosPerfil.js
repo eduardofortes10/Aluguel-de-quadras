@@ -8,9 +8,8 @@ const fs = require("fs");
 // Configuração do multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-   const dir = path.resolve(__dirname, "..", "..", "public", "avatars");
-
-    fs.mkdirSync(dir, { recursive: true }); // <-- Garante que toda a estrutura de pasta exista
+    const dir = path.resolve(__dirname, "..", "..", "public", "avatars");
+    fs.mkdirSync(dir, { recursive: true }); // Garante que a pasta exista
     cb(null, dir);
   },
   filename: (req, file, cb) => {
@@ -19,7 +18,6 @@ const storage = multer.diskStorage({
     cb(null, filename);
   },
 });
-
 
 const upload = multer({ storage });
 
@@ -44,7 +42,7 @@ router.post("/upload", upload.single("avatar"), async (req, res) => {
   }
 });
 
-// GET - Obter imagem atual
+// GET - Obter imagem atual (com padrão caso não exista)
 router.get("/:usuario_id", async (req, res) => {
   const { usuario_id } = req.params;
   try {
@@ -52,8 +50,20 @@ router.get("/:usuario_id", async (req, res) => {
       "SELECT imagem_url FROM fotos_perfil WHERE usuario_id = ? ORDER BY criado_em DESC LIMIT 1",
       [usuario_id]
     );
-    res.json(rows[0] || {});
+
+    if (rows.length === 0) {
+      // Retorna imagem padrão
+      return res.json({
+        imagem_url: `${process.env.VITE_FILES_ORIGIN || "https://aluguel-de-quadras.onrender.com"}/avatars/default.png`,
+      });
+    }
+
+    // Retorna imagem do banco com URL completa
+    res.json({
+      imagem_url: `${process.env.VITE_FILES_ORIGIN || "https://aluguel-de-quadras.onrender.com"}/avatars/${rows[0].imagem_url}`,
+    });
   } catch (err) {
+    console.error("Erro ao buscar imagem:", err);
     res.status(500).json({ erro: "Erro ao buscar imagem" });
   }
 });
