@@ -61,6 +61,10 @@ router.post("/upload", upload.single("avatar"), async (req, res) => {
 });
 
 /** Busca última foto do usuário (ou default.png) */
+// no topo já tem: const path = require("path");
+
+// ...
+/** Busca última foto do usuário (ou default.png) */
 router.get("/:usuarioId", async (req, res) => {
   try {
     const usuarioId = Number(req.params.usuarioId);
@@ -70,7 +74,6 @@ router.get("/:usuarioId", async (req, res) => {
       return res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
     }
 
-    // tenta por criado_em; se falhar (coluna inexistente), cai para ORDER BY id
     let rows;
     try {
       [rows] = await db.execute(
@@ -88,12 +91,10 @@ router.get("/:usuarioId", async (req, res) => {
       return res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
     }
 
-    const value = String(rows[0].imagem_url || "").trim();
-
-    // Aceita já absoluto (http...) OU somente o filename salvo no upload
-    const full = /^https?:\/\//i.test(value)
-      ? value
-      : `${ORIGIN}/avatars/${value.replace(/^\/+/, "")}`;
+    // 🔒 blindagem: garante que vamos responder sempre /avatars/<arquivo>
+    const raw = String(rows[0].imagem_url || "").trim();
+    const base = path.basename(raw); // ex: "user_1754....png"
+    const full = `${ORIGIN}/avatars/${base}`;
 
     return res.json({ imagem_url: full });
   } catch (err) {
@@ -101,5 +102,6 @@ router.get("/:usuarioId", async (req, res) => {
     return res.status(500).json({ erro: "Erro ao buscar foto de perfil" });
   }
 });
+
 
 module.exports = router;
