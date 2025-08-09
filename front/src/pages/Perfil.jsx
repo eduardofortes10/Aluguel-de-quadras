@@ -1,3 +1,4 @@
+console.log('[Perfil] build marker v5');
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
