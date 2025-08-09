@@ -4,7 +4,14 @@ const path = require('path');
 const app = express();
 
 // ===== Middlewares =====
-app.use(cors({ origin: true, credentials: true })); // CORS liberado provisoriamente
+app.use(cors({
+  origin: [
+    "https://aluguel-de-quadras-xomr.vercel.app", // frontend no Vercel
+    "http://localhost:5173" // desenvolvimento local
+  ],
+  credentials: true
+}));
+ // CORS liberado provisoriamente
 app.use(express.json());
 
 // ===== Rotas externas =====
