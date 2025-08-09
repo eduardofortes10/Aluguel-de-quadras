@@ -11,13 +11,16 @@ import {
   ChevronRight,
   LogOut,
 } from "lucide-react";
-import { api, fileURL } from "../services/api";
+import { api } from "../services/api"; // não precisamos mais do fileURL
 
 export default function Perfil() {
   const navigate = useNavigate();
   const [nomeUsuario, setNomeUsuario] = useState("Usuário");
-  const [imagemPerfil, setImagemPerfil] = useState(null); // pode ser "/uploads/xyz.jpg" ou nome de arquivo
+  const [imagemPerfil, setImagemPerfil] = useState(null);
   const [novaPreview, setNovaPreview] = useState(null);
+
+  // origem de arquivos estáticos (sem /api)
+  const FILES_ORIGIN = import.meta.env.VITE_FILES_ORIGIN; // ex: https://aluguel-de-quadras.onrender.com
 
   // Nome do usuário
   useEffect(() => {
@@ -46,11 +49,27 @@ export default function Perfil() {
     } catch {}
   }, []);
 
+  // Monta a src do avatar
   const srcAvatar = () => {
     if (novaPreview) return novaPreview;
-    if (imagemPerfil?.startsWith("/")) return fileURL(imagemPerfil);
-    if (imagemPerfil) return `/avatars/${imagemPerfil}`;
-    return "/quadras/avatar.png";
+
+    if (!imagemPerfil) {
+      // fallback padrão
+      return `${FILES_ORIGIN}/avatars/default.png`;
+    }
+
+    if (imagemPerfil.startsWith("http")) {
+      // já é URL absoluta
+      return imagemPerfil;
+    }
+
+    if (imagemPerfil.startsWith("/")) {
+      // caminho relativo vindo do backend (/avatars/... ou /uploads/...)
+      return `${FILES_ORIGIN}${imagemPerfil}`;
+    }
+
+    // veio apenas o nome do arquivo
+    return `${FILES_ORIGIN}/avatars/${imagemPerfil}`;
   };
 
   const handleUpload = async (e) => {
@@ -73,11 +92,14 @@ export default function Perfil() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // se a API retorna { imagem_url: "/uploads/..." }, usamos direto;
-      // senão, refaz a busca
+      // seu endpoint atual retorna { url: "nome-do-arquivo.png" }
+      // mas pode retornar { imagem_url: "https://..." } caso você mude
       if (data?.imagem_url) {
-        setImagemPerfil(data.imagem_url);
+        setImagemPerfil(data.imagem_url); // já absoluta
+      } else if (data?.url) {
+        setImagemPerfil(`${FILES_ORIGIN}/avatars/${data.url}`);
       } else {
+        // refaz a busca pra garantir
         const { data: got } = await api.get(`/fotos-perfil/${user.id}`);
         setImagemPerfil(got?.imagem_url || null);
       }
