@@ -1,276 +1,110 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Toaster, toast } from "react-hot-toast";
-import {
-  UserIcon,
-  PhoneIcon,
-  EnvelopeIcon,
-  LockClosedIcon,
-} from "@heroicons/react/24/solid";
+import { Link, useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { api } from "../services/api";
 
-function Register() {
+export default function Register() {
   const navigate = useNavigate();
 
-  const [nome, setNome] = useState("");
-  const [sobrenome, setSobrenome] = useState("");
-  const [telefone, setTelefone] = useState("");
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [confirmSenha, setConfirmSenha] = useState("");
-  const [tipo, setTipo] = useState("cliente");
-  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    nome: "",
+    email: "",
+    senha: "",
+    tipo: "cliente",
+  });
 
-  const handleRegister = async () => {
-    if (!nome || !sobrenome || !email || !senha || !confirmSenha) {
+  const [carregando, setCarregando] = useState(false);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    if (!form.nome || !form.email || !form.senha) {
       toast.error("Preencha todos os campos");
       return;
     }
-    if (senha !== confirmSenha) {
-      toast.error("As senhas não coincidem");
-      return;
-    }
-
-    const nomeCompleto = `${nome.trim()} ${sobrenome.trim()}`.trim();
-    const dados = {
-      nome: nomeCompleto,
-      email: email.trim().toLowerCase(),
-      senha,
-      tipo_usuario: tipo, // "cliente" | "locador"
-      telefone: telefone?.trim() || undefined,
-    };
 
     try {
-      setLoading(true);
-
-      const { data: resultado } = await api.post("/auth/register", dados);
-
-      // Resultado esperado: { usuario: { id, nome, tipo_usuario, ... } }
-      const u = resultado?.usuario || {
-        id: resultado?.id,
-        nome: nomeCompleto,
-        tipo_usuario: tipo,
-      };
-
-      if (!u?.id) {
-        toast.error("Resposta inesperada do servidor.");
-        return;
-      }
-
-      toast.success("Conta criada com sucesso!");
-
-      // Persistência similar ao fluxo de login
-      localStorage.setItem("usuario_id", String(u.id));
-      localStorage.setItem("nomeUsuario", u.nome);
-      localStorage.setItem(
-        "usuario",
-        JSON.stringify({
-          id: u.id,
-          nome: u.nome,
-          tipo: u.tipo_usuario,
-        })
-      );
-
-      // Redireciona pelo tipo
-      setTimeout(() => {
-        if (u.tipo_usuario === "locador") {
-          navigate("/home-locador");
-        } else {
-          navigate("/home");
-        }
-      }, 1200);
+      setCarregando(true);
+      const { data } = await api.post("/auth/register", form);
+      toast.success("Cadastro realizado com sucesso!");
+      setTimeout(() => navigate("/login"), 2000);
     } catch (err) {
       console.error("Erro no registro:", err);
-      const msg =
-        err?.response?.data?.erro ||
-        err?.response?.data?.message ||
-        "Erro ao registrar.";
-      toast.error(msg);
+      toast.error("Erro ao registrar usuário");
     } finally {
-      setLoading(false);
+      setCarregando(false);
     }
   };
 
   return (
-    <section className="flex min-h-screen">
-      <Toaster position="top-right" />
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{
+        backgroundImage: `url(${import.meta.env.VITE_FILES_ORIGIN}/quadras/logo-fundo.png)`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div className="bg-white shadow-lg rounded-lg p-8 max-w-md w-full">
+        <h2 className="text-2xl font-bold mb-6 text-center">Criar Conta</h2>
+        <form onSubmit={handleRegister}>
+          <input
+            type="text"
+            name="nome"
+            placeholder="Nome"
+            value={form.nome}
+            onChange={handleChange}
+            className="w-full p-2 mb-4 border border-gray-300 rounded"
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full p-2 mb-4 border border-gray-300 rounded"
+          />
+          <input
+            type="password"
+            name="senha"
+            placeholder="Senha"
+            value={form.senha}
+            onChange={handleChange}
+            className="w-full p-2 mb-4 border border-gray-300 rounded"
+          />
 
-      {/* LADO ESQUERDO */}
-      <div
-        className="w-2/5 bg-cover bg-center relative hidden lg:block"
-        style={{ backgroundImage: "url('/quadras/logo-fundo.png')" }}
-      >
-        <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-          <div className="text-white p-6 max-w-md">
-            <h2 className="text-3xl font-bold mb-4">QuadraFlex</h2>
-            <p>
-              Bem-vindo ao QuadraFlex! Aqui você encontra a maneira mais rápida
-              e prática de reservar quadras esportivas perto de você.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* LADO DIREITO */}
-      <div className="relative flex w-full lg:w-3/5 items-center justify-center overflow-hidden">
-        {/* Fundo animado radial verde */}
-        <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-green-400 via-green-700 to-green-900 animate-blob" />
-
-        {/* Luz suave no fundo */}
-        <div className="absolute top-[-100px] right-[-200px] w-[700px] h-[700px] bg-gradient-to-bl from-white/70 via-lime-200/40 to-transparent blur-[100px] opacity-70 z-10 pointer-events-none rounded-full rotate-[-25deg]" />
-
-        {/* Partículas flutuantes */}
-        <div className="absolute inset-0 z-20 pointer-events-none">
-          {[...Array(60)].map((_, i) => (
-            <div
-              key={i}
-              className="particle"
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 10}s`,
-                animationDuration: `${10 + Math.random() * 10}s`,
-              }}
-            />
-          ))}
-        </div>
-
-        {/* FORMULÁRIO */}
-        <div className="relative z-30 w-full max-w-3xl px-4 sm:px-8 py-8 bg-white/5 border border-white/20 backdrop-blur-xl rounded-xl shadow-xl animate-fade-in-up">
-          <h1 className="text-3xl text-white font-bold">Criar Conta</h1>
-          <p className="text-sm text-gray-200 mt-2">
-            Preencha os dados para começar a usar o QuadraFlex
-          </p>
-
-          {/* Tipo de conta */}
-          <div className="mt-6">
-            <p className="text-white font-medium mb-2">Tipo de conta</p>
-            <div className="flex gap-4">
-              {["cliente", "locador"].map((role) => (
-                <button
-                  key={role}
-                  onClick={() => setTipo(role)}
-                  className={`transition-all duration-300 px-6 py-3 rounded-lg ${
-                    tipo === role
-                      ? "bg-white text-green-800 font-bold shadow-md"
-                      : "border border-white text-white hover:bg-white/10"
-                  }`}
-                >
-                  {role === "cliente" ? "Cliente" : "Locador"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Inputs */}
-          <form
-            className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6"
-            onSubmit={(e) => e.preventDefault()}
+          <select
+            name="tipo"
+            value={form.tipo}
+            onChange={handleChange}
+            className="w-full p-2 mb-4 border border-gray-300 rounded"
           >
-            <InputField
-              label="Nome"
-              value={nome}
-              onChange={setNome}
-              icon={<UserIcon className="w-5 h-5" />}
-            />
-            <InputField
-              label="Sobrenome"
-              value={sobrenome}
-              onChange={setSobrenome}
-              icon={<UserIcon className="w-5 h-5" />}
-            />
-            <InputField
-              label="Telefone"
-              value={telefone}
-              onChange={setTelefone}
-              icon={<PhoneIcon className="w-5 h-5" />}
-            />
-            <InputField
-              label="Email"
-              value={email}
-              onChange={setEmail}
-              icon={<EnvelopeIcon className="w-5 h-5" />}
-              type="email"
-            />
-            <InputField
-              label="Senha"
-              value={senha}
-              onChange={setSenha}
-              icon={<LockClosedIcon className="w-5 h-5" />}
-              type="password"
-            />
-            <InputField
-              label="Confirmar Senha"
-              value={confirmSenha}
-              onChange={setConfirmSenha}
-              icon={<LockClosedIcon className="w-5 h-5" />}
-              type="password"
-            />
+            <option value="cliente">Cliente</option>
+            <option value="locador">Locador</option>
+          </select>
 
-            {senha !== confirmSenha && confirmSenha.length > 0 && (
-              <p className="text-red-300 text-sm mt-[-12px] md:col-span-2">
-                As senhas não coincidem.
-              </p>
-            )}
+          <button
+            type="submit"
+            disabled={carregando}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded"
+          >
+            {carregando ? "Cadastrando..." : "Cadastrar"}
+          </button>
+        </form>
 
-            {/* Botão */}
-            <button
-              type="button"
-              onClick={handleRegister}
-              className="md:col-span-2 mt-4 flex justify-center items-center gap-2 bg-[#1E8449] hover:bg-green-700 text-white px-6 py-3 rounded-lg transition-all duration-300 disabled:opacity-70"
-              disabled={loading}
-            >
-              {loading ? (
-                <span className="loader-small" />
-              ) : (
-                <>
-                  Criar conta
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </>
-              )}
-            </button>
-          </form>
-
-          <p className="text-sm text-white mt-6 text-center">
-            Já tem uma conta?
-            <Link to="/login" className="ml-1 underline hover:text-gray-200">
-              Entrar
-            </Link>
-          </p>
-        </div>
+        <p className="mt-4 text-sm text-center">
+          Já tem uma conta?{" "}
+          <Link to="/login" className="text-green-600 hover:underline">
+            Entrar
+          </Link>
+        </p>
       </div>
-    </section>
-  );
-}
-
-// Componente de input reutilizável com ícone
-function InputField({ label, value, onChange, icon, type = "text" }) {
-  return (
-    <div>
-      <label className="block text-white text-sm mb-1">{label}</label>
-      <div className="relative">
-        <span className="absolute left-3 top-3 text-gray-200">{icon}</span>
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={label}
-          className="w-full pl-10 pr-4 py-3 mt-1 text-gray-700 bg-white border rounded-lg outline-none focus:ring-2 focus:ring-green-400"
-        />
-      </div>
+      <ToastContainer />
     </div>
   );
 }
-
-export default Register;

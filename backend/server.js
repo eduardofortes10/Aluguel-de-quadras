@@ -33,6 +33,8 @@ app.use('/api/alugueis', alugueisRoutes);
 app.use('/api/fotos-perfil', fotosPerfilRoutes);
 app.use('/api/notificacoes', notificacoesRoutes);
 app.use('/api/usuarios', usuariosRoutes);
+// Servir imagens de quadras
+app.use('/quadras', express.static(path.join(__dirname, 'public', 'quadras')));
 
 // ===== Uploads =====
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
