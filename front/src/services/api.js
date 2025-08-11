@@ -9,11 +9,10 @@ const filesOrigin = (import.meta.env.VITE_FILES_ORIGIN || FILES_DEFAULT).replace
 
 export const api = axios.create({ baseURL });
 
-// ajuda de debug no navegador
 if (typeof window !== "undefined") {
   window.__API_BASE__ = baseURL;
   window.__FILES_ORIGIN__ = filesOrigin;
-  console.log("[api] baseURL =", baseURL);
+  console.log("[api] baseURL =", baseURL); // 👈 log visível no console
 }
 
 export const fileURL = (p = "") => `${filesOrigin}${p}`;
