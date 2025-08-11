@@ -1,6 +1,6 @@
 // src/components/DropdownUser.jsx
-console.log('[Dropdown] build marker v7');
-import React, { useState, useEffect, useCallback } from "react";
+console.log('[Dropdown] build marker v8');
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, LogOut, Bell, ChevronDown } from "lucide-react";
 import { api } from "../services/api";
@@ -10,6 +10,8 @@ export default function UserDropdown() {
   const [nomeUsuario, setNomeUsuario] = useState("Usuário");
   const [imagemPerfil, setImagemPerfil] = useState(null);
   const navigate = useNavigate();
+  const menuRef = useRef(null);
+  const btnRef = useRef(null);
 
   const ORIGIN =
     import.meta.env.VITE_FILES_ORIGIN?.replace(/\/+$/, "") ||
@@ -27,26 +29,31 @@ export default function UserDropdown() {
     [ORIGIN]
   );
 
-  // adiciona cache-busting
-  const bust = useCallback((url) => {
-    if (!url) return avatarFallback;
-    const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}t=${Date.now()}`;
-  }, [avatarFallback]);
+  const bust = useCallback(
+    (url) => {
+      if (!url) return avatarFallback;
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}t=${Date.now()}`;
+    },
+    [avatarFallback]
+  );
 
-  const loadFromServer = useCallback(async (id) => {
-    try {
-      const { data } = await api.get(`/fotos-perfil/${id}`);
-      const url = normalize(data?.imagem_url) || avatarFallback;
-      const finalUrl = bust(url);
-      setImagemPerfil(finalUrl);
-      // opcional: sincroniza com outros componentes
-      localStorage.setItem("avatar_url", finalUrl);
-    } catch {
-      setImagemPerfil(avatarFallback);
-    }
-  }, [normalize, avatarFallback, bust]);
+  const loadFromServer = useCallback(
+    async (id) => {
+      try {
+        const { data } = await api.get(`/fotos-perfil/${id}`);
+        const url = normalize(data?.imagem_url) || avatarFallback;
+        const finalUrl = bust(url);
+        setImagemPerfil(finalUrl);
+        localStorage.setItem("avatar_url", finalUrl); // mantém em sync com outras partes
+      } catch {
+        setImagemPerfil(avatarFallback);
+      }
+    },
+    [normalize, avatarFallback, bust]
+  );
 
+  // primeira carga: nome + avatar local + força sync do servidor
   useEffect(() => {
     const raw = localStorage.getItem("usuario");
     if (!raw) return;
@@ -54,18 +61,16 @@ export default function UserDropdown() {
       const user = JSON.parse(raw);
       if (user?.nome) setNomeUsuario(user.nome);
 
-      // 1) tenta pegar o que o Perfil salvou
       const lsAvatar = localStorage.getItem("avatar_url");
       if (lsAvatar) setImagemPerfil(lsAvatar);
 
-      // 2) busca do backend (garante consistência)
       if (user?.id) loadFromServer(user.id);
     } catch {
       setImagemPerfil(avatarFallback);
     }
   }, [loadFromServer, avatarFallback]);
 
-  // escuta atualização vinda do Perfil.jsx
+  // escuta atualizações vindas do Perfil.jsx
   useEffect(() => {
     const onUpdated = () => {
       const lsAvatar = localStorage.getItem("avatar_url");
@@ -79,6 +84,38 @@ export default function UserDropdown() {
     };
   }, []);
 
+  // fechar no clique fora
+  useEffect(() => {
+    if (!isOpen) return;
+    const onClickAway = (e) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(e.target) &&
+        btnRef.current &&
+        !btnRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickAway);
+    return () => document.removeEventListener("mousedown", onClickAway);
+  }, [isOpen]);
+
+  // fechar com Esc
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isOpen]);
+
+  const go = (path) => {
+    setIsOpen(false);
+    navigate(path);
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login");
@@ -87,8 +124,11 @@ export default function UserDropdown() {
   return (
     <div className="relative inline-block text-left">
       <button
+        ref={btnRef}
         onClick={() => setIsOpen((v) => !v)}
         className="flex items-center bg-green-600 text-white px-4 py-2 rounded-full hover:bg-green-700 shadow-md"
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
       >
         <img
           src={imagemPerfil || avatarFallback}
@@ -106,6 +146,8 @@ export default function UserDropdown() {
 
       {isOpen && (
         <div
+          ref={menuRef}
+          role="menu"
           className="absolute right-0 top-full mt-2 w-56 bg-white border rounded-lg shadow-xl z-[9999] overflow-hidden"
           onMouseLeave={() => setIsOpen(false)}
         >
@@ -115,7 +157,8 @@ export default function UserDropdown() {
           </div>
 
           <button
-            onClick={() => { setIsOpen(false); navigate("/perfil"); }}
+            role="menuitem"
+            onClick={() => go("/perfil")}
             className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
           >
             <UserIcon className="w-4 h-4 mr-2" />
@@ -123,7 +166,8 @@ export default function UserDropdown() {
           </button>
 
           <button
-            onClick={() => { setIsOpen(false); navigate("/notificacao"); }}
+            role="menuitem"
+            onClick={() => go("/notificacao")}
             className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
           >
             <Bell className="w-4 h-4 mr-2" />
@@ -131,6 +175,7 @@ export default function UserDropdown() {
           </button>
 
           <button
+            role="menuitem"
             onClick={handleLogout}
             className="flex items-center w-full px-4 py-2 text-sm hover:bg-red-100 text-red-600 border-t"
           >

@@ -46,7 +46,6 @@ export default function Perfil() {
     return imagemPerfil || avatarFallback;
   }, [novaPreview, imagemPerfil, avatarFallback]);
 
-  // nome do usuário
   useEffect(() => {
     const raw = localStorage.getItem("usuario");
     if (!raw) return;
@@ -56,7 +55,6 @@ export default function Perfil() {
     } catch {}
   }, []);
 
-  // busca foto
   useEffect(() => {
     const raw = localStorage.getItem("usuario");
     if (!raw) return;
@@ -105,7 +103,6 @@ export default function Perfil() {
       setImagemPerfil(finalUrl);
       setNovaPreview(null);
 
-      // sincroniza com o Dropdown e demais componentes
       localStorage.setItem("avatar_url", finalUrl);
       window.dispatchEvent(new Event("avatar-updated"));
     } catch (err) {
