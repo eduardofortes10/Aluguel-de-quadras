@@ -13,20 +13,16 @@ export default function Login() {
 
   async function handleLogin(e) {
     e?.preventDefault();
-    if (!email || !senha) {
-      toast.error("Preencha todos os campos");
-      return;
-    }
+    if (!email || !senha) return toast.error("Preencha todos os campos");
     try {
       setCarregando(true);
       const { data: r } = await api.post("/auth/login", { email, senha });
 
       localStorage.setItem("usuario_id", r.id);
       localStorage.setItem("nomeUsuario", r.nome);
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ id: r.id, nome: r.nome, email: r.email, tipo: r.tipo_usuario })
-      );
+      localStorage.setItem("user", JSON.stringify({
+        id: r.id, nome: r.nome, email: r.email, tipo: r.tipo_usuario
+      }));
 
       toast.success("Login realizado com sucesso!");
       setTimeout(() => {
@@ -34,7 +30,6 @@ export default function Login() {
         else navigate("/home", { state: { loginSucesso: true } });
       }, 600);
     } catch (err) {
-      console.error("Erro no login:", err);
       const msg = err?.response?.data?.erro || "Email ou senha inválidos";
       toast.error(msg);
     } finally {
@@ -46,18 +41,17 @@ export default function Login() {
     <main className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
       <ToastContainer position="top-center" autoClose={2500} theme="colored" />
 
-      {/* Aurora / blobs */}
+      {/* Fundo aurora + grade sutil (sem imagem lateral) */}
       <div className="pointer-events-none absolute -top-28 -left-28 h-96 w-96 rounded-full bg-emerald-600/25 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-36 -right-28 h-[26rem] w-[26rem] rounded-full bg-teal-500/20 blur-3xl" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_600px_at_80%_-10%,rgba(16,185,129,0.12),transparent),radial-gradient(900px_500px_at_10%_110%,rgba(4,120,87,0.10),transparent)]" />
-      {/* grade sutil */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:22px_22px] [mask-image:radial-gradient(70%_50%_at_50%_40%,black,transparent)]" />
 
-      {/* container */}
+      {/* Conteúdo central */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-[420px] rounded-3xl border border-white/10 bg-white/10 backdrop-blur-2xl shadow-[0_20px_70px_rgba(0,0,0,0.45)]">
           <div className="px-7 py-8 sm:p-10">
-            {/* topo do card */}
+            {/* Cabeçalho do card */}
             <div className="flex items-center gap-3">
               <img
                 src="/quadras/logo-quadraflex.png"
@@ -65,14 +59,14 @@ export default function Login() {
                 className="h-10 w-10 rounded-full ring-1 ring-white/20"
               />
               <div>
-                <h1 className="text-lg font-semibold tracking-tight">Bem-vindo</h1>
-                <p className="text-xs text-white/60">Acesse sua conta do QuadraFlex</p>
+                <h1 className="text-lg font-semibold tracking-tight">QuadraFlex</h1>
+                <p className="text-xs text-white/60">Entre para acessar sua conta</p>
               </div>
             </div>
 
-            {/* formulário */}
+            {/* Formulário */}
             <form onSubmit={handleLogin} className="mt-8 space-y-5">
-              {/* email */}
+              {/* Email */}
               <div className="relative">
                 <input
                   id="email"
@@ -92,20 +86,12 @@ export default function Login() {
                 >
                   Email
                 </label>
-                <svg
-                  aria-hidden="true"
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 opacity-60"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                >
-                  <path d="M4 8l8 5 8-5" />
-                  <rect x="3" y="6" width="18" height="12" rx="2" ry="2" />
+                <svg aria-hidden="true" className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M4 8l8 5 8-5" /><rect x="3" y="6" width="18" height="12" rx="2" ry="2" />
                 </svg>
               </div>
 
-              {/* senha */}
+              {/* Senha */}
               <div className="relative">
                 <input
                   id="senha"
@@ -146,13 +132,10 @@ export default function Login() {
                 </button>
               </div>
 
-              {/* ações */}
+              {/* Ações */}
               <div className="mt-1 flex items-center justify-between text-sm">
                 <label className="flex items-center gap-2 select-none text-white/80">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-white/20 bg-white/5 text-emerald-500 focus:ring-emerald-500"
-                  />
+                  <input type="checkbox" className="h-4 w-4 rounded border-white/20 bg-white/5 text-emerald-500 focus:ring-emerald-500" />
                   Manter conectado
                 </label>
                 <Link to="/redefinir-senha" className="text-emerald-300 hover:text-emerald-200">
@@ -160,7 +143,7 @@ export default function Login() {
                 </Link>
               </div>
 
-              {/* botão */}
+              {/* Botão */}
               <button
                 type="submit"
                 disabled={carregando}
@@ -180,7 +163,7 @@ export default function Login() {
               </button>
             </form>
 
-            {/* divider + sociais */}
+            {/* Divider + Social */}
             <div className="my-6 flex items-center gap-4 text-xs text-white/60">
               <div className="h-px flex-1 bg-white/15" />
               <span>ou continue com</span>
@@ -195,7 +178,7 @@ export default function Login() {
               </button>
             </div>
 
-            {/* cadastro */}
+            {/* Cadastro */}
             <p className="mt-6 text-center text-sm text-white/70">
               Não tem conta?{" "}
               <Link to="/register" className="font-medium text-emerald-300 hover:text-emerald-200">
