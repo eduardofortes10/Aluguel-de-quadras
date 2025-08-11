@@ -7,12 +7,12 @@ const path = require('path');
 
 const app = express();
 
-// --------- CORS ----------
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://aluguel-de-quadras-xomr.vercel.app',        // prod vercel
-  /\.vercel\.app$/,                                     // qualquer preview *.vercel.app
+  /^https:\/\/aluguel-de-quadras-xomr\.vercel\.app$/,
+  /\.vercel\.app$/
 ];
+
 
 app.use((req, res, next) => {
   res.setHeader('Vary', 'Origin'); // para proxies/CDN
