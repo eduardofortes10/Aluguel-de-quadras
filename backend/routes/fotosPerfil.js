@@ -43,8 +43,9 @@ router.post("/upload", upload.single("avatar"), async (req, res) => {
     }
 
     const filename = req.file.filename;
+    // >>> usa 'criado_em' (seu schema)
     await db.execute(
-      `INSERT INTO fotos_perfil (usuario_id, imagem_url, data)
+      `INSERT INTO fotos_perfil (usuario_id, imagem_url, criado_em)
        VALUES (?, ?, NOW())`,
       [usuarioId, filename]
     );
@@ -66,11 +67,12 @@ router.get("/:usuarioId", async (req, res) => {
 
     if (!usuarioId) return res.json({ imagem_url: fallback });
 
+    // >>> ordena por 'criado_em' (com COALESCE pra compatibilidade)
     const [rows] = await db.execute(
       `SELECT imagem_url
          FROM fotos_perfil
         WHERE usuario_id = ?
-        ORDER BY data DESC, id DESC
+        ORDER BY COALESCE(criado_em, data) DESC, id DESC
         LIMIT 1`,
       [usuarioId]
     );
@@ -84,7 +86,9 @@ router.get("/:usuarioId", async (req, res) => {
     res.json({ imagem_url: `${ORIGIN}/avatars/${filename}` });
   } catch (err) {
     console.error("Erro ao buscar foto:", err);
-    res.status(500).json({ erro: "Falha ao buscar foto" });
+    // fallback seguro mesmo com erro de DB
+    const ORIGIN = getOrigin(req);
+    res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
   }
 });
 
