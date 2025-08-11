@@ -45,10 +45,11 @@ router.post("/upload", upload.single("avatar"), async (req, res) => {
     const filename = req.file.filename;
     // >>> usa 'criado_em' (seu schema)
     await db.execute(
-      `INSERT INTO fotos_perfil (usuario_id, imagem_url, criado_em)
-VALUES (?, ?, NOW())`,
-      [usuarioId, filename]
-    );
+  `INSERT INTO fotos_perfil (usuario_id, imagem_url, criado_em)
+   VALUES (?, ?, NOW())`,
+  [usuarioId, filename]
+);
+
 
     const ORIGIN = getOrigin(req);
     res.json({ ok: true, imagem_url: `${ORIGIN}/avatars/${filename}` });
@@ -68,14 +69,15 @@ router.get("/:usuarioId", async (req, res) => {
     if (!usuarioId) return res.json({ imagem_url: fallback });
 
     // >>> ordena por 'criado_em' (com COALESCE pra compatibilidade)
-    const [rows] = await db.execute(
-      `SELECT imagem_url
-       FROM fotos_perfil
-       WHERE usuario_id = ?
-       ORDER BY COALESCE(criado_em, data) DESC, id DESC
-        LIMIT 1`,
-      [usuarioId]
-    );
+ const [rows] = await db.execute(
+  `SELECT imagem_url
+     FROM fotos_perfil
+    WHERE usuario_id = ?
+    ORDER BY criado_em DESC, id DESC
+    LIMIT 1`,
+  [usuarioId]
+);
+
 
     if (!rows?.length) return res.json({ imagem_url: fallback });
 
@@ -85,11 +87,11 @@ router.get("/:usuarioId", async (req, res) => {
 
     res.json({ imagem_url: `${ORIGIN}/avatars/${filename}` });
   } catch (err) {
-    console.error("Erro ao buscar foto:", err);
-    // fallback seguro mesmo com erro de DB
-    const ORIGIN = getOrigin(req);
-    res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
-  }
+  console.error('Erro ao buscar foto:', err);
+  const ORIGIN = getOrigin(req);
+  return res.json({ imagem_url: `${ORIGIN}/avatars/default.png` });
+}
+
 });
 
 module.exports = router;
