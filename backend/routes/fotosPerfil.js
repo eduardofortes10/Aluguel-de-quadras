@@ -46,7 +46,7 @@ router.post("/upload", upload.single("avatar"), async (req, res) => {
     // >>> usa 'criado_em' (seu schema)
     await db.execute(
       `INSERT INTO fotos_perfil (usuario_id, imagem_url, criado_em)
-       VALUES (?, ?, NOW())`,
+VALUES (?, ?, NOW())`,
       [usuarioId, filename]
     );
 
@@ -70,9 +70,9 @@ router.get("/:usuarioId", async (req, res) => {
     // >>> ordena por 'criado_em' (com COALESCE pra compatibilidade)
     const [rows] = await db.execute(
       `SELECT imagem_url
-         FROM fotos_perfil
-        WHERE usuario_id = ?
-        ORDER BY COALESCE(criado_em, data) DESC, id DESC
+       FROM fotos_perfil
+       WHERE usuario_id = ?
+       ORDER BY COALESCE(criado_em, data) DESC, id DESC
         LIMIT 1`,
       [usuarioId]
     );
