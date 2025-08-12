@@ -11,12 +11,12 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Normaliza VITE_API_URL (sem /api no final, sem barra no fim)
+  // normaliza base (sem /api no final, sem barra final)
   const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
-  const API_BASE = RAW_BASE.trim().replace(/\s+/g, "")
-    .replace(/\/?api\/?$/i, "")
-    .replace(/\/$/, "");
+  const API_BASE = RAW_BASE.trim().replace(/\s+/g, "").replace(/\/?api\/?$/i, "").replace(/\/$/, "");
   const LOGIN_URL = API_BASE ? `${API_BASE}/api/auth/login` : "/api/auth/login";
+
+  const nextPathFor = (u) => (u?.tipo_usuario === "locador" ? "/home-locador" : "/home");
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -30,37 +30,23 @@ export default function Login() {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      // Aceita variações do backend
       const data = res?.data || {};
-      const usuario = data.usuario || data.user || data.profile || null;
-      const token =
-        data.token || data.accessToken || data.jwt || data.authorization || null;
+      const usuario = data.usuario;
+      const token = data.token;
 
       if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
       if (token) localStorage.setItem("token", token);
 
-      // IMPORTANTE: sua rota de Home é /home (no App.jsx)
-      // Se quiser ir pra outra página, ajuste aqui.
-      navigate("/home");
+      navigate(nextPathFor(usuario));
     } catch (err) {
       const status = err?.response?.status;
       let msg =
         err?.response?.data?.message ||
         "Não foi possível entrar. Verifique seu e-mail e senha.";
-// depois de receber "usuario" no Login.jsx
-if (usuario?.tipo_usuario === 'locador') navigate('/home-locador');
-else navigate('/home');
-
-      if (status === 405) {
-        msg =
-          "405 (Method Not Allowed). Confirme se /api/auth/login aceita POST e se VITE_API_URL aponta para o backend.";
-      } else if (status === 404) {
-        msg =
-          "Rota /api/auth/login não encontrada no backend. Confira o caminho e a base URL.";
-      } else if (err?.message?.includes("ERR_NAME_NOT_RESOLVED")) {
-        msg =
-          "Domínio do backend inválido em VITE_API_URL. Use a URL completa (https://SEU-BACKEND.onrender.com).";
-      }
+      if (status === 405) msg = "405: verifique se /api/auth/login aceita POST.";
+      if (status === 404) msg = "Rota /api/auth/login não encontrada.";
+      if (err?.message?.includes("ERR_NAME_NOT_RESOLVED"))
+        msg = "VITE_API_URL inválida. Use a URL completa do backend (https://...).";
 
       setError(msg);
       console.error("[LOGIN ERRO]", err);
@@ -71,57 +57,38 @@ else navigate('/home');
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
-      {/* Glow de fundo */}
+      {/* glows de fundo */}
       <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
-        />
-        <div
-          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
-        />
+        <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+             style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+             style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
       </div>
 
-      {/* Linhas de quadra */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-15"
-        style={{
-          backgroundImage:
-            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
-          backgroundSize: "24px 24px, 24px 24px",
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
-        }}
-      />
+      {/* linhas estilo quadra */}
+      <div aria-hidden className="absolute inset-0 opacity-15" style={{
+        backgroundImage:
+          "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+        backgroundSize: "24px 24px, 24px 24px",
+      }} />
+      <div aria-hidden className="absolute inset-0 opacity-10" style={{
+        backgroundImage:
+          "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+      }} />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
-        {/* Hero (desktop) */}
+        {/* hero (desktop) */}
         <div className="hidden md:flex items-center justify-center p-10">
           <div className="relative w-full max-w-xl">
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
-              <img
-                src="/quadras/quadra3.png"
-                alt="Quadra poliesportiva"
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
+              <img src="/quadras/quadra3.png" alt="Quadra poliesportiva" className="h-full w-full object-cover" loading="lazy" />
               <div className="absolute inset-0 bg-gradient-to-tr from-[#0A1611] via-transparent to-transparent" />
             </div>
             <div className="absolute -bottom-6 left-6 right-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-white/70">Reserve rápido</p>
-                  <p className="text-lg font-semibold">
-                    Encontre a quadra perfeita perto de você
-                  </p>
+                  <p className="text-lg font-semibold">Encontre a quadra perfeita perto de você</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-white/60">Avaliação média</p>
@@ -132,7 +99,7 @@ else navigate('/home');
           </div>
         </div>
 
-        {/* Formulário */}
+        {/* formulário */}
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
@@ -155,78 +122,43 @@ else navigate('/home');
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Email */}
                   <div>
-                    <label htmlFor="email" className="mb-1 block text-sm text-white/80">
-                      E-mail
-                    </label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" stroke="currentColor" strokeWidth="1.8" />
-                          <path d="m22 8-10 6L2 8" stroke="currentColor" strokeWidth="1.8" />
-                        </svg>
-                      </span>
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        autoComplete="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-white/10 px-10 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
-                        placeholder="voce@email.com"
-                      />
-                    </div>
+                    <label htmlFor="email" className="mb-1 block text-sm text-white/80">E-mail</label>
+                    <input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                      placeholder="voce@email.com"
+                    />
                   </div>
 
-                  {/* Senha */}
                   <div>
-                    <label htmlFor="password" className="mb-1 block text-sm text-white/80">
-                      Senha
-                    </label>
+                    <label htmlFor="password" className="mb-1 block text-sm text-white/80">Senha</label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.8" />
-                          <path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" />
-                        </svg>
-                      </span>
                       <input
                         id="password"
-                        name="password"
                         type={showPassword ? "text" : "password"}
                         autoComplete="current-password"
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="w-full rounded-xl border border-white/10 bg-white/10 px-10 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                        className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
                         placeholder="Sua senha"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs text-white/70 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/30"
-                        aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                       >
-                        {showPassword ? (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M3 3l18 18" stroke="currentColor" strokeWidth="1.8" />
-                            <path d="M10.58 10.58A3 3 0 0 0 9 13a3 3 0 0 0 5.24 1.76" stroke="currentColor" strokeWidth="1.6" />
-                            <path d="M2 12s3.5-7 10-7 10 7 10 7a17.2 17.2 0 0 1-3.2 3.78M6.1 15.1A17.5 17.5 0 0 1 2 12" stroke="currentColor" strokeWidth="1.6" />
-                          </svg>
-                        ) : (
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke="currentColor" strokeWidth="1.8" />
-                            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-                          </svg>
-                        )}
+                        {showPassword ? "Ocultar" : "Mostrar"}
                       </button>
                     </div>
                   </div>
 
-                  {/* Ações */}
                   <div className="flex items-center justify-between text-sm">
                     <span />
                     <Link to="/recuperar" className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
@@ -234,7 +166,6 @@ else navigate('/home');
                     </Link>
                   </div>
 
-                  {/* Entrar */}
                   <button
                     type="submit"
                     className="relative mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-3 text-[0.95rem] font-semibold shadow-lg shadow-emerald-900/20 hover:brightness-[1.03] focus:outline-none focus:ring-4 focus:ring-emerald-400/30 active:scale-[.99]"
@@ -246,18 +177,10 @@ else navigate('/home');
                         Entrando...
                       </span>
                     ) : (
-                      <>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M8 12h12" stroke="currentColor" strokeWidth="2" />
-                          <path d="M14 6l6 6-6 6" stroke="currentColor" strokeWidth="2" />
-                          <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" stroke="currentColor" strokeWidth="2" />
-                        </svg>
-                        Entrar
-                      </>
+                      <>Entrar</>
                     )}
                   </button>
 
-                  {/* Cadastro */}
                   <p className="mt-4 text-center text-sm text-white/70">
                     Não tem conta?{" "}
                     <Link to="/register" className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
@@ -265,10 +188,8 @@ else navigate('/home');
                     </Link>
                   </p>
 
-                  {/* Debug (dev) */}
                   {import.meta.env.DEV && (
                     <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/70">
-                      <div><span className="font-semibold">API_BASE:</span> {API_BASE || "(vazio)"}</div>
                       <div><span className="font-semibold">LOGIN_URL:</span> {LOGIN_URL}</div>
                     </div>
                   )}

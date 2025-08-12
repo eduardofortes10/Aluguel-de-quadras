@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-// opcional: se já usa react-hot-toast no App
-// import toast from "react-hot-toast";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -18,10 +16,12 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Normaliza base URL do backend (sem /api no final)
   const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
   const API_BASE = RAW_BASE.trim().replace(/\s+/g, "").replace(/\/?api\/?$/i, "").replace(/\/$/, "");
   const REGISTER_URL = API_BASE ? `${API_BASE}/api/auth/register` : "/api/auth/register";
+  const LOGIN_URL = API_BASE ? `${API_BASE}/api/auth/login` : "/api/auth/login";
+
+  const nextPathFor = (u) => (u?.tipo_usuario === "locador" ? "/home-locador" : "/home");
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -42,21 +42,35 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const payload = {
-        nome,
-        email,
-        senha,
-        tipo_usuario: tipo,
-        telefone: telefone || null,
-        data_nascimento: dataNascimento || null,
-      };
+      // 1) cadastra
+      await axios.post(
+        REGISTER_URL,
+        {
+          nome,
+          email,
+          senha,
+          tipo_usuario: tipo,
+          telefone: telefone || null,
+          data_nascimento: dataNascimento || null,
+        },
+        { headers: { "Content-Type": "application/json" } }
+      );
 
-      await axios.post(REGISTER_URL, payload, {
-        headers: { "Content-Type": "application/json" },
-      });
+      // 2) login automático
+      const res = await axios.post(
+        LOGIN_URL,
+        { email, senha },
+        { headers: { "Content-Type": "application/json" } }
+      );
+      const data = res?.data || {};
+      const usuario = data.usuario;
+      const token = data.token;
 
-      // toast?.success?.("Cadastro realizado! Faça login para continuar.");
-      navigate("/login");
+      if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
+      if (token) localStorage.setItem("token", token);
+
+      // 3) redireciona para a home correta
+      navigate(nextPathFor(usuario));
     } catch (err) {
       const status = err?.response?.status;
       let msg =
@@ -64,7 +78,8 @@ export default function Register() {
         "Não foi possível cadastrar. Verifique os dados e tente novamente.";
       if (status === 409) msg = "E-mail já cadastrado.";
       if (status === 405) msg = "405: verifique se /api/auth/register aceita POST.";
-      if (status === 404) msg = "Rota /api/auth/register não encontrada no backend.";
+      if (status === 404) msg = "Rota /api/auth/register não encontrada.";
+
       setError(msg);
       console.error("[REGISTER ERRO]", err);
     } finally {
@@ -74,48 +89,31 @@ export default function Register() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
-      {/* Glows */}
+      {/* glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
-        />
-        <div
-          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
-        />
+        <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+             style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+             style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
       </div>
 
-      {/* Linhas estilo quadra */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-15"
-        style={{
-          backgroundImage:
-            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
-          backgroundSize: "24px 24px, 24px 24px",
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
-        }}
-      />
+      {/* linhas de quadra */}
+      <div aria-hidden className="absolute inset-0 opacity-15" style={{
+        backgroundImage:
+          "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+        backgroundSize: "24px 24px, 24px 24px",
+      }} />
+      <div aria-hidden className="absolute inset-0 opacity-10" style={{
+        backgroundImage:
+          "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+      }} />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
-        {/* Hero (desktop) */}
+        {/* hero (desktop) */}
         <div className="hidden md:flex items-center justify-center p-10">
           <div className="relative w-full max-w-xl">
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
-              <img
-                src="/quadras/quadra4.png"
-                alt="Quadra iluminada à noite"
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
+              <img src="/quadras/quadra4.png" alt="Quadra iluminada" className="h-full w-full object-cover" loading="lazy" />
               <div className="absolute inset-0 bg-gradient-to-tr from-[#0A1611] via-transparent to-transparent" />
             </div>
             <div className="absolute -bottom-6 left-6 right-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 p-4">
@@ -133,7 +131,7 @@ export default function Register() {
           </div>
         </div>
 
-        {/* Formulário */}
+        {/* formulário */}
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
@@ -156,7 +154,6 @@ export default function Register() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* Nome */}
                   <div>
                     <label htmlFor="nome" className="mb-1 block text-sm text-white/80">Nome</label>
                     <input
@@ -170,7 +167,6 @@ export default function Register() {
                     />
                   </div>
 
-                  {/* Email */}
                   <div>
                     <label htmlFor="email" className="mb-1 block text-sm text-white/80">E-mail</label>
                     <input
@@ -185,7 +181,6 @@ export default function Register() {
                     />
                   </div>
 
-                  {/* Senhas */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="senha" className="mb-1 block text-sm text-white/80">Senha</label>
@@ -222,7 +217,6 @@ export default function Register() {
                     </div>
                   </div>
 
-                  {/* Tipo de usuário */}
                   <div>
                     <label className="mb-1 block text-sm text-white/80">Tipo de usuário</label>
                     <div className="grid grid-cols-2 gap-2 rounded-xl p-1 bg-white/5 border border-white/10">
@@ -244,7 +238,6 @@ export default function Register() {
                     </div>
                   </div>
 
-                  {/* Telefone & Data de nascimento */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label htmlFor="tel" className="mb-1 block text-sm text-white/80">Telefone</label>
@@ -269,7 +262,6 @@ export default function Register() {
                     </div>
                   </div>
 
-                  {/* Botão Cadastrar */}
                   <button
                     type="submit"
                     className="relative mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-3 text-[0.95rem] font-semibold shadow-lg shadow-emerald-900/20 hover:brightness-[1.03] focus:outline-none focus:ring-4 focus:ring-emerald-400/30 active:scale-[.99]"
@@ -285,7 +277,6 @@ export default function Register() {
                     )}
                   </button>
 
-                  {/* Voltar para login */}
                   <p className="mt-4 text-center text-sm text-white/70">
                     Já tem conta?{" "}
                     <Link to="/login" className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
@@ -293,11 +284,10 @@ export default function Register() {
                     </Link>
                   </p>
 
-                  {/* Debug em dev */}
                   {import.meta.env.DEV && (
                     <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/70">
-                      <div><span className="font-semibold">API_BASE:</span> {API_BASE || "(vazio)"}</div>
                       <div><span className="font-semibold">REGISTER_URL:</span> {REGISTER_URL}</div>
+                      <div><span className="font-semibold">LOGIN_URL:</span> {LOGIN_URL}</div>
                     </div>
                   )}
                 </form>
