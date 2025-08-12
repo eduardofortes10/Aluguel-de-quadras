@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -16,6 +16,30 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // <<< AJUSTE AQUI as imagens que você tem em /public/quadras >>>
+  const IMAGES = useMemo(
+    () => [
+      "/quadras/quadra2.jpg",
+      "/quadras/quadra4.png",
+      "/quadras/quadra5.jpg",
+      "/quadras/quadra9.png",
+    ],
+    []
+  );
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % IMAGES.length), 5000);
+    return () => clearInterval(t);
+  }, [IMAGES.length]);
+
+  useEffect(() => {
+    const next = (idx + 1) % IMAGES.length;
+    const img = new Image();
+    img.src = IMAGES[next];
+  }, [idx, IMAGES]);
+
+  // base URL
   const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
   const API_BASE = RAW_BASE.trim().replace(/\s+/g, "").replace(/\/?api\/?$/i, "").replace(/\/$/, "");
   const REGISTER_URL = API_BASE ? `${API_BASE}/api/auth/register` : "/api/auth/register";
@@ -27,18 +51,9 @@ export default function Register() {
     e.preventDefault();
     setError("");
 
-    if (!nome || !email || !senha) {
-      setError("Preencha nome, e-mail e senha.");
-      return;
-    }
-    if (senha.length < 6) {
-      setError("A senha precisa ter pelo menos 6 caracteres.");
-      return;
-    }
-    if (senha !== confirmSenha) {
-      setError("As senhas não coincidem.");
-      return;
-    }
+    if (!nome || !email || !senha) return setError("Preencha nome, e-mail e senha.");
+    if (senha.length < 6) return setError("A senha precisa ter pelo menos 6 caracteres.");
+    if (senha !== confirmSenha) return setError("As senhas não coincidem.");
 
     setLoading(true);
     try {
@@ -62,14 +77,11 @@ export default function Register() {
         { email, senha },
         { headers: { "Content-Type": "application/json" } }
       );
-      const data = res?.data || {};
-      const usuario = data.usuario;
-      const token = data.token;
-
+      const { usuario, token } = res.data || {};
       if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
       if (token) localStorage.setItem("token", token);
 
-      // 3) redireciona para a home correta
+      // 3) redireciona por papel
       navigate(nextPathFor(usuario));
     } catch (err) {
       const status = err?.response?.status;
@@ -79,7 +91,6 @@ export default function Register() {
       if (status === 409) msg = "E-mail já cadastrado.";
       if (status === 405) msg = "405: verifique se /api/auth/register aceita POST.";
       if (status === 404) msg = "Rota /api/auth/register não encontrada.";
-
       setError(msg);
       console.error("[REGISTER ERRO]", err);
     } finally {
@@ -89,7 +100,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
-      {/* glows */}
+      {/* Glows */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
              style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
@@ -97,7 +108,7 @@ export default function Register() {
              style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
       </div>
 
-      {/* linhas de quadra */}
+      {/* Grid da “quadra” */}
       <div aria-hidden className="absolute inset-0 opacity-15" style={{
         backgroundImage:
           "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
@@ -109,13 +120,20 @@ export default function Register() {
       }} />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
-        {/* hero (desktop) */}
+        {/* HERO com slideshow */}
         <div className="hidden md:flex items-center justify-center p-10">
-          <div className="relative w-full max-w-xl">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
-              <img src="/quadras/quadra4.png" alt="Quadra iluminada" className="h-full w-full object-cover" loading="lazy" />
-              <div className="absolute inset-0 bg-gradient-to-tr from-[#0A1611] via-transparent to-transparent" />
-            </div>
+          <div className="relative w-full max-w-xl aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
+            {IMAGES.map((src, i) => (
+              <img
+                key={src}
+                src={src}
+                alt="Quadra"
+                className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ease-out
+                  ${i === idx ? "opacity-100 scale-100" : "opacity-0 scale-105"}`}
+                loading={i === 0 ? "eager" : "lazy"}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#0A1611] via-transparent to-transparent" />
             <div className="absolute -bottom-6 left-6 right-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -131,16 +149,16 @@ export default function Register() {
           </div>
         </div>
 
-        {/* formulário */}
+        {/* Formulário */}
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
-              <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 grid place-items-center shadow-lg">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
-                  <path d="M3 12h18M12 3v18" stroke="white" strokeWidth="2" opacity="0.8" />
-                </svg>
-              </div>
+              {/* LOGO real acima do título */}
+              <img
+                src="/quadras/logo-quadraflex.png"
+                alt="QuadraFlex"
+                className="mx-auto mb-3 h-12 w-12 rounded-xl object-contain shadow-lg"
+              />
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Criar conta</h1>
               <p className="mt-1 text-white/70">Em poucos passos você já pode reservar e gerenciar quadras</p>
             </div>
@@ -283,13 +301,6 @@ export default function Register() {
                       Entrar
                     </Link>
                   </p>
-
-                  {import.meta.env.DEV && (
-                    <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/70">
-                      <div><span className="font-semibold">REGISTER_URL:</span> {REGISTER_URL}</div>
-                      <div><span className="font-semibold">LOGIN_URL:</span> {LOGIN_URL}</div>
-                    </div>
-                  )}
                 </form>
               </div>
             </div>
