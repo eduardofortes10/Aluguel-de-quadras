@@ -13,9 +13,11 @@ export default function Login() {
 
   const IMAGES = useMemo(
     () => [
-      "/quadras/quadra3.png",
+
       "/quadras/quadra4.png",
       "/quadras/quadra2.jpg",
+      "/quadras/quadra6.png",
+      "/quadras/quadra5.png",
     ],
     []
   );
