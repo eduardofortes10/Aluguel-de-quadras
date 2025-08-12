@@ -2,11 +2,6 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-// Login.jsx — funcional e alinhado ao seu server.js
-// - POST em /api/auth/login
-// - Usa VITE_API_URL como base do backend (sem /api no final)
-// - Remove "manter conectado" e separação cliente/locador
-
 export default function Login() {
   const navigate = useNavigate();
 
@@ -16,15 +11,11 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Normaliza a base para evitar /api duplicado e domínios inválidos
+  // Normaliza VITE_API_URL (sem /api no final, sem barra no fim)
   const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
-  const API_BASE = RAW_BASE
-    .trim()
-    .replace(/\s+/g, "")
-    .replace(/\/?api\/?$/i, "") // se colocarem .../api, remove
-    .replace(/\/$/, ""); // remove barra final
-
-  // endpoint correto conforme seu server.js (app.use('/api/auth', authRoutes))
+  const API_BASE = RAW_BASE.trim().replace(/\s+/g, "")
+    .replace(/\/?api\/?$/i, "")
+    .replace(/\/$/, "");
   const LOGIN_URL = API_BASE ? `${API_BASE}/api/auth/login` : "/api/auth/login";
 
   async function handleSubmit(e) {
@@ -36,26 +27,30 @@ export default function Login() {
       const res = await axios.post(
         LOGIN_URL,
         { email, senha: password },
-        {
-          // Se seu backend usar cookies/sessão, habilite:
-          // withCredentials: true,
-          headers: { "Content-Type": "application/json" },
-        }
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      const { usuario, token } = res.data || {};
+      // Aceita variações do backend
+      const data = res?.data || {};
+      const usuario = data.usuario || data.user || data.profile || null;
+      const token =
+        data.token || data.accessToken || data.jwt || data.authorization || null;
+
       if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
       if (token) localStorage.setItem("token", token);
 
-      navigate("/");
+      // IMPORTANTE: sua rota de Home é /home (no App.jsx)
+      // Se quiser ir pra outra página, ajuste aqui.
+      navigate("/home");
     } catch (err) {
       const status = err?.response?.status;
       let msg =
         err?.response?.data?.message ||
         "Não foi possível entrar. Verifique seu e-mail e senha.";
+
       if (status === 405) {
         msg =
-          "Erro 405 (Method Not Allowed). Confirme se /api/auth/login aceita POST e se VITE_API_URL aponta para o backend.";
+          "405 (Method Not Allowed). Confirme se /api/auth/login aceita POST e se VITE_API_URL aponta para o backend.";
       } else if (status === 404) {
         msg =
           "Rota /api/auth/login não encontrada no backend. Confira o caminho e a base URL.";
@@ -63,7 +58,9 @@ export default function Login() {
         msg =
           "Domínio do backend inválido em VITE_API_URL. Use a URL completa (https://SEU-BACKEND.onrender.com).";
       }
+
       setError(msg);
+      console.error("[LOGIN ERRO]", err);
     } finally {
       setLoading(false);
     }
@@ -75,19 +72,15 @@ export default function Login() {
       <div className="pointer-events-none absolute inset-0">
         <div
           className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-          style={{
-            background: "radial-gradient(closest-side, #34d399, transparent)",
-          }}
+          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
         />
         <div
           className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-          style={{
-            background: "radial-gradient(closest-side, #10b981, transparent)",
-          }}
+          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
         />
       </div>
 
-      {/* Linhas lembrando marcação de quadra */}
+      {/* Linhas de quadra */}
       <div
         aria-hidden
         className="absolute inset-0 opacity-15"
@@ -107,7 +100,7 @@ export default function Login() {
       />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
-        {/* Hero à esquerda (desktop) */}
+        {/* Hero (desktop) */}
         <div className="hidden md:flex items-center justify-center p-10">
           <div className="relative w-full max-w-xl">
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
@@ -136,34 +129,18 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Formulário à direita */}
+        {/* Formulário */}
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
-            {/* Logo + título */}
             <div className="mb-8 text-center">
               <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 grid place-items-center shadow-lg">
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
-                  <path
-                    d="M3 12h18M12 3v18"
-                    stroke="white"
-                    strokeWidth="2"
-                    opacity="0.8"
-                  />
+                  <path d="M3 12h18M12 3v18" stroke="white" strokeWidth="2" opacity="0.8" />
                 </svg>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                Bem-vindo de volta
-              </h1>
-              <p className="mt-1 text-white/70">
-                Entre para agendar, favoritar e conversar com donos de quadras
-              </p>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Bem-vindo de volta</h1>
+              <p className="mt-1 text-white/70">Entre para agendar, favoritar e conversar com donos de quadras</p>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl">
@@ -177,31 +154,14 @@ export default function Login() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {/* Email */}
                   <div>
-                    <label
-                      htmlFor="email"
-                      className="mb-1 block text-sm text-white/80"
-                    >
+                    <label htmlFor="email" className="mb-1 block text-sm text-white/80">
                       E-mail
                     </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                          />
-                          <path
-                            d="m22 8-10 6L2 8"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                          />
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z" stroke="currentColor" strokeWidth="1.8" />
+                          <path d="m22 8-10 6L2 8" stroke="currentColor" strokeWidth="1.8" />
                         </svg>
                       </span>
                       <input
@@ -220,35 +180,14 @@ export default function Login() {
 
                   {/* Senha */}
                   <div>
-                    <label
-                      htmlFor="password"
-                      className="mb-1 block text-sm text-white/80"
-                    >
+                    <label htmlFor="password" className="mb-1 block text-sm text-white/80">
                       Senha
                     </label>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <rect
-                            x="4"
-                            y="10"
-                            width="16"
-                            height="10"
-                            rx="2"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                          />
-                          <path
-                            d="M8 10V7a4 4 0 1 1 8 0v3"
-                            stroke="currentColor"
-                            strokeWidth="1.8"
-                          />
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                          <path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" />
                         </svg>
                       </span>
                       <input
@@ -269,49 +208,15 @@ export default function Login() {
                         aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                       >
                         {showPassword ? (
-                          <svg
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M3 3l18 18"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                            />
-                            <path
-                              d="M10.58 10.58A3 3 0 0 0 9 13a3 3 0 0 0 5.24 1.76"
-                              stroke="currentColor"
-                              strokeWidth="1.6"
-                            />
-                            <path
-                              d="M2 12s3.5-7 10-7 10 7 10 7a17.2 17.2 0 0 1-3.2 3.78M6.1 15.1A17.5 17.5 0 0 1 2 12"
-                              stroke="currentColor"
-                              strokeWidth="1.6"
-                            />
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 3l18 18" stroke="currentColor" strokeWidth="1.8" />
+                            <path d="M10.58 10.58A3 3 0 0 0 9 13a3 3 0 0 0 5.24 1.76" stroke="currentColor" strokeWidth="1.6" />
+                            <path d="M2 12s3.5-7 10-7 10 7 10 7a17.2 17.2 0 0 1-3.2 3.78M6.1 15.1A17.5 17.5 0 0 1 2 12" stroke="currentColor" strokeWidth="1.6" />
                           </svg>
                         ) : (
-                          <svg
-                            width="18"
-                            height="18"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                            />
-                            <circle
-                              cx="12"
-                              cy="12"
-                              r="3"
-                              stroke="currentColor"
-                              strokeWidth="1.8"
-                            />
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" stroke="currentColor" strokeWidth="1.8" />
+                            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
                           </svg>
                         )}
                       </button>
@@ -321,15 +226,12 @@ export default function Login() {
                   {/* Ações */}
                   <div className="flex items-center justify-between text-sm">
                     <span />
-                    <Link
-                      to="/recuperar"
-                      className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
-                    >
+                    <Link to="/recuperar" className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
                       Esqueceu a senha?
                     </Link>
                   </div>
 
-                  {/* Botão Entrar */}
+                  {/* Entrar */}
                   <button
                     type="submit"
                     className="relative mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-3 text-[0.95rem] font-semibold shadow-lg shadow-emerald-900/20 hover:brightness-[1.03] focus:outline-none focus:ring-4 focus:ring-emerald-400/30 active:scale-[.99]"
@@ -342,83 +244,37 @@ export default function Login() {
                       </span>
                     ) : (
                       <>
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M8 12h12" stroke="currentColor" strokeWidth="2" />
-                          <path
-                            d="M14 6l6 6-6 6"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          />
-                          <path
-                            d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          />
+                          <path d="M14 6l6 6-6 6" stroke="currentColor" strokeWidth="2" />
+                          <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" stroke="currentColor" strokeWidth="2" />
                         </svg>
                         Entrar
                       </>
                     )}
                   </button>
 
-                  {/* CTA cadastro */}
+                  {/* Cadastro */}
                   <p className="mt-4 text-center text-sm text-white/70">
                     Não tem conta?{" "}
-                    <Link
-                      to="/register"
-                      className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
-                    >
+                    <Link to="/register" className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
                       Crie uma agora
                     </Link>
                   </p>
 
-                  <p className="text-center text-[11px] text-white/50">
-                    Ao continuar, você concorda com nossos{" "}
-                    <Link
-                      to="/termos"
-                      className="underline underline-offset-2 hover:text-white/70"
-                    >
-                      Termos
-                    </Link>{" "}
-                    e{" "}
-                    <Link
-                      to="/privacidade"
-                      className="underline underline-offset-2 hover:text-white/70"
-                    >
-                      Privacidade
-                    </Link>
-                    .
-                  </p>
-
-                  {/* Debug em dev para checar a URL sendo chamada */}
+                  {/* Debug (dev) */}
                   {import.meta.env.DEV && (
                     <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/70">
-                      <div>
-                        <span className="font-semibold">API_BASE:</span>{" "}
-                        {API_BASE || "(vazio)"}
-                      </div>
-                      <div>
-                        <span className="font-semibold">LOGIN_URL:</span> {LOGIN_URL}
-                      </div>
-                      <div>
-                        Dica: defina VITE_API_URL (sem /api) para evitar
-                        /api/api/login e ERR_NAME_NOT_RESOLVED.
-                      </div>
+                      <div><span className="font-semibold">API_BASE:</span> {API_BASE || "(vazio)"}</div>
+                      <div><span className="font-semibold">LOGIN_URL:</span> {LOGIN_URL}</div>
                     </div>
                   )}
                 </form>
               </div>
             </div>
 
-            {/* Rodapé */}
             <div className="mt-6 text-center text-xs text-white/50">
-              © {new Date().getFullYear()} Aluguel de Quadras — todos os direitos
-              reservados
+              © {new Date().getFullYear()} Aluguel de Quadras — todos os direitos reservados
             </div>
           </div>
         </div>
