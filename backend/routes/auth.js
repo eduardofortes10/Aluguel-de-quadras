@@ -74,5 +74,31 @@ router.post('/login', async (req, res) => {
     return res.status(500).json({ message: 'Erro interno na autenticação.' });
   }
 });
+// POST /api/auth/register
+router.post('/register', async (req, res) => {
+  const { nome, email, senha, tipo_usuario, telefone, data_nascimento } = req.body || {};
+  if (!nome || !email || !senha || !tipo_usuario) {
+    return res.status(400).json({ message: 'Campos obrigatórios: nome, email, senha, tipo_usuario.' });
+  }
+
+  try {
+    const [exists] = await db.execute('SELECT id FROM usuarios WHERE email = ? LIMIT 1', [email]);
+    if (exists.length) return res.status(409).json({ message: 'E-mail já cadastrado.' });
+
+    const bcrypt = require('bcryptjs'); // ou 'bcrypt' se escolheu a opção B
+    const hash = await bcrypt.hash(senha, 10);
+
+    await db.execute(
+      `INSERT INTO usuarios (nome, email, senha, tipo_usuario, telefone, data_nascimento, criado_em)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [nome, email, hash, tipo_usuario, telefone || null, data_nascimento || null]
+    );
+
+    return res.status(201).json({ ok: true });
+  } catch (e) {
+    console.error('Erro no register:', e);
+    return res.status(500).json({ message: 'Erro ao cadastrar.' });
+  }
+});
 
 module.exports = router;

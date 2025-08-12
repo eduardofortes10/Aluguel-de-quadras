@@ -1,110 +1,315 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { api } from "../services/api";
+import axios from "axios";
+// opcional: se já usa react-hot-toast no App
+// import toast from "react-hot-toast";
 
 export default function Register() {
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    nome: "",
-    email: "",
-    senha: "",
-    tipo: "cliente",
-  });
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [confirmSenha, setConfirmSenha] = useState("");
+  const [tipo, setTipo] = useState("cliente"); // cliente | locador
+  const [telefone, setTelefone] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const [carregando, setCarregando] = useState(false);
+  // Normaliza base URL do backend (sem /api no final)
+  const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
+  const API_BASE = RAW_BASE.trim().replace(/\s+/g, "").replace(/\/?api\/?$/i, "").replace(/\/$/, "");
+  const REGISTER_URL = API_BASE ? `${API_BASE}/api/auth/register` : "/api/auth/register";
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleRegister = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
+    setError("");
 
-    if (!form.nome || !form.email || !form.senha) {
-      toast.error("Preencha todos os campos");
+    if (!nome || !email || !senha) {
+      setError("Preencha nome, e-mail e senha.");
+      return;
+    }
+    if (senha.length < 6) {
+      setError("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (senha !== confirmSenha) {
+      setError("As senhas não coincidem.");
       return;
     }
 
+    setLoading(true);
     try {
-      setCarregando(true);
-      const { data } = await api.post("/auth/register", form);
-      toast.success("Cadastro realizado com sucesso!");
-      setTimeout(() => navigate("/login"), 2000);
+      const payload = {
+        nome,
+        email,
+        senha,
+        tipo_usuario: tipo,
+        telefone: telefone || null,
+        data_nascimento: dataNascimento || null,
+      };
+
+      await axios.post(REGISTER_URL, payload, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      // toast?.success?.("Cadastro realizado! Faça login para continuar.");
+      navigate("/login");
     } catch (err) {
-      console.error("Erro no registro:", err);
-      toast.error("Erro ao registrar usuário");
+      const status = err?.response?.status;
+      let msg =
+        err?.response?.data?.message ||
+        "Não foi possível cadastrar. Verifique os dados e tente novamente.";
+      if (status === 409) msg = "E-mail já cadastrado.";
+      if (status === 405) msg = "405: verifique se /api/auth/register aceita POST.";
+      if (status === 404) msg = "Rota /api/auth/register não encontrada no backend.";
+      setError(msg);
+      console.error("[REGISTER ERRO]", err);
     } finally {
-      setCarregando(false);
+      setLoading(false);
     }
-  };
+  }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{
-        backgroundImage: `url(${import.meta.env.VITE_FILES_ORIGIN}/quadras/logo-fundo.png)`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      <div className="bg-white shadow-lg rounded-lg p-8 max-w-md w-full">
-        <h2 className="text-2xl font-bold mb-6 text-center">Criar Conta</h2>
-        <form onSubmit={handleRegister}>
-          <input
-            type="text"
-            name="nome"
-            placeholder="Nome"
-            value={form.nome}
-            onChange={handleChange}
-            className="w-full p-2 mb-4 border border-gray-300 rounded"
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full p-2 mb-4 border border-gray-300 rounded"
-          />
-          <input
-            type="password"
-            name="senha"
-            placeholder="Senha"
-            value={form.senha}
-            onChange={handleChange}
-            className="w-full p-2 mb-4 border border-gray-300 rounded"
-          />
-
-          <select
-            name="tipo"
-            value={form.tipo}
-            onChange={handleChange}
-            className="w-full p-2 mb-4 border border-gray-300 rounded"
-          >
-            <option value="cliente">Cliente</option>
-            <option value="locador">Locador</option>
-          </select>
-
-          <button
-            type="submit"
-            disabled={carregando}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded"
-          >
-            {carregando ? "Cadastrando..." : "Cadastrar"}
-          </button>
-        </form>
-
-        <p className="mt-4 text-sm text-center">
-          Já tem uma conta?{" "}
-          <Link to="/login" className="text-green-600 hover:underline">
-            Entrar
-          </Link>
-        </p>
+    <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
+      {/* Glows */}
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
+        />
+        <div
+          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
+        />
       </div>
-      <ToastContainer />
+
+      {/* Linhas estilo quadra */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-15"
+        style={{
+          backgroundImage:
+            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+          backgroundSize: "24px 24px, 24px 24px",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+        }}
+      />
+
+      <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
+        {/* Hero (desktop) */}
+        <div className="hidden md:flex items-center justify-center p-10">
+          <div className="relative w-full max-w-xl">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
+              <img
+                src="/quadras/quadra4.png"
+                alt="Quadra iluminada à noite"
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#0A1611] via-transparent to-transparent" />
+            </div>
+            <div className="absolute -bottom-6 left-6 right-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-white/70">Pronto pra jogar?</p>
+                  <p className="text-lg font-semibold">Cadastre-se e comece agora</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-white/60">Agendamentos por dia</p>
+                  <p className="text-xl font-bold">+120</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Formulário */}
+        <div className="flex items-center justify-center p-6 sm:p-10">
+          <div className="w-full max-w-md">
+            <div className="mb-8 text-center">
+              <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 grid place-items-center shadow-lg">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
+                  <path d="M3 12h18M12 3v18" stroke="white" strokeWidth="2" opacity="0.8" />
+                </svg>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Criar conta</h1>
+              <p className="mt-1 text-white/70">Em poucos passos você já pode reservar e gerenciar quadras</p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl">
+              <div className="p-6 sm:p-7">
+                {error && (
+                  <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-red-200 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Nome */}
+                  <div>
+                    <label htmlFor="nome" className="mb-1 block text-sm text-white/80">Nome</label>
+                    <input
+                      id="nome"
+                      type="text"
+                      required
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                      placeholder="Seu nome completo"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <label htmlFor="email" className="mb-1 block text-sm text-white/80">E-mail</label>
+                    <input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                      placeholder="voce@email.com"
+                    />
+                  </div>
+
+                  {/* Senhas */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="senha" className="mb-1 block text-sm text-white/80">Senha</label>
+                      <div className="relative">
+                        <input
+                          id="senha"
+                          type={showPassword ? "text" : "password"}
+                          required
+                          value={senha}
+                          onChange={(e) => setSenha(e.target.value)}
+                          className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                          placeholder="Mín. 6 caracteres"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs text-white/70 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/30"
+                        >
+                          {showPassword ? "Ocultar" : "Mostrar"}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="confirm" className="mb-1 block text-sm text-white/80">Confirmar senha</label>
+                      <input
+                        id="confirm"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={confirmSenha}
+                        onChange={(e) => setConfirmSenha(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                        placeholder="Repita sua senha"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Tipo de usuário */}
+                  <div>
+                    <label className="mb-1 block text-sm text-white/80">Tipo de usuário</label>
+                    <div className="grid grid-cols-2 gap-2 rounded-xl p-1 bg-white/5 border border-white/10">
+                      {["cliente", "locador"].map((t) => (
+                        <button
+                          type="button"
+                          key={t}
+                          onClick={() => setTipo(t)}
+                          className={`py-2 rounded-lg text-sm font-medium transition-all ${
+                            tipo === t
+                              ? "bg-gradient-to-r from-emerald-500 to-green-600 shadow border border-white/10"
+                              : "text-white/70 hover:text-white"
+                          }`}
+                          aria-pressed={tipo === t}
+                        >
+                          {t === "cliente" ? "Cliente" : "Locador"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Telefone & Data de nascimento */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="tel" className="mb-1 block text-sm text-white/80">Telefone</label>
+                      <input
+                        id="tel"
+                        type="tel"
+                        value={telefone}
+                        onChange={(e) => setTelefone(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                        placeholder="(11) 99999-9999"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="nasc" className="mb-1 block text-sm text-white/80">Data de nascimento</label>
+                      <input
+                        id="nasc"
+                        type="date"
+                        value={dataNascimento}
+                        onChange={(e) => setDataNascimento(e.target.value)}
+                        className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm outline-none placeholder:text-white/50 focus:border-emerald-400/60 focus:ring-2 focus:ring-emerald-400/20"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Botão Cadastrar */}
+                  <button
+                    type="submit"
+                    className="relative mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 px-4 py-3 text-[0.95rem] font-semibold shadow-lg shadow-emerald-900/20 hover:brightness-[1.03] focus:outline-none focus:ring-4 focus:ring-emerald-400/30 active:scale-[.99]"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                        Cadastrando...
+                      </span>
+                    ) : (
+                      <>Criar conta</>
+                    )}
+                  </button>
+
+                  {/* Voltar para login */}
+                  <p className="mt-4 text-center text-sm text-white/70">
+                    Já tem conta?{" "}
+                    <Link to="/login" className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
+                      Entrar
+                    </Link>
+                  </p>
+
+                  {/* Debug em dev */}
+                  {import.meta.env.DEV && (
+                    <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3 text-xs text-white/70">
+                      <div><span className="font-semibold">API_BASE:</span> {API_BASE || "(vazio)"}</div>
+                      <div><span className="font-semibold">REGISTER_URL:</span> {REGISTER_URL}</div>
+                    </div>
+                  )}
+                </form>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center text-xs text-white/50">
+              © {new Date().getFullYear()} Aluguel de Quadras — todos os direitos reservados
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
