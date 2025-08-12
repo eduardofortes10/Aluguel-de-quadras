@@ -11,33 +11,27 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Ajuste os nomes conforme as imagens que existem em /public/quadras
   const IMAGES = useMemo(
     () => [
-      "/quadras/quadra5.png",
+      "/quadras/quadra3.png",
       "/quadras/quadra4.png",
-      "/quadras/quadra2.png",
-       "/quadras/quadra1.png",
-       "/quadras/quadra6.png",
+      "/quadras/quadra2.jpg",
     ],
     []
   );
   const [idx, setIdx] = useState(0);
 
-  // Troca a imagem a cada 5s
   useEffect(() => {
     const t = setInterval(() => setIdx((i) => (i + 1) % IMAGES.length), 5000);
     return () => clearInterval(t);
   }, [IMAGES.length]);
 
-  // Pré-carrega a próxima
   useEffect(() => {
     const next = (idx + 1) % IMAGES.length;
     const img = new Image();
     img.src = IMAGES[next];
   }, [idx, IMAGES]);
 
-  // base do backend (sem /api no final)
   const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
   const API_BASE = RAW_BASE.trim().replace(/\s+/g, "").replace(/\/?api\/?$/i, "").replace(/\/$/, "");
   const LOGIN_URL = API_BASE ? `${API_BASE}/api/auth/login` : "/api/auth/login";
@@ -48,21 +42,15 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
     try {
       const res = await axios.post(
         LOGIN_URL,
         { email, senha: password },
         { headers: { "Content-Type": "application/json" } }
       );
-
-      const data = res?.data || {};
-      const usuario = data.usuario;
-      const token = data.token;
-
+      const { usuario, token } = res.data || {};
       if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
       if (token) localStorage.setItem("token", token);
-
       navigate(nextPathFor(usuario));
     } catch (err) {
       const status = err?.response?.status;
@@ -73,7 +61,6 @@ export default function Login() {
       if (status === 404) msg = "Rota /api/auth/login não encontrada.";
       if (err?.message?.includes("ERR_NAME_NOT_RESOLVED"))
         msg = "VITE_API_URL inválida. Use a URL completa do backend (https://...).";
-
       setError(msg);
       console.error("[LOGIN ERRO]", err);
     } finally {
@@ -85,37 +72,25 @@ export default function Login() {
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
       {/* Glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
-        />
-        <div
-          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
-        />
+        <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+             style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+             style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
       </div>
 
-      {/* Grid da “quadra” */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-15"
-        style={{
-          backgroundImage:
-            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
-          backgroundSize: "24px 24px, 24px 24px",
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
-        }}
-      />
+      {/* Grid de “quadra” */}
+      <div aria-hidden className="absolute inset-0 opacity-15" style={{
+        backgroundImage:
+          "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+        backgroundSize: "24px 24px, 24px 24px",
+      }} />
+      <div aria-hidden className="absolute inset-0 opacity-10" style={{
+        backgroundImage:
+          "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+      }} />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
-        {/* HERO com slideshow */}
+        {/* HERO slideshow */}
         <div className="hidden md:flex items-center justify-center p-10">
           <div className="relative w-full max-w-xl aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
             {IMAGES.map((src, i) => (
@@ -129,14 +104,15 @@ export default function Login() {
               />
             ))}
             <div className="absolute inset-0 bg-gradient-to-tr from-[#0A1611] via-transparent to-transparent" />
-            <div className="absolute -bottom-6 left-6 right-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 p-4">
+            {/* CARD agora dentro da imagem, sem ser cortado */}
+            <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white/70">Reserve rápido</p>
+                  <p className="text-sm text-white/80">Reserve rápido</p>
                   <p className="text-lg font-semibold">Encontre a quadra perfeita perto de você</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-white/60">Avaliação média</p>
+                  <p className="text-xs text-white/70">Avaliação média</p>
                   <p className="text-xl font-bold">4.8 ★</p>
                 </div>
               </div>
@@ -148,11 +124,11 @@ export default function Login() {
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
-              {/* LOGO real (sem corte) */}
+              {/* LOGO real — sem corte e com quinas arredondadas */}
               <img
                 src="/quadras/logo-quadraflex.png"
                 alt="QuadraFlex"
-                className="mx-auto mb-3 w-auto max-h-16 sm:max-h-20 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                className="mx-auto mb-3 w-auto max-h-16 sm:max-h-20 object-contain rounded-2xl bg-white/5 p-2 border border-white/10 drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
                 draggable="false"
               />
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Bem-vindo de volta</h1>

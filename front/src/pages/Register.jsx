@@ -9,21 +9,19 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmSenha, setConfirmSenha] = useState("");
-  const [tipo, setTipo] = useState("cliente"); // cliente | locador
+  const [tipo, setTipo] = useState("cliente");
   const [telefone, setTelefone] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Ajuste os nomes conforme as imagens que existem em /public/quadras
   const IMAGES = useMemo(
     () => [
-     "/quadras/quadra5.png",
+      "/quadras/quadra2.jpg",
       "/quadras/quadra4.png",
-      "/quadras/quadra2.png",
-       "/quadras/quadra1.png",
-       "/quadras/quadra6.png",
+      "/quadras/quadra5.jpg",
+      "/quadras/quadra3.png",
     ],
     []
   );
@@ -40,7 +38,6 @@ export default function Register() {
     img.src = IMAGES[next];
   }, [idx, IMAGES]);
 
-  // base URL
   const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
   const API_BASE = RAW_BASE.trim().replace(/\s+/g, "").replace(/\/?api\/?$/i, "").replace(/\/$/, "");
   const REGISTER_URL = API_BASE ? `${API_BASE}/api/auth/register` : "/api/auth/register";
@@ -51,28 +48,18 @@ export default function Register() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-
     if (!nome || !email || !senha) return setError("Preencha nome, e-mail e senha.");
     if (senha.length < 6) return setError("A senha precisa ter pelo menos 6 caracteres.");
     if (senha !== confirmSenha) return setError("As senhas não coincidem.");
 
     setLoading(true);
     try {
-      // 1) cadastra
       await axios.post(
         REGISTER_URL,
-        {
-          nome,
-          email,
-          senha,
-          tipo_usuario: tipo,
-          telefone: telefone || null,
-          data_nascimento: dataNascimento || null,
-        },
+        { nome, email, senha, tipo_usuario: tipo, telefone: telefone || null, data_nascimento: dataNascimento || null },
         { headers: { "Content-Type": "application/json" } }
       );
 
-      // 2) login automático
       const res = await axios.post(
         LOGIN_URL,
         { email, senha },
@@ -81,8 +68,6 @@ export default function Register() {
       const { usuario, token } = res.data || {};
       if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
       if (token) localStorage.setItem("token", token);
-
-      // 3) redireciona por papel
       navigate(nextPathFor(usuario));
     } catch (err) {
       const status = err?.response?.status;
@@ -103,37 +88,25 @@ export default function Register() {
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
       {/* Glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
-        />
-        <div
-          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
-        />
+        <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+             style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+             style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
       </div>
 
-      {/* Grid da “quadra” */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-15"
-        style={{
-          backgroundImage:
-            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
-          backgroundSize: "24px 24px, 24px 24px",
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
-        }}
-      />
+      {/* Grid de “quadra” */}
+      <div aria-hidden className="absolute inset-0 opacity-15" style={{
+        backgroundImage:
+          "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+        backgroundSize: "24px 24px, 24px 24px",
+      }} />
+      <div aria-hidden className="absolute inset-0 opacity-10" style={{
+        backgroundImage:
+          "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+      }} />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
-        {/* HERO com slideshow */}
+        {/* HERO slideshow */}
         <div className="hidden md:flex items-center justify-center p-10">
           <div className="relative w-full max-w-xl aspect-[4/3] overflow-hidden rounded-3xl shadow-2xl">
             {IMAGES.map((src, i) => (
@@ -147,14 +120,15 @@ export default function Register() {
               />
             ))}
             <div className="absolute inset-0 bg-gradient-to-tr from-[#0A1611] via-transparent to-transparent" />
-            <div className="absolute -bottom-6 left-6 right-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 p-4">
+            {/* CARD dentro da imagem */}
+            <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white/70">Pronto pra jogar?</p>
+                  <p className="text-sm text-white/80">Pronto pra jogar?</p>
                   <p className="text-lg font-semibold">Cadastre-se e comece agora</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-white/60">Agendamentos por dia</p>
+                  <p className="text-xs text-white/70">Agendamentos por dia</p>
                   <p className="text-xl font-bold">+120</p>
                 </div>
               </div>
@@ -166,11 +140,11 @@ export default function Register() {
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
-              {/* LOGO real acima do título — sem corte */}
+              {/* LOGO real — sem corte + cantos arredondados */}
               <img
                 src="/quadras/logo-quadraflex.png"
                 alt="QuadraFlex"
-                className="mx-auto mb-3 w-auto max-h-16 sm:max-h-20 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                className="mx-auto mb-3 w-auto max-h-16 sm:max-h-20 object-contain rounded-2xl bg-white/5 p-2 border border-white/10 drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
                 draggable="false"
               />
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Criar conta</h1>
