@@ -19,7 +19,7 @@ export default function Register() {
   const IMAGES = useMemo(
     () => [
       "/quadras/quadra4.png",
-      "/quadras/quadra2.jpg",
+      "/quadras/quadra2.png",
       "/quadras/quadra6.png",
       "/quadras/quadra5.png",
     ],

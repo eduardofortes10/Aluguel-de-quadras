@@ -15,7 +15,7 @@ export default function Login() {
     () => [
 
       "/quadras/quadra4.png",
-      "/quadras/quadra2.jpg",
+      "/quadras/quadra2.png",
       "/quadras/quadra6.png",
       "/quadras/quadra5.png",
     ],
