@@ -47,6 +47,9 @@ export default function Login() {
       let msg =
         err?.response?.data?.message ||
         "Não foi possível entrar. Verifique seu e-mail e senha.";
+// depois de receber "usuario" no Login.jsx
+if (usuario?.tipo_usuario === 'locador') navigate('/home-locador');
+else navigate('/home');
 
       if (status === 405) {
         msg =

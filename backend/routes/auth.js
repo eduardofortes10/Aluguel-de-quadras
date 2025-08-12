@@ -1,79 +1,77 @@
-// routes/auth.js
+// backend/routes/auth.js
 const express = require('express');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');       // seus hashes são $2b$10..., ou seja, bcrypt
+const jwt = require('jsonwebtoken');
 const db = require('../db');
+
 const router = express.Router();
 
-// POST /api/auth/register
-router.post('/register', async (req, res) => {
+router.post('/login', async (req, res) => {
+  const { email, senha } = req.body || {};
+  if (!email || !senha) {
+    return res.status(400).json({ message: 'E-mail e senha são obrigatórios.' });
+  }
+
   try {
-    const { nome, email, senha, tipo_usuario, telefone, data_nascimento } = req.body;
-
-    if (!nome || !email || !senha || !tipo_usuario) {
-      return res.status(400).json({ erro: 'Preencha todos os campos obrigatórios' });
-    }
-
-    // verifica e-mail duplicado (responde 409 em vez de 500)
-    const [exist] = await db.query('SELECT id FROM usuarios WHERE email = ? LIMIT 1', [email]);
-    if (exist.length) {
-      return res.status(409).json({ erro: 'E-mail já cadastrado.' });
-    }
-
-    const hash = await bcrypt.hash(senha, 10);
-
-    const [result] = await db.query(
-      `INSERT INTO usuarios (nome, email, senha, tipo_usuario, telefone, data_nascimento)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [nome, email, hash, tipo_usuario, telefone || null, data_nascimento || null]
+    // pega o usuário pelo e-mail (ajuste o nome da tabela se for diferente)
+    const [rows] = await db.execute(
+      `SELECT id, nome, email, senha, tipo_usuario, telefone, data_nascimento
+         FROM usuarios
+        WHERE email = ?
+        LIMIT 1`,
+      [email]
     );
 
-    // >>> retorno consistente para o front
-    return res.status(201).json({
-      usuario: {
-        id: result.insertId,
-        nome,
-        email,
-        tipo_usuario,
-        telefone: telefone || null,
-        data_nascimento: data_nascimento || null,
-      }
-    });
-  } catch (err) {
-  console.error("Erro no registro:", err.response?.data || err.message);
-  const msg = err?.response?.data?.erro || "Erro ao registrar.";
-  toast.error(msg);
-}
-
-});
-
-// POST /api/auth/login (mantém como está)
-router.post('/login', async (req, res) => {
-  try {
-    const { email, senha } = req.body;
-    if (!email || !senha) {
-      return res.status(400).json({ erro: 'Email e senha são obrigatórios' });
+    if (!rows || rows.length === 0) {
+      return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
 
-    const [results] = await db.query('SELECT * FROM usuarios WHERE email = ?', [email]);
-    if (results.length === 0) {
-      return res.status(401).json({ erro: 'Usuário não encontrado' });
+    const u = rows[0];
+
+    // compara senha plaintext com o hash armazenado em "senha"
+    const ok = await bcrypt.compare(senha, u.senha);
+    if (!ok) {
+      return res.status(401).json({ message: 'Credenciais inválidas.' });
     }
 
-    const usuario = results[0];
-    const match = await bcrypt.compare(senha, usuario.senha);
-    if (!match) {
-      return res.status(401).json({ erro: 'Senha incorreta' });
-    }
+    // gera token
+    const token = jwt.sign(
+      { id: u.id, tipo_usuario: u.tipo_usuario },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
+    // retorna o usuário (mantive "tipo" também para compatibilidade, se seu front usar)
     return res.json({
-      mensagem: 'Login bem-sucedido',
-      id: usuario.id,
-      nome: usuario.nome,
-      tipo_usuario: usuario.tipo_usuario
+      usuario: {
+        id: u.id,
+        nome: u.nome,
+        email: u.email,
+        tipo_usuario: u.tipo_usuario,
+        tipo: u.tipo_usuario,
+        telefone: u.telefone,
+        data_nascimento: u.data_nascimento
+      },
+      token
     });
-  } catch (err) {
-    console.error('Erro no login:', err);
-    return res.status(500).json({ erro: 'Erro ao tentar fazer login' });
+  } catch (e) {
+    console.error('Erro no login:', e);
+
+    // erros de conexão/transientes (como o seu ECONNRESET) -> responde 503
+    const transient =
+      e?.code === 'ECONNRESET' ||
+      e?.code === 'PROTOCOL_CONNECTION_LOST' ||
+      e?.code === 'ECONNREFUSED' ||
+      e?.code === 'ETIMEDOUT';
+
+    if (transient) {
+      return res.status(503).json({
+        message: 'Banco de dados indisponível no momento. Tente novamente.',
+        code: e.code,
+      });
+    }
+
+    return res.status(500).json({ message: 'Erro interno na autenticação.' });
   }
 });
 
