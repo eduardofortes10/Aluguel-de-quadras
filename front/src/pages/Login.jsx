@@ -370,7 +370,7 @@ export default function Login() {
                   <p className="mt-4 text-center text-sm text-white/70">
                     Não tem conta?{" "}
                     <Link
-                      to="/cadastro"
+                      to="/register"
                       className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
                     >
                       Crie uma agora
