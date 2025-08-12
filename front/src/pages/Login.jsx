@@ -11,33 +11,33 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // <<< AJUSTE AQUI as imagens que você tem em /public/quadras >>>
+  // Ajuste os nomes conforme as imagens que existem em /public/quadras
   const IMAGES = useMemo(
     () => [
-      "/quadras/quadra1.jpg",
-      "/quadras/quadra2.jpg",
       "/quadras/quadra5.png",
       "/quadras/quadra4.png",
+      "/quadras/quadra2.png",
+       "/quadras/quadra1.png",
+       "/quadras/quadra6.png",
     ],
     []
   );
   const [idx, setIdx] = useState(0);
 
-  // troca a imagem a cada 5s + pré-carrega a próxima
+  // Troca a imagem a cada 5s
   useEffect(() => {
-    const t = setInterval(() => {
-      setIdx((i) => (i + 1) % IMAGES.length);
-    }, 5000);
+    const t = setInterval(() => setIdx((i) => (i + 1) % IMAGES.length), 5000);
     return () => clearInterval(t);
   }, [IMAGES.length]);
 
+  // Pré-carrega a próxima
   useEffect(() => {
     const next = (idx + 1) % IMAGES.length;
     const img = new Image();
     img.src = IMAGES[next];
   }, [idx, IMAGES]);
 
-  // normaliza base (sem /api no final, sem barra final)
+  // base do backend (sem /api no final)
   const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
   const API_BASE = RAW_BASE.trim().replace(/\s+/g, "").replace(/\/?api\/?$/i, "").replace(/\/$/, "");
   const LOGIN_URL = API_BASE ? `${API_BASE}/api/auth/login` : "/api/auth/login";
@@ -85,22 +85,34 @@ export default function Login() {
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
       {/* Glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-             style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-             style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
+        <div
+          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
+        />
+        <div
+          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
+        />
       </div>
 
       {/* Grid da “quadra” */}
-      <div aria-hidden className="absolute inset-0 opacity-15" style={{
-        backgroundImage:
-          "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
-        backgroundSize: "24px 24px, 24px 24px",
-      }} />
-      <div aria-hidden className="absolute inset-0 opacity-10" style={{
-        backgroundImage:
-          "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
-      }} />
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-15"
+        style={{
+          backgroundImage:
+            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+          backgroundSize: "24px 24px, 24px 24px",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+        }}
+      />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
         {/* HERO com slideshow */}
@@ -136,13 +148,13 @@ export default function Login() {
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
-              {/* Mantive o ícone; se quiser, posso trocar pela sua logo também */}
-              <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-green-600 grid place-items-center shadow-lg">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="2" />
-                  <path d="M3 12h18M12 3v18" stroke="white" strokeWidth="2" opacity="0.8" />
-                </svg>
-              </div>
+              {/* LOGO real (sem corte) */}
+              <img
+                src="/quadras/logo-quadraflex.png"
+                alt="QuadraFlex"
+                className="mx-auto mb-3 w-auto max-h-16 sm:max-h-20 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                draggable="false"
+              />
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Bem-vindo de volta</h1>
               <p className="mt-1 text-white/70">Entre para agendar, favoritar e conversar com donos de quadras</p>
             </div>

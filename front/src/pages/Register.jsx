@@ -16,13 +16,14 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // <<< AJUSTE AQUI as imagens que você tem em /public/quadras >>>
+  // Ajuste os nomes conforme as imagens que existem em /public/quadras
   const IMAGES = useMemo(
     () => [
-      "/quadras/quadra2.jpg",
+     "/quadras/quadra5.png",
       "/quadras/quadra4.png",
-      "/quadras/quadra5.jpg",
-      "/quadras/quadra9.png",
+      "/quadras/quadra2.png",
+       "/quadras/quadra1.png",
+       "/quadras/quadra6.png",
     ],
     []
   );
@@ -102,22 +103,34 @@ export default function Register() {
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
       {/* Glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-             style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-             style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
+        <div
+          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
+        />
+        <div
+          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
+        />
       </div>
 
       {/* Grid da “quadra” */}
-      <div aria-hidden className="absolute inset-0 opacity-15" style={{
-        backgroundImage:
-          "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
-        backgroundSize: "24px 24px, 24px 24px",
-      }} />
-      <div aria-hidden className="absolute inset-0 opacity-10" style={{
-        backgroundImage:
-          "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
-      }} />
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-15"
+        style={{
+          backgroundImage:
+            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+          backgroundSize: "24px 24px, 24px 24px",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+        }}
+      />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
         {/* HERO com slideshow */}
@@ -153,11 +166,12 @@ export default function Register() {
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
-              {/* LOGO real acima do título */}
+              {/* LOGO real acima do título — sem corte */}
               <img
                 src="/quadras/logo-quadraflex.png"
                 alt="QuadraFlex"
-                className="mx-auto mb-3 h-12 w-12 rounded-xl object-contain shadow-lg"
+                className="mx-auto mb-3 w-auto max-h-16 sm:max-h-20 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                draggable="false"
               />
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Criar conta</h1>
               <p className="mt-1 text-white/70">Em poucos passos você já pode reservar e gerenciar quadras</p>
