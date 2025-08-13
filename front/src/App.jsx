@@ -1,3 +1,4 @@
+// src/App.jsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
@@ -13,7 +14,6 @@ import Sobre from "./pages/sobre";
 import Favoritos from "./pages/Favoritos";
 import Chat from "./pages/chat";
 import QuadraDetalhe from "./pages/QuadraDetalhe";
-import { quadras } from "./data/quadras";
 import HomeLocador from "./pages/HomeLocador";
 import CadastrarQuadra from "./pages/CadastrarQuadra";
 import Filtro from "./pages/Filtro";
@@ -40,8 +40,11 @@ function RequireAuth({ children, role }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (role && usuario?.tipo_usuario !== role) {
-    const dest = usuario?.tipo_usuario === "locador" ? "/home-locador" : "/home";
+  // ✅ normaliza o campo de tipo
+  const tipo = usuario?.tipo || usuario?.tipo_usuario;
+
+  if (role && tipo !== role) {
+    const dest = tipo === "locador" ? "/home-locador" : "/home";
     return <Navigate to={dest} replace />;
   }
 
@@ -58,10 +61,9 @@ const App = () => {
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        {/* Se quiser deixar /sobre e /privacidade públicas, mantenha fora do guard */}
         <Route path="/sobre" element={<Sobre />} />
         <Route path="/privacidade" element={<Privacidade />} />
-        {/* Detalhe de quadra pode ser público; mantenha assim se desejar */}
+        {/* Detalhe de quadra pode ser público */}
         <Route path="/quadra/:id" element={<QuadraDetalhe />} />
 
         {/* Cliente */}
@@ -78,6 +80,14 @@ const App = () => {
           element={
             <RequireAuth role="cliente">
               <Favoritos />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/minhas-quadras"
+          element={
+            <RequireAuth role="cliente">
+              <MinhasQuadras />
             </RequireAuth>
           }
         />
@@ -104,14 +114,6 @@ const App = () => {
           element={
             <RequireAuth role="locador">
               <DetalheQuadraLocador />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/minhas-quadras"
-          element={
-            <RequireAuth role="locador">
-              <MinhasQuadras />
             </RequireAuth>
           }
         />
@@ -158,7 +160,7 @@ const App = () => {
           }
         />
 
-        {/* Filtros/resultados — deixe público ou proteja, você escolhe */}
+        {/* Filtros/resultados — atualmente públicos */}
         <Route path="/filtro" element={<Filtro />} />
         <Route path="/resultados" element={<Resultados />} />
 
