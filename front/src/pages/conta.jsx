@@ -1,3 +1,4 @@
+// src/pages/conta.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -7,10 +8,44 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { api } from "../services/api";
 
+// Helpers ---------
+async function getUsuarioIdSeguro() {
+  try {
+    const raw = localStorage.getItem("usuario");
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.id) return Number(u.id);
+      if (u?.usuario_id) return Number(u.usuario_id);
+    }
+    const uidStr = localStorage.getItem("usuario_id");
+    if (uidStr && /^\d+$/.test(uidStr)) return Number(uidStr);
+
+    // tenta /auth/me se o token já está nos headers do axios
+    try {
+      const { data } = await api.get("/auth/me");
+      if (data?.id) return Number(data.id);
+      if (data?.usuario_id) return Number(data.usuario_id);
+    } catch (_) {}
+  } catch (_) {}
+  return null;
+}
+
+function getUsuarioTipoLocal() {
+  try {
+    const raw = localStorage.getItem("usuario");
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    return u?.tipo || u?.tipo_usuario || null;
+  } catch {
+    return null;
+  }
+}
+// -----------------
+
 export default function Conta() {
   const navigate = useNavigate();
-  const usuarioId = localStorage.getItem("usuario_id");
 
+  const [usuarioId, setUsuarioId] = useState(null);
   const [dados, setDados] = useState({
     nome: "",
     email: "",
@@ -19,30 +54,68 @@ export default function Conta() {
   });
   const [carregando, setCarregando] = useState(true);
 
+  // Resolve o ID e redireciona se não houver login
   useEffect(() => {
-    // se não estiver logado, manda pro login
-    if (!usuarioId) {
-      navigate("/login");
-      return;
+    let cancelado = false;
+
+    async function boot() {
+      const id = await getUsuarioIdSeguro();
+      if (!id) {
+        navigate("/login", { replace: true });
+        return;
+      }
+      if (!cancelado) setUsuarioId(id);
     }
 
-    const buscarDados = async () => {
-      try {
-        const res = await api.get(`/usuarios/${usuarioId}`);
-        const dadosUsuario = res.data || {};
+    boot();
+    return () => {
+      cancelado = true;
+    };
+  }, [navigate]);
 
-        if (dadosUsuario.data_nascimento) {
-          dadosUsuario.data_nascimento = new Date(dadosUsuario.data_nascimento)
-            .toISOString()
-            .split("T")[0];
+  // Busca dados do usuário
+  useEffect(() => {
+    if (!usuarioId) return;
+
+    let cancelado = false;
+
+    async function buscarDados() {
+      try {
+        setCarregando(true);
+
+        // 1) tenta /auth/me primeiro
+        let dadosUsuario = null;
+        try {
+          const me = await api.get("/auth/me");
+          dadosUsuario = me?.data || null;
+        } catch {
+          // 2) fallback /usuarios/:id
+          const res = await api.get(`/usuarios/${usuarioId}`);
+          dadosUsuario = res?.data || null;
         }
 
-        setDados({
+        if (!dadosUsuario) throw new Error("Usuário não encontrado.");
+
+        // normaliza data_nascimento para input date
+        let data_nascimento = "";
+        if (dadosUsuario.data_nascimento) {
+          try {
+            data_nascimento = new Date(dadosUsuario.data_nascimento)
+              .toISOString()
+              .split("T")[0];
+          } catch {
+            data_nascimento = "";
+          }
+        }
+
+        const next = {
           nome: dadosUsuario.nome || "",
           email: dadosUsuario.email || "",
           telefone: dadosUsuario.telefone || "",
-          data_nascimento: dadosUsuario.data_nascimento || "",
-        });
+          data_nascimento,
+        };
+
+        if (!cancelado) setDados(next);
       } catch (err) {
         console.error("Erro ao buscar dados:", err);
         toast.error("❌ Não foi possível carregar seus dados.", {
@@ -51,21 +124,44 @@ export default function Conta() {
           theme: "colored",
         });
       } finally {
-        setCarregando(false);
+        if (!cancelado) setCarregando(false);
       }
-    };
+    }
 
     buscarDados();
-  }, [usuarioId, navigate]);
+    return () => {
+      cancelado = true;
+    };
+  }, [usuarioId]);
 
   const handleChange = (e) => {
-    setDados({ ...dados, [e.target.name]: e.target.value });
+    setDados((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const salvarAlteracoes = async (e) => {
     e.preventDefault();
+    if (!usuarioId) return;
+
     try {
       await api.put(`/usuarios/${usuarioId}`, dados);
+
+      // Atualiza o localStorage.usuario para manter o app consistente
+      try {
+        const raw = localStorage.getItem("usuario");
+        if (raw) {
+          const u = JSON.parse(raw);
+          const atualizado = {
+            ...u,
+            nome: dados.nome,
+            email: dados.email,
+            telefone: dados.telefone,
+          };
+          localStorage.setItem("usuario", JSON.stringify(atualizado));
+          // opcional: atualiza chave antiga se existir
+          localStorage.setItem("nomeUsuario", dados.nome || "");
+        }
+      } catch {}
+
       toast.success("✅ Dados atualizados com sucesso!", {
         position: "top-right",
         autoClose: 3000,
@@ -73,13 +169,21 @@ export default function Conta() {
       });
     } catch (err) {
       console.error("Erro ao salvar alterações:", err);
-      toast.error("❌ Erro ao salvar alterações!", {
+      const msg =
+        err?.response?.data?.erro ||
+        err?.response?.data?.message ||
+        "❌ Erro ao salvar alterações!";
+      toast.error(msg, {
         position: "top-right",
         autoClose: 3000,
         theme: "colored",
       });
     }
   };
+
+  // Home dinâmica no breadcrumb
+  const tipo = getUsuarioTipoLocal();
+  const homePath = tipo === "locador" ? "/home-locador" : "/home";
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -100,7 +204,7 @@ export default function Conta() {
       <div className="flex-1 text-black px-6 md:pl-20 py-10">
         {/* Breadcrumb */}
         <div className="flex items-center py-4 overflow-x-auto whitespace-nowrap mb-6">
-          <Link to="/home" className="text-gray-600 dark:text-gray-200">
+          <Link to={homePath} className="text-gray-600 dark:text-gray-200" title="Início">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
             </svg>

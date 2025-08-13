@@ -1,5 +1,5 @@
-// src/pages/Notificacoes.jsx
-import React, { useState, useEffect } from "react";
+// src/pages/notificacao.jsx
+import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
@@ -13,43 +13,35 @@ import {
 } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-// ✅ IMPORT CERTO: cliente configurado com baseURL/headers
+
+import { getNotificacoes, deleteNotificacao } from "../services/notificacoes";
 import { api } from "../services/api";
 
-export default function Notificacoes() {
-  const [notificacoes, setNotificacoes] = useState([]);
+// helper: resolve ID do usuário de forma robusta
+async function getUsuarioIdSeguro() {
+  try {
+    const raw = localStorage.getItem("usuario");
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.id) return Number(u.id);
+      if (u?.usuario_id) return Number(u.usuario_id);
+    }
+    const uidStr = localStorage.getItem("usuario_id");
+    if (uidStr && /^\d+$/.test(uidStr)) return Number(uidStr);
+
+    // tenta /auth/me (se token já está no axios)
+    try {
+      const { data } = await api.get("/auth/me");
+      if (data?.id) return Number(data.id);
+      if (data?.usuario_id) return Number(data.usuario_id);
+    } catch (_) {}
+  } catch (_) {}
+  return null;
+}
+
+export default function Notificacao() {
+  const [items, setItems] = useState([]);
   const [carregando, setCarregando] = useState(true);
-
-  useEffect(() => {
-    const userId = localStorage.getItem("usuario_id");
-    if (!userId) {
-      setCarregando(false);
-      toast.info("Você precisa estar logado para ver as notificações.");
-      return;
-    }
-
-    let cancelado = false;
-    async function buscarNotificacoes() {
-      try {
-        setCarregando(true);
-        const res = await api.get(`/notificacoes/${userId}`);
-        if (!cancelado) {
-          const data = Array.isArray(res.data) ? res.data : [];
-          setNotificacoes(data);
-        }
-      } catch (error) {
-        console.error("❌ Erro ao buscar notificações:", error?.response?.data || error?.message);
-        toast.error("Não foi possível carregar as notificações.");
-      } finally {
-        if (!cancelado) setCarregando(false);
-      }
-    }
-
-    buscarNotificacoes();
-    return () => {
-      cancelado = true;
-    };
-  }, []);
 
   const icones = {
     aprovacao: <FaCheckCircle className="text-green-500 w-6 h-6" />,
@@ -59,20 +51,44 @@ export default function Notificacoes() {
     aluguel: <FaCalendarAlt className="text-purple-500 w-6 h-6" />,
   };
 
-  const excluirNotificacao = async (id) => {
+  async function carregar() {
     try {
-      await api.delete(`/notificacoes/${id}`);
-      setNotificacoes((prev) => prev.filter((n) => n.id !== id));
-      toast.success("Notificação excluída com sucesso!");
-    } catch (error) {
-      console.error("❌ Erro ao excluir notificação:", error?.response?.data || error?.message);
+      setCarregando(true);
+      const uid = await getUsuarioIdSeguro();
+      if (!uid) {
+        setItems([]);
+        toast.info("Entre na sua conta para ver as notificações.");
+        return;
+      }
+      const { data } = await getNotificacoes(uid);
+      setItems(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Erro ao carregar notificações:", err?.response?.data || err?.message);
+      toast.error("Não foi possível carregar as notificações.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  useEffect(() => {
+    carregar();
+  }, []);
+
+  async function excluir(id) {
+    try {
+      await deleteNotificacao(id);
+      setItems((prev) => prev.filter((n) => n.id !== id));
+      toast.success("Notificação excluída!");
+    } catch (err) {
+      console.error("Erro ao excluir notificação:", err?.response?.data || err?.message);
       toast.error("Erro ao excluir notificação.");
     }
-  };
+  }
 
   return (
     <div className="flex">
       <ToastContainer />
+
       {/* Sidebar (desktop) */}
       <div className="md:block hidden">
         <Sidebar />
@@ -88,9 +104,9 @@ export default function Notificacoes() {
         <div className="flex justify-end items-center mb-4 gap-4">
           <div className="relative">
             <FaBell className="text-gray-700 w-6 h-6" />
-            {notificacoes.length > 0 && (
+            {items.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">
-                {notificacoes.length}
+                {items.length}
               </span>
             )}
           </div>
@@ -115,14 +131,14 @@ export default function Notificacoes() {
         <h1 className="text-2xl font-bold text-green-700 mb-6">
           Notificações
           <span className="ml-2 bg-green-200 text-green-800 text-xs font-bold px-2 py-1 rounded-full">
-            {notificacoes.length}
+            {items.length}
           </span>
         </h1>
 
         {/* Lista / estados */}
         {carregando ? (
           <div className="text-gray-500">Carregando notificações...</div>
-        ) : notificacoes.length === 0 ? (
+        ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center p-8 bg-white rounded-lg border shadow">
             <FaBell className="w-10 h-10 text-gray-400 mb-2" />
             <p className="text-gray-700 font-medium">Nenhuma notificação por aqui</p>
@@ -130,7 +146,7 @@ export default function Notificacoes() {
           </div>
         ) : (
           <div className="space-y-4">
-            {notificacoes.map((n) => (
+            {items.map((n) => (
               <div
                 key={n.id}
                 className="flex items-start justify-between p-4 bg-white border-l-4 border-green-600 shadow rounded-lg hover:bg-green-50 transition-all"
@@ -147,7 +163,7 @@ export default function Notificacoes() {
                   </div>
                 </div>
                 <button
-                  onClick={() => excluirNotificacao(n.id)}
+                  onClick={() => excluir(n.id)}
                   className="text-red-600 hover:text-red-800 p-2 rounded-full transition"
                   title="Excluir notificação"
                 >
