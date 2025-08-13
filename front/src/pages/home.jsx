@@ -1,90 +1,125 @@
 // src/pages/Home.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
-import { useNavigate, Link } from "react-router-dom";
-import { quadras, quadrasCarrossel } from "../data/quadras";
-import UserDropdown from "../components/DropdownUser";
-import MobileNav from "../components/MobileNav";
+import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import MobileNav from "../components/MobileNav";
+import UserDropdown from "../components/DropdownUser";
 import { api } from "../services/api";
+import { Search, SlidersHorizontal, Bell, Star, MapPin, Heart, ChevronRight } from "lucide-react";
+import { quadras, quadrasCarrossel } from "../data/quadras";
 
-// Helper que resolve o nome do usuário a partir de múltiplas fontes
-async function resolverNomeUsuario() {
-  try {
-    // 1) usuário salvo como objeto
-    const raw = localStorage.getItem("usuario");
-    if (raw) {
-      const u = JSON.parse(raw);
-      if (u?.nome) return u.nome;
-      if (u?.name) return u.name;
-    }
+/* ===== ÍCONES MINI (16px) — viewBox padronizado ===== */
+function IconSoccerMini({ className = "w-4 h-4" }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="12" cy="12" r="9" />
+      <polygon points="12,6.5 9,8.5 10,12 14,12 15,8.5" />
+      <path d="M6.5 12c1.1 1.1 3.3 2.2 5.5 2.2s4.4-1.1 5.5-2.2" />
+    </svg>
+  );
+}
+function IconBasketMini({ className = "w-4 h-4" }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3v18" />
+      <path d="M6.5 6.5c5 3 7 9 6 15" />
+      <path d="M17.5 6.5c-5 3-7 9-6 15" />
+    </svg>
+  );
+}
+function IconVolleyMini({ className = "w-4 h-4" }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M6.5 9.5c4-3 7-3 11 0" />
+      <path d="M5.5 14c4 2 9 2 13 0" />
+      <path d="M9 4.5c-2 5-2 10 0 15" />
+      <path d="M15 4.5c2 5 2 10 0 15" />
+    </svg>
+  );
+}
+function IconTennisMini({ className = "w-4 h-4" }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M4.5 10c5-4 10-4 15 0" />
+      <path d="M4.5 14c5 4 10 4 15 0" />
+    </svg>
+  );
+}
 
-    // 2) nome salvo isolado
-    const nomeisolado = localStorage.getItem("nomeUsuario");
-    if (nomeisolado) return nomeisolado;
-
-    // 3) tentar via backend (se tiver token aplicado no axios)
-    try {
-      const { data } = await api.get("/auth/me");
-      if (data?.nome) return data.nome;
-      if (data?.name) return data.name;
-    } catch {
-      const uid = localStorage.getItem("usuario_id");
-      if (uid) {
-        const { data } = await api.get(`/usuarios/${uid}`);
-        if (data?.nome) return data.nome;
-        if (data?.name) return data.name;
-      }
-    }
-  } catch (e) {
-    console.warn("Falha ao resolver nome do usuário:", e);
-  }
-  return "Usuário(a)";
+/* ===== Chip de categoria ===== */
+function CategoryChip({ label, onClick, Icon }) {
+  return (
+    <button
+      onClick={onClick}
+      className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white hover:bg-emerald-50 transition ring-1 ring-black/5"
+      aria-label={label}
+    >
+      <span className="grid place-items-center rounded-full bg-gray-100 w-7 h-7">
+        <Icon className="w-4 h-4 text-emerald-800" />
+      </span>
+      <span className="text-sm font-medium text-gray-700">{label}</span>
+    </button>
+  );
 }
 
 export default function Home() {
   const navigate = useNavigate();
-
-  const [nomeUsuario, setNomeUsuario] = useState("Usuário(a)");
+  const [nomeUsuario, setNomeUsuario] = useState("Usuário");
   const [mostrarCookies, setMostrarCookies] = useState(false);
-  const [tipoSelecionado, setTipoSelecionado] = useState("Todos");
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
 
+  /* ===== Carrossel ===== */
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
-    slides: { perView: 5, spacing: 16 },
+    renderMode: "performance",
+    rubberband: true,
+    breakpoints: {
+      "(max-width: 480px)": { slides: { perView: 1.1, spacing: 10 } },
+      "(min-width: 481px)": { slides: { perView: 1.6, spacing: 12 } },
+      "(min-width: 768px)": { slides: { perView: 2.5, spacing: 14 } },
+      "(min-width: 1024px)": { slides: { perView: 3.5, spacing: 16 } },
+      "(min-width: 1280px)": { slides: { perView: 4.5, spacing: 18 } },
+    },
+    slides: { perView: 3.5, spacing: 16 },
   });
 
-  // Autoplay do carrossel sem vazar setInterval
   useEffect(() => {
     if (!instanceRef.current) return;
-    const id = setInterval(() => {
-      instanceRef.current?.next();
-    }, 5000);
+    const id = setInterval(() => instanceRef.current?.next(), 4500);
     return () => clearInterval(id);
   }, [instanceRef]);
 
-  // Buscar notificações periodicamente (usando /api)
+  /* ===== Inicialização ===== */
+  useEffect(() => {
+    setNomeUsuario(localStorage.getItem("nomeUsuario") || "Usuário");
+    setMostrarCookies(localStorage.getItem("cookiesAceitos") !== "true");
+  }, []);
+
+  /* ===== Notificações ===== */
   useEffect(() => {
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario?.id) return;
-
-    const buscarTodasNotificacoes = async () => {
+    const buscar = async () => {
       try {
         const { data } = await api.get(`/notificacoes/${usuario.id}`);
-        const total = Array.isArray(data) ? data.length : 0;
+        const total = Array.isArray(data) ? data.filter((n) => !n.lida).length : 0;
         setNotificacoesNaoLidas(total);
-      } catch (err) {
-        console.error("Erro ao buscar notificações:", err?.response?.data || err?.message);
+      } catch (e) {
+        console.error("Erro ao buscar notificações:", e);
       }
     };
-
-    buscarTodasNotificacoes();
-    const intervalo = setInterval(buscarTodasNotificacoes, 15000);
-    return () => clearInterval(intervalo);
+    buscar();
+    const t = setInterval(buscar, 15000);
+    return () => clearInterval(t);
   }, []);
 
+  /* ===== Navegação detalhe ===== */
   const handleQuadraClick = (quadra) => {
     const imagem_nome = quadra.imagem?.split("/").pop();
     navigate(`/quadra/${quadra.id}`, {
@@ -98,272 +133,289 @@ export default function Home() {
     });
   };
 
-  // Carregar nome do usuário de forma robusta + reagir a mudanças do localStorage
-  useEffect(() => {
-    let cancelado = false;
-
-    async function carregarNome() {
-      const nome = await resolverNomeUsuario();
-      if (!cancelado) setNomeUsuario(nome || "Usuário(a)");
-    }
-
-    carregarNome();
-
-    function onStorage(e) {
-      if (e.key === "usuario" || e.key === "nomeUsuario" || e.key === "usuario_id") {
-        carregarNome();
-      }
-    }
-    window.addEventListener("storage", onStorage);
-
-    return () => {
-      cancelado = true;
-      window.removeEventListener("storage", onStorage);
-    };
-  }, []);
-
-  // Cookie banner
-  useEffect(() => {
-    const cookiesAceitos = localStorage.getItem("cookiesAceitos");
-    setMostrarCookies(cookiesAceitos !== "true");
-  }, []);
+  /* ===== Categorias ===== */
+  const categorias = useMemo(
+    () => [
+      { nome: "Futebol", Icon: IconSoccerMini },
+      { nome: "Basquete", Icon: IconBasketMini },
+      { nome: "Vôlei", Icon: IconVolleyMini },
+      { nome: "Tênis", Icon: IconTennisMini },
+    ],
+    []
+  );
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden">
+    <div className="flex min-h-screen bg-neutral-50">
+      {/* Sidebar Desktop */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      <div className="md:hidden fixed top-0 left-0 w-full z-50">
+      {/* Mobile Topbar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40">
         <MobileNav />
       </div>
 
-      <div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
-        <div className="relative bg-gradient-to-b from-[#1E8449] to-[#14532d] text-white p-6 pb-10 rounded-b-3xl shadow-md z-10">
-          {/* Sino / Notificações */}
-          <Link to="/notificacoes" className="absolute top-6 left-4 sm:left-16">
-            <div className="relative group">
-              <div className="bg-white rounded-full w-10 h-10 shadow flex items-center justify-center group-hover:scale-105 transition">
-                <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 2a6 6 0 00-6 6v2.586l-.707.707A1 1 0 004 13h12a1 1 0 00.707-1.707L16 10.586V8a6 6 0 00-6-6zm0 16a2 2 0 001.995-1.85L12 16H8a2 2 0 001.85 1.995L10 18z" />
-                </svg>
+      {/* Conteúdo */}
+      <main className="flex-1 w-full">
+        {/* === HERO FULL-BLEED (sem corte nas laterais) ===
+            A mágica está nas margens negativas abaixo, que “anulam” o padding do container
+            e deixam o gradiente ocupar toda a largura útil. Também removi overflow-hidden. */}
+        <section className="relative mt-12 md:mt-4 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8">
+          <div className="relative rounded-b-3xl shadow-sm">
+            <div className="absolute inset-0 rounded-b-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800" />
+            <div className="relative px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6">
+              {/* Topo */}
+              <div className="flex items-center justify-between">
+                <Link to="/notificacao" className="relative group">
+                  <div className="w-10 h-10 rounded-full bg-white grid place-items-center shadow">
+                    <Bell className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  {notificacoesNaoLidas > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-semibold px-1.5 py-[1px] rounded-full shadow">
+                      {notificacoesNaoLidas}
+                    </span>
+                  )}
+                </Link>
+
+                <div className="relative z-50">
+                  <UserDropdown />
+                </div>
               </div>
-              {notificacoesNaoLidas > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-semibold px-1.5 py-[1px] rounded-full shadow">
-                  {notificacoesNaoLidas}
-                </span>
-              )}
+
+              {/* Saudação */}
+              <div className="mt-1 text-center md:text-left text-white">
+                <h1 className="text-xl md:text-2xl font-semibold">Olá, {nomeUsuario}</h1>
+                <p className="text-white/85 text-sm">Sua quadra, seu jogo!</p>
+              </div>
+
+              {/* Busca + Filtro */}
+              <div className="mt-3 md:mt-4 flex items-center justify-center md:justify-start">
+                <div className="flex items-center bg-white/95 backdrop-blur rounded-full px-3 py-2 shadow-lg ring-1 ring-black/5 w-full max-w-xl">
+                  <Search className="w-5 h-5 text-gray-400 mr-2" />
+                  <input
+                    type="text"
+                    placeholder="Procure sua quadra aqui"
+                    className="outline-none text-gray-700 flex-1 bg-transparent placeholder:text-gray-400 text-sm md:text-base"
+                  />
+                </div>
+                <button
+                  className="ml-2 p-2.5 bg-white rounded-xl shadow-lg ring-1 ring-black/5 hover:bg-emerald-50 transition"
+                  onClick={() => navigate("/filtro")}
+                  aria-label="Abrir filtros"
+                >
+                  <SlidersHorizontal className="w-5 h-5 text-emerald-700" />
+                </button>
+              </div>
+
+              {/* Categorias — chips (mini) */}
+              <div className="mt-3">
+                {/* Mobile: rolagem horizontal sem cortes */}
+                <div className="flex gap-2 overflow-x-auto md:hidden py-1 -mx-1 px-1">
+                  {categorias.map(({ nome, Icon }) => (
+                    <CategoryChip
+                      key={nome}
+                      label={nome}
+                      Icon={Icon}
+                      onClick={() => navigate("/resultados", { state: { tipo: [nome] } })}
+                    />
+                  ))}
+                </div>
+                {/* Desktop: grade compacta */}
+                <div className="hidden md:grid grid-cols-4 gap-3 mt-1">
+                  {categorias.map(({ nome, Icon }) => (
+                    <button
+                      key={nome}
+                      onClick={() => navigate("/resultados", { state: { tipo: [nome] } })}
+                      className="group w-full rounded-xl border border-gray-200 bg-white hover:bg-emerald-50 transition ring-1 ring-black/5 px-3 py-3 flex items-center gap-3"
+                    >
+                      <span className="grid place-items-center rounded-full bg-gray-100 w-8 h-8">
+                        <Icon className="w-4 h-4 text-emerald-800" />
+                      </span>
+                      <span className="text-sm font-medium text-gray-700">{nome}</span>
+                      <ChevronRight className="w-4 h-4 text-gray-400 ml-auto opacity-0 group-hover:opacity-100 transition" />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </Link>
-
-          {/* Dropdown do usuário */}
-          <div className="fixed top-4 right-4 z-[9999]">
-            <UserDropdown />
           </div>
+        </section>
 
-          <h1 className="text-2xl font-bold text-center">Olá, {nomeUsuario}</h1>
-          <p className="text-sm mt-1 text-center">Sua quadra, seu jogo!</p>
-
-          {/* Busca + Filtro */}
-          <div className="flex items-center justify-center mt-4">
-            <div className="flex items-center bg-white rounded-full px-4 py-2 shadow-md">
-              <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M5 11a6 6 0 1112 0 6 6 0 01-12 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Procure sua quadra aqui"
-                className="outline-none text-gray-700 w-64"
-              />
+        {/* Container central para o restante da página */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          {/* CARROSSEL */}
+          <section className="mt-6 md:mt-8">
+            <div className="flex items-center justify-between mb-2 md:mb-3">
+              <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">
+                Descubra quadras por aqui
+              </h2>
+              <Link to="/resultados" className="text-emerald-700 text-xs md:text-sm hover:underline">
+                Ver todas
+              </Link>
             </div>
 
-            <button
-              className="ml-2 p-3 bg-white rounded-xl shadow-md hover:bg-green-100"
-              onClick={() => navigate("/filtro")}
-            >
-              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6l-6.2 7.9V19a1 1 0 01-1.6.8l-2-1.5a1 1 0 01-.4-.8v-5.8L3.2 5.6A1 1 0 013 4z" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Atalhos por tipo */}
-          <div className="flex gap-6 mt-6 justify-center flex-wrap">
-            {[
-              { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
-              { nome: "Basquete", img: "/quadras/imagem1logo.png" },
-              { nome: "Vôlei", img: "/quadras/imagem4logo.png" },
-              { nome: "Tênis", img: "/quadras/imagem3logo.png" },
-            ].map(({ nome, img }) => (
-              <div
-                key={nome}
-                onClick={() =>
-                  navigate("/resultados", {
-                    state: {
-                      tipo: [nome],
-                      precoMaximo: "",
-                      avaliacaoMinima: "",
-                      local: "",
-                    },
-                  })
-                }
-                className="flex flex-col items-center cursor-pointer"
-              >
-                <div className="bg-white rounded-full p-2 shadow-md hover:scale-105 transition-transform duration-200">
-                  <img src={img} alt={nome} className="w-10 h-10 object-contain" />
+            <div ref={sliderRef} className="keen-slider">
+              {quadrasCarrossel.map((q) => (
+                <div key={q.id} className="keen-slider__slide">
+                  <button onClick={() => handleQuadraClick(q)} className="block group w-full h-full">
+                    <article className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5">
+                      <div className="relative" style={{ aspectRatio: "3 / 2" }}>
+                        <img
+                          src={q.imagem}
+                          alt={q.nome}
+                          className="h-full w-full object-cover group-hover:scale-105 transition"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+                        <div className="absolute bottom-2 left-2 flex items-center gap-2">
+                          <span className="bg-white/90 text-emerald-800 text-[11px] font-semibold px-2 py-1 rounded">
+                            {q.tipo}
+                          </span>
+                          <span className="bg-yellow-100 text-yellow-800 text-[11px] font-medium px-2 py-1 rounded inline-flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5" />
+                            {q.avaliacao}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="font-semibold text-gray-900 truncate">{q.nome}</h3>
+                        <p className="text-xs text-gray-500 mt-1 inline-flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5" />
+                          {q.local}
+                        </p>
+                        <div className="mt-2 text-sm font-medium text-emerald-700">{q.preco}</div>
+                      </div>
+                    </article>
+                  </button>
                 </div>
-                <span className="text-sm mt-1 capitalize text-white drop-shadow">{nome}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </section>
 
-        {/* Carrossel "Para você" */}
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold mb-4">Para você</h2>
-          <div ref={sliderRef} className="keen-slider">
-            {quadrasCarrossel.map((quadra) => (
-              <div
-                key={quadra.id}
-                className="keen-slider__slide bg-white rounded-lg shadow-md p-2 cursor-pointer"
-                onClick={() => navigate(`/quadra/${quadra.id}`, { state: { quadra } })}
-              >
-                <img src={quadra.imagem} alt={quadra.nome} className="rounded-md w-full h-32 object-cover" />
-                <div className="mt-2">
-                  <h3 className="font-medium text-sm">{quadra.nome}</h3>
-                  <p className="text-green-700 font-bold text-sm">{quadra.preco}</p>
-                  <p className="text-xs text-gray-500">{quadra.local}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          {/* DESTAQUES */}
+          <section className="mt-8 md:mt-10 mb-16">
+            <div className="flex items-center justify-between mb-2 md:mb-3">
+              <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">
+                Quadras em destaque
+              </h2>
+              <div className="text-[11px] md:text-xs text-gray-500">Atualizado diariamente</div>
+            </div>
 
-        {/* Quadras em destaque */}
-        <div className="mt-10">
-          <h2 className="text-xl font-semibold mb-4 text-green-700">Quadras em destaque</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {quadras.map((q) => (
-              <div
-                key={q.id}
-                onClick={() => handleQuadraClick(q)}
-                className="cursor-pointer bg-white rounded-xl shadow-md hover:shadow-xl hover:scale-[1.015] transition-transform duration-300 p-4 flex gap-4"
-              >
-                <img
-                  src={q.imagem}
-                  alt={q.nome}
-                  className="w-24 h-24 object-cover rounded-lg border border-gray-200"
-                />
-                <div className="flex flex-col justify-between">
-                  <h3 className="font-semibold text-lg text-gray-900">{q.nome}</h3>
-                  <p className="text-sm text-gray-600">{q.local}</p>
-                  <p className="text-green-700 font-bold text-sm">{q.preco}</p>
-                  <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded w-max">
-                    ★ {q.avaliacao}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
+              {quadras.map((q) => (
+                <article
+                  key={q.id}
+                  className="group relative rounded-2xl overflow-hidden bg-white shadow-md ring-1 ring-black/5 hover:shadow-lg transition"
+                >
+                  <button onClick={() => handleQuadraClick(q)} className="text-left w-full">
+                    <div className="relative" style={{ aspectRatio: "16 / 10" }}>
+                      <img
+                        src={q.imagem}
+                        alt={q.nome}
+                        className="h-full w-full object-cover group-hover:scale-105 transition"
+                        loading="lazy"
+                      />
+                      <button
+                        type="button"
+                        className="absolute top-2 right-2 rounded-full bg-white/90 backdrop-blur p-2 shadow hover:scale-105 transition"
+                        aria-label="Favoritar"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <Heart className="w-4 h-4 text-rose-500" />
+                      </button>
+
+                      <div className="absolute bottom-2 left-2 flex items-center gap-2">
+                        <span className="bg-white/90 text-emerald-800 text-[11px] font-semibold px-2 py-1 rounded">
+                          {q.tipo}
+                        </span>
+                        <span className="bg-yellow-100 text-yellow-800 text-[11px] font-medium px-2 py-1 rounded inline-flex items-center gap-1">
+                          <Star className="w-3.5 h-3.5" />
+                          {q.avaliacao}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-4">
+                      <h3 className="font-semibold text-gray-900 truncate">{q.nome}</h3>
+                      <p className="text-xs text-gray-500 mt-1 inline-flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {q.local}
+                      </p>
+                      <div className="mt-2 text-sm font-medium text-emerald-700">{q.preco}</div>
+                    </div>
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
         </div>
 
         {/* COOKIES */}
         {mostrarCookies && (
-          <section className="fixed bottom-10 left-6 sm:left-12 max-w-md w-[90%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50 transition-all">
-            <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
-            <p className="text-sm mb-3">
-              Usamos cookies para melhorar sua experiência e analisar o tráfego do site.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  localStorage.setItem("cookiesAceitos", "true");
-                  setMostrarCookies(false);
-                }}
-                className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
-              >
-                Aceitar todos
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.setItem("cookiesAceitos", "true");
-                  setMostrarCookies(false);
-                }}
-                className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
-              >
-                Rejeitar
-              </button>
-              <button
-                onClick={() => setMostrarCookies(false)}
-                className="w-full text-center mt-2 text-xs underline text-white/80 hover:text-white"
-              >
-                Fechar
-              </button>
+          <section className="fixed bottom-6 left-4 right-4 md:left-10 md:right-auto z-50">
+            <div className="max-w-md rounded-2xl bg-emerald-700 text-white p-4 shadow-2xl ring-1 ring-black/10">
+              <h3 className="font-semibold text-base mb-1">🍪 Nós usamos cookies!</h3>
+              <p className="text-sm text-white/90 mb-3">
+                Usamos cookies para melhorar sua experiência e analisar o tráfego do site.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    localStorage.setItem("cookiesAceitos", "true");
+                    setMostrarCookies(false);
+                  }}
+                  className="bg-white text-emerald-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-50 transition"
+                >
+                  Aceitar todos
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem("cookiesAceitos", "true");
+                    setMostrarCookies(false);
+                  }}
+                  className="bg-emerald-800/40 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-800/60 transition"
+                >
+                  Preferências
+                </button>
+              </div>
             </div>
           </section>
         )}
 
         {/* RODAPÉ */}
-        <footer className="bg-[#14532d] text-white py-10 mt-12">
-          <div className="max-w-6xl mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 text-sm">
-            <div>
-              <h3 className="text-lg font-bold mb-2">Sobre</h3>
-              <p>Encontre, alugue e jogue nas melhores quadras da sua cidade.</p>
+        <footer className="mt-6 mb-8 px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 text-white p-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Aluguel de Quadras</h3>
+                <p className="text-sm text-white/90">
+                  Encontre e agende quadras com facilidade. Mais esporte, menos burocracia.
+                </p>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Navegação</h3>
+                <ul className="space-y-1.5 text-sm text-white/90">
+                  <li><Link to="/home" className="hover:underline">Início</Link></li>
+                  <li><Link to="/favoritos" className="hover:underline">Favoritos</Link></li>
+                  <li><Link to="/sobre" className="hover:underline">Sobre</Link></li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Contato</h3>
+                <p className="text-sm text-white/90 mb-1">📧 eduardo_fortes@gmail.com</p>
+                <p className="text-sm text-white/90">📞 +55 (19) 99938-7274</p>
+              </div>
             </div>
-
-            <div>
-              <h3 className="text-lg font-bold mb-2">Navegação</h3>
-              <ul className="space-y-1">
-                <li>
-                  <a href="#" className="hover:underline">
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Quadras
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Contato
-                  </a>
-                </li>
-              </ul>
+            <div className="mt-6 text-center text-xs border-t border-white/20 pt-4">
+              © {new Date().getFullYear()} Aluguel de Quadras — Todos os direitos reservados.
             </div>
-
-            <div>
-              <h3 className="text-lg font-bold mb-2">Redes sociais</h3>
-              <ul className="space-y-1">
-                <li>
-                  <a href="#" className="hover:underline">
-                    Instagram
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Facebook
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Twitter
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold mb-2">Contato</h3>
-              <p className="mb-1">📧 eduardo_fortes@gmail.com</p>
-              <p>📞 +55 (19) 99938-7274</p>
-            </div>
-          </div>
-          <div className="mt-8 text-center text-xs border-t border-white/20 pt-4">
-            © 2025 Aluguel de Quadras — Todos os direitos reservados.
           </div>
         </footer>
-      </div>
+      </main>
     </div>
   );
 }
