@@ -1,9 +1,9 @@
 // src/components/DropdownUser.jsx
-console.log('[Dropdown] build marker v8');
+console.log("[Dropdown] build marker v9");
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, LogOut, Bell, ChevronDown } from "lucide-react";
-import { api } from "../services/api";
+import { api, fileURL } from "../services/api";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,47 +13,56 @@ export default function UserDropdown() {
   const menuRef = useRef(null);
   const btnRef = useRef(null);
 
-  const ORIGIN =
-    import.meta.env.VITE_FILES_ORIGIN?.replace(/\/+$/, "") ||
-    (typeof window !== "undefined" ? window.location.origin : "");
+  // 1) Fallbacks:
+  // - preferimos um default servido pelo backend (funciona com fileURL + /uploads)
+  // - e, se der erro, caímos para um placeholder que você pode deixar em /public do front
+  const AVATAR_PLACEHOLDER = "/avatar-placeholder.png"; // coloque um PNG/SVG no /public
+  const avatarFallback = fileURL("/uploads/default-avatar.png"); // opcional: suba esse arquivo no back
 
-  const avatarFallback = `${ORIGIN}/avatars/default.png`;
+  // 2) Normaliza qualquer formato vindo do back (absoluto, relativo, só nome de arquivo)
+  const normalizeToFileURL = useCallback((val) => {
+    if (!val) return null;
+    const s = String(val).trim();
 
-  const normalize = useCallback(
-    (val) => {
-      if (!val) return null;
-      if (/^https?:\/\//i.test(val)) return val;
-      if (val.startsWith("/")) return `${ORIGIN}${val}`;
-      return `${ORIGIN}/avatars/${val.replace(/^\/+/, "")}`;
-    },
-    [ORIGIN]
-  );
+    // já é absoluta
+    if (/^https?:\/\//i.test(s)) return s;
 
-  const bust = useCallback(
-    (url) => {
-      if (!url) return avatarFallback;
-      const sep = url.includes("?") ? "&" : "?";
-      return `${url}${sep}t=${Date.now()}`;
-    },
-    [avatarFallback]
-  );
+    // se o caminho contém /uploads/, mantém a partir daí
+    const idx = s.indexOf("/uploads/");
+    if (idx >= 0) return fileURL(s.slice(idx));
 
-  const loadFromServer = useCallback(
-    async (id) => {
-      try {
-        const { data } = await api.get(`/fotos-perfil/${id}`);
-        const url = normalize(data?.imagem_url) || avatarFallback;
-        const finalUrl = bust(url);
-        setImagemPerfil(finalUrl);
-        localStorage.setItem("avatar_url", finalUrl); // mantém em sync com outras partes
-      } catch {
-        setImagemPerfil(avatarFallback);
-      }
-    },
-    [normalize, avatarFallback, bust]
-  );
+    // se vier só "arquivo.png" ou "uploads/arquivo.png", força para /uploads/arquivo.png
+    const just = s.replace(/^\/+/, "");
+    const rel = just.startsWith("uploads/") ? `/${just}` : `/uploads/${just}`;
+    return fileURL(rel);
+  }, []);
 
-  // primeira carga: nome + avatar local + força sync do servidor
+  // 3) Cache-buster
+  const bust = useCallback((url) => {
+    if (!url) return avatarFallback;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}t=${Date.now()}`;
+  }, [avatarFallback]);
+
+  // 4) Busca a foto no servidor
+  const loadFromServer = useCallback(async (id) => {
+    try {
+      const { data } = await api.get(`/fotos-perfil/${id}`);
+      // aceite tanto imagem_url quanto imagem/foto
+      const raw =
+        data?.imagem_url || data?.imagem || data?.foto || data?.path || null;
+
+      const url = normalizeToFileURL(raw) || avatarFallback;
+      const finalUrl = bust(url);
+      setImagemPerfil(finalUrl);
+      localStorage.setItem("avatar_url", finalUrl);
+    } catch (e) {
+      // se falhar, usa fallback do back; se quebrar, onError cai no placeholder do front
+      setImagemPerfil(avatarFallback);
+    }
+  }, [normalizeToFileURL, avatarFallback, bust]);
+
+  // 5) Primeira carga: nome + avatar de cache + sync do servidor
   useEffect(() => {
     const raw = localStorage.getItem("usuario");
     if (!raw) return;
@@ -64,13 +73,14 @@ export default function UserDropdown() {
       const lsAvatar = localStorage.getItem("avatar_url");
       if (lsAvatar) setImagemPerfil(lsAvatar);
 
-      if (user?.id) loadFromServer(user.id);
+      const id = user?.id ?? user?.usuario_id;
+      if (id) loadFromServer(id);
     } catch {
       setImagemPerfil(avatarFallback);
     }
   }, [loadFromServer, avatarFallback]);
 
-  // escuta atualizações vindas do Perfil.jsx
+  // 6) Escuta atualizações do avatar vindas do Perfil.jsx
   useEffect(() => {
     const onUpdated = () => {
       const lsAvatar = localStorage.getItem("avatar_url");
@@ -84,7 +94,7 @@ export default function UserDropdown() {
     };
   }, []);
 
-  // fechar no clique fora
+  // 7) Clique fora / ESC
   useEffect(() => {
     if (!isOpen) return;
     const onClickAway = (e) => {
@@ -97,18 +107,13 @@ export default function UserDropdown() {
         setIsOpen(false);
       }
     };
+    const onKey = (e) => e.key === "Escape" && setIsOpen(false);
     document.addEventListener("mousedown", onClickAway);
-    return () => document.removeEventListener("mousedown", onClickAway);
-  }, [isOpen]);
-
-  // fechar com Esc
-  useEffect(() => {
-    if (!isOpen) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") setIsOpen(false);
-    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClickAway);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [isOpen]);
 
   const go = (path) => {
@@ -135,8 +140,12 @@ export default function UserDropdown() {
           alt="Avatar"
           className="w-8 h-8 rounded-full mr-2 border-2 border-white shadow-sm object-cover"
           onError={(e) => {
+            // 1º fallback: avatar do back
             if (e.currentTarget.src !== avatarFallback) {
               e.currentTarget.src = avatarFallback;
+            } else {
+              // 2º fallback: placeholder local do front (/public/avatar-placeholder.png)
+              e.currentTarget.src = AVATAR_PLACEHOLDER;
             }
           }}
         />
