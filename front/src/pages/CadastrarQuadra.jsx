@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import { FaSpinner, FaTrash } from "react-icons/fa";
-import { toast } from "react-toast-toast";
+import { toast } from "react-hot-toast"; // ✅ CORRIGIDO
 import { api } from "../services/api";
 
 // helpers
@@ -120,14 +120,13 @@ export default function CadastrarQuadra() {
     formData.append("dono_id", String(donoId));
     formData.append("nota", "0");
 
-    // ⚠️ ENVIE APENAS O CAMPO QUE O MULTER ACEITA
-    // Backend provavelmente: upload.array('imagens', ...)
+    // envie APENAS o campo aceito pelo Multer
     imagens.forEach((file) => {
-      formData.append("imagens", file, file.name); // <-- use só "imagens"
+      formData.append("imagens", file, file.name);
     });
 
     try {
-      const { data } = await api.post("/quadras", formData /* não defina Content-Type aqui */);
+      const { data } = await api.post("/quadras", formData); // não defina Content-Type manualmente
       console.log("🟢 Resposta do servidor:", data);
       toast.success("Quadra cadastrada com sucesso!");
       navigate("/home-locador");
@@ -233,9 +232,7 @@ export default function CadastrarQuadra() {
                 <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3" />
                 </svg>
-                <span className="text-sm text-gray-500 mt-2">
-                  Clique para selecionar imagens (mínimo 3)
-                </span>
+                <span className="text-sm text-gray-500 mt-2">Clique para selecionar imagens (mínimo 3)</span>
                 <input
                   id="imagens"
                   type="file"
