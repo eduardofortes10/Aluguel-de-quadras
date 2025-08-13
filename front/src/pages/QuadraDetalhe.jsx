@@ -1,3 +1,4 @@
+// src/pages/QuadraDetalhe.jsx
 import React, { useState, useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -6,7 +7,6 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { enviarNotificacao } from "../services/notificacoes";
 import { api } from "../services/api";
-
 import {
   FaStar,
   FaEnvelope,
@@ -15,6 +15,36 @@ import {
   FaHeart,
   FaMapMarkerAlt,
 } from "react-icons/fa";
+
+// 🔐 Helper: resolve o ID do usuário logado a partir de várias fontes
+async function getUsuarioIdSeguro() {
+  try {
+    // 1) Objeto 'usuario' no localStorage
+    const raw = localStorage.getItem("usuario");
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.id) return Number(u.id);
+      if (u?.usuario_id) return Number(u.usuario_id);
+    }
+    // 2) Chave isolada 'usuario_id'
+    const uidStr = localStorage.getItem("usuario_id");
+    if (uidStr && /^\d+$/.test(uidStr)) return Number(uidStr);
+
+    // 3) Pergunta para a API (se token já está no axios)
+    try {
+      const { data } = await api.get("/auth/me");
+      if (data?.id) return Number(data.id);
+      if (data?.usuario_id) return Number(data.usuario_id);
+    } catch {
+      // 4) Último fallback: se existir 'usuario_id' mas veio não-numérico
+      const uid = parseInt(uidStr, 10);
+      if (!isNaN(uid) && uid > 0) return uid;
+    }
+  } catch (e) {
+    console.warn("Falha ao resolver usuario_id:", e);
+  }
+  return null;
+}
 
 export default function QuadraDetalhe() {
   const navigate = useNavigate();
@@ -28,12 +58,10 @@ export default function QuadraDetalhe() {
 
   const { state } = useLocation();
   const quadra = state?.quadra;
-  const usuario_id = Number(localStorage.getItem("usuario_id"));
 
   if (!quadra) return <div className="p-4">Quadra não encontrada.</div>;
 
   const precoNumerico = () => {
-    // aceita "R$ 100", "R$ 100 /hora", "100"
     const limpo = String(quadra.preco || "")
       .replace("R$", "")
       .replace("/hora", "")
@@ -49,7 +77,6 @@ export default function QuadraDetalhe() {
       setValorTotal("0.00");
       return;
     }
-
     const [h1, m1] = horaInicio.split(":").map(Number);
     const [h2, m2] = horaFim.split(":").map(Number);
     const inicio = h1 * 60 + m1;
@@ -67,9 +94,9 @@ export default function QuadraDetalhe() {
   }, [horaInicio, horaFim]);
 
   const handleFavoritar = async () => {
-    const uid = Number(localStorage.getItem("usuario_id"));
+    const uid = await getUsuarioIdSeguro();
     if (!uid) {
-      alert("Você precisa estar logado para favoritar quadras.");
+      toast.error("Faça login para favoritar.");
       return;
     }
 
@@ -77,7 +104,7 @@ export default function QuadraDetalhe() {
       usuario_id: uid,
       quadra_id: quadra.id || quadra.quadra_id || 0,
       nome: quadra.nome,
-      preco: precoNumerico(), // manda número
+      preco: precoNumerico(),
       local: quadra.local,
       imagem_url:
         quadra.imagem_url?.split("/").pop() ||
@@ -90,27 +117,27 @@ export default function QuadraDetalhe() {
       await api.post("/favoritos", dadosFavorito);
       toast.success("Quadra favoritada com sucesso!");
 
-      // notificação
       await enviarNotificacao({
         usuario_id: uid,
         tipo: "favorito",
         mensagem: `Você favoritou a quadra ${quadra.nome}`,
       });
 
-      // opcional: atualizar contador de não lidas (se tiver store global depois)
-      await api.get(`/notificacoes/nao-lidas/${uid}`);
+      // opcional: atualizar contador em alguma store futuramente
+      // await api.get(`/notificacoes/nao-lidas/${uid}`);
     } catch (erro) {
       console.error("Erro ao favoritar:", erro);
-      const msg =
-        erro?.response?.data?.erro || "Erro inesperado ao favoritar.";
+      const msg = erro?.response?.data?.erro || "Erro inesperado ao favoritar.";
       toast.error(msg);
     }
   };
 
   const confirmarAluguel = async () => {
-    const uid = Number(localStorage.getItem("usuario_id"));
+    const uid = await getUsuarioIdSeguro();
     if (!uid) {
       toast.error("Faça login para alugar.");
+      // Se quiser, pode redirecionar:
+      // navigate("/login");
       return;
     }
     if (!dataAluguel || !horaInicio || !horaFim) {
@@ -145,8 +172,7 @@ export default function QuadraDetalhe() {
       setMostrarModal(false);
     } catch (err) {
       console.error("❌ Erro ao salvar aluguel:", err);
-      const msg =
-        err?.response?.data?.erro || "Erro inesperado ao salvar aluguel.";
+      const msg = err?.response?.data?.erro || "Erro inesperado ao salvar aluguel.";
       toast.error(msg);
     }
   };
@@ -187,16 +213,8 @@ export default function QuadraDetalhe() {
         <div className="bg-white shadow-2xl rounded-3xl p-6 border border-gray-200">
           {/* Breadcrumb */}
           <div className="flex items-center py-4 overflow-x-auto whitespace-nowrap">
-            <Link
-              to="/home"
-              className="text-gray-600 flex items-center hover:underline"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-5 h-5 mr-1"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
+            <Link to="/home" className="text-gray-600 flex items-center hover:underline">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
               </svg>
               Início
@@ -235,9 +253,7 @@ export default function QuadraDetalhe() {
 
           {/* Dono */}
           <div className="mt-6 border-t pt-4">
-            <h2 className="text-lg font-semibold mb-2 text-gray-800">
-              Dono da Quadra
-            </h2>
+            <h2 className="text-lg font-semibold mb-2 text-gray-800">Dono da Quadra</h2>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-gray-50 p-4 rounded-xl shadow-sm">
               <img
                 src={quadra.dono.foto}
@@ -250,12 +266,8 @@ export default function QuadraDetalhe() {
                 <p className="text-sm text-gray-600">{quadra.dono.telefone}</p>
               </div>
               <div className="ml-auto flex gap-3 text-green-700 text-xl">
-                <a href={`mailto:${quadra.dono.email}`}>
-                  <FaEnvelope />
-                </a>
-                <a href={`tel:${quadra.dono.telefone}`}>
-                  <FaPhone />
-                </a>
+                <a href={`mailto:${quadra.dono.email}`}><FaEnvelope /></a>
+                <a href={`tel:${quadra.dono.telefone}`}><FaPhone /></a>
                 <button
                   onClick={() => {
                     if (!quadra?.dono?.id) {
@@ -284,16 +296,14 @@ export default function QuadraDetalhe() {
             <div className="rounded-2xl overflow-hidden backdrop-blur-md bg-white/30 shadow-xl ring-1 ring-white/20">
               <iframe
                 title="Mapa da quadra"
-                src={`https://www.google.com/maps?q=${encodeURIComponent(
-                  quadra.local
-                )}&output=embed`}
+                src={`https://www.google.com/maps?q=${encodeURIComponent(quadra.local)}&output=embed`}
                 width="100%"
                 height="280"
                 className="rounded-2xl"
                 style={{ border: 0 }}
                 loading="lazy"
                 allowFullScreen
-              ></iframe>
+              />
             </div>
 
             <p className="mt-2 text-center text-sm text-gray-600 italic">
@@ -399,8 +409,7 @@ export default function QuadraDetalhe() {
                   {duracaoHoras > 0 && (
                     <div className="text-center mt-2 bg-green-50 border border-green-300 rounded-xl px-4 py-2">
                       <p className="text-sm text-gray-600">
-                        Duração:{" "}
-                        <span className="font-semibold">{duracaoHoras} hora(s)</span>
+                        Duração: <span className="font-semibold">{duracaoHoras} hora(s)</span>
                       </p>
                       <p className="text-md font-bold text-green-700">
                         Total a pagar: R$ {valorTotal}
