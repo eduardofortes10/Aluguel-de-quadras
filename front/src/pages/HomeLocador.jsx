@@ -41,7 +41,6 @@ function formatPreco(v) {
 }
 
 function resolveImagem(quadra) {
-  // tenta arrays variados
   if (Array.isArray(quadra?.imagens) && quadra.imagens.length > 0) {
     const first = quadra.imagens[0];
     if (typeof first === "string") {
@@ -101,6 +100,7 @@ function QuadraCard({ quadra, onExcluir }) {
         <div className="mt-3 flex items-center justify-between">
           <span className="text-green-700 font-bold">{formatPreco(quadra.preco)}</span>
           <div className="flex items-center gap-3 text-sm">
+            {/* REMOVIDO ':id' do path — use só o valor */}
             <Link to={`/quadra-locador/${quadra.id}`} className="text-blue-600 hover:underline">
               Ver detalhes
             </Link>
@@ -141,7 +141,7 @@ export default function HomeLocador() {
         navigate("/login", { replace: true });
         return;
       }
-      if (tipo !== "locador") {
+      if ((tipo || "").toLowerCase() !== "locador") {
         toast("Redirecionando para sua home.", { icon: "↩️" });
         navigate("/home", { replace: true });
         return;
@@ -162,7 +162,9 @@ export default function HomeLocador() {
     return () => { cancelado = true; };
   }, [navigate]);
 
+  // AJUSTE: use a rota oficial (ou altere aqui para a sua)
   const handleNovaQuadra = () => navigate("/cadastrar-quadra");
+
   const handleExcluirQuadra = async (id) => {
     if (!confirm("Tem certeza que deseja excluir esta quadra?")) return;
     try {
@@ -174,7 +176,6 @@ export default function HomeLocador() {
     }
   };
 
-  // Ações do header
   const actions = (
     <button
       onClick={handleNovaQuadra}
