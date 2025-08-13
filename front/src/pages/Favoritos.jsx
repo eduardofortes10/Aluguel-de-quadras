@@ -1,58 +1,156 @@
+// src/pages/Favoritos.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import UserDropdown from "../components/DropdownUser";
+import MobileNav from "../components/MobileNav";
 import { FaHome } from "react-icons/fa";
 import { api, fileURL } from "../services/api";
+
+// ---- helpers ----
+async function getUsuarioIdSeguro() {
+  try {
+    const raw = localStorage.getItem("usuario");
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.id) return Number(u.id);
+      if (u?.usuario_id) return Number(u.usuario_id);
+    }
+    const uidStr = localStorage.getItem("usuario_id");
+    if (uidStr && /^\d+$/.test(uidStr)) return Number(uidStr);
+    // tenta /auth/me (se o token já está no axios)
+    try {
+      const { data } = await api.get("/auth/me");
+      if (data?.id) return Number(data.id);
+      if (data?.usuario_id) return Number(data.usuario_id);
+    } catch {}
+  } catch {}
+  return null;
+}
+
+// Normaliza qualquer formato vindo do backend
+function normalizarFavorito(f) {
+  const hasNestedQuadra = f?.quadra && typeof f.quadra === "object";
+
+  const favoritoId =
+    f.favorito_id ??
+    (hasNestedQuadra ? f.id : undefined) ?? // quando lista é { id: favoritoId, quadra: {...} }
+    (f.quadra_id ? f.id : undefined) ?? // quando vem { id: favoritoId, quadra_id: X }
+    f.id; // fallback
+
+  const quadraId =
+    f.quadra_id ??
+    (hasNestedQuadra ? f.quadra.id : undefined) ??
+    f.id_quadra ??
+    f.quadraId ??
+    f.id; // fallback (caso a API devolva direto as quadras)
+
+  const nome = f.nome ?? (hasNestedQuadra ? f.quadra.nome : undefined) ?? "Quadra";
+  const preco = f.preco ?? (hasNestedQuadra ? f.quadra.preco : undefined) ?? 0;
+  const local = f.local ?? (hasNestedQuadra ? f.quadra.local : undefined) ?? "";
+  const tipo = f.tipo ?? (hasNestedQuadra ? f.quadra.tipo : undefined) ?? "Quadra esportiva";
+  const nota =
+    f.nota ??
+    f.avaliacao ??
+    (hasNestedQuadra ? f.quadra.nota ?? f.quadra.avaliacao : undefined) ??
+    4.5;
+
+  // imagem: pode vir como /uploads/.. ou só filename
+  const imagem_url =
+    f.imagem_url ??
+    (hasNestedQuadra ? f.quadra.imagem_url ?? f.quadra.imagem : undefined) ??
+    "sem-imagem.png";
+
+  return {
+    favoritoId,
+    quadraId,
+    nome,
+    preco,
+    local,
+    tipo,
+    nota,
+    imagem_url,
+    // guarda o original se quiser depurar
+    _raw: f,
+  };
+}
+
+function renderImagem(item) {
+  const url = item.imagem_url || "sem-imagem.png";
+  if (url.startsWith("/")) return fileURL(url); // servido pelo backend (/uploads, /avatars etc.)
+  if (url.startsWith("http")) return url; // absoluto
+  return `/quadras/${url}`; // arquivo estático da pasta pública
+}
+// -----------------
 
 export default function Favoritos() {
   const [favoritos, setFavoritos] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const usuario_id = localStorage.getItem("usuario_id");
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!usuario_id) {
-      setCarregando(false);
-      return;
-    }
+    let cancelado = false;
 
-    const carregar = async () => {
+    async function carregar() {
       try {
-        console.log("🔍 Buscando favoritos do usuário:", usuario_id);
-        const { data } = await api.get(`/favoritos/${usuario_id}`);
-        console.log("✅ Dados recebidos:", data);
-        setFavoritos(data || []);
+        setCarregando(true);
+        const uid = await getUsuarioIdSeguro();
+        if (!uid) {
+          setCarregando(false);
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const { data } = await api.get(`/favoritos/${uid}`);
+        const arr = Array.isArray(data) ? data : [];
+        const normalizados = arr.map(normalizarFavorito);
+        if (!cancelado) setFavoritos(normalizados);
       } catch (err) {
-        console.error("❌ Erro ao buscar favoritos:", err);
+        console.error("❌ Erro ao buscar favoritos:", err?.response?.data || err?.message);
       } finally {
-        setCarregando(false);
+        if (!cancelado) setCarregando(false);
       }
-    };
+    }
 
     carregar();
-  }, [usuario_id]);
+    return () => {
+      cancelado = true;
+    };
+  }, [navigate]);
 
-  const removerFavorito = async (id) => {
+  const removerFavorito = async (item) => {
     try {
-      await api.delete(`/favoritos/${id}`);
-      setFavoritos((prev) => prev.filter((q) => q.id !== id));
+      // a maioria dos backends espera o ID do FAVORITO na rota /favoritos/:id
+      if (item.favoritoId) {
+        await api.delete(`/favoritos/${item.favoritoId}`);
+      } else {
+        // fallback: se seu backend usa (usuario, quadra) para deletar
+        const uid = await getUsuarioIdSeguro();
+        if (uid && item.quadraId) {
+          try {
+            await api.delete(`/favoritos/usuario/${uid}/quadra/${item.quadraId}`);
+          } catch (e) {
+            // se essa rota não existir, re-lança o erro original
+            throw e;
+          }
+        }
+      }
+      setFavoritos((prev) => prev.filter((q) => q.favoritoId !== item.favoritoId));
     } catch (err) {
-      console.error("Erro ao remover favorito:", err);
+      console.error("Erro ao remover favorito:", err?.response?.data || err?.message);
     }
-  };
-
-  const renderImagem = (q) => {
-    // Se vier um caminho do backend (ex.: "/uploads/xyz.jpg"), uso fileURL()
-    if (q.imagem_url?.startsWith("/")) return fileURL(q.imagem_url);
-    // Caso contrário, tenta pegar da pasta pública /quadras
-    return `/quadras/${q.imagem_url || "sem-imagem.png"}`;
   };
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Sidebar desktop */}
       <div className="hidden md:block">
         <Sidebar />
+      </div>
+
+      {/* Nav mobile */}
+      <div className="md:hidden block w-full fixed top-0 left-0 z-50">
+        <MobileNav />
       </div>
 
       <div className="absolute top-4 right-4 z-50">
@@ -79,31 +177,50 @@ export default function Favoritos() {
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {favoritos.map((quadra) => (
+            {favoritos.map((item) => (
               <div
-                key={quadra.id}
+                key={item.favoritoId ?? item.quadraId}
                 className="bg-white rounded-xl shadow-md overflow-hidden relative hover:shadow-lg hover:scale-[1.01] transition-transform duration-300"
               >
                 <img
-                  src={renderImagem(quadra)}
-                  alt={quadra.nome}
+                  src={renderImagem(item)}
+                  alt={item.nome}
                   className="w-full h-48 object-cover"
                 />
 
                 <div className="p-4">
-                  <h2 className="text-lg font-semibold text-gray-800">{quadra.nome}</h2>
-                  <p className="text-sm text-gray-600">{quadra.local}</p>
+                  <h2 className="text-lg font-semibold text-gray-800">{item.nome}</h2>
+                  <p className="text-sm text-gray-600">{item.local}</p>
                   <div className="flex justify-between items-center mt-2">
-                    <span className="text-green-700 font-bold">R$ {quadra.preco}</span>
-                    <span className="text-yellow-500">⭐ {quadra.nota || "4.5"}</span>
+                    <span className="text-green-700 font-bold">
+                      {String(item.preco).toString().includes("R$")
+                        ? item.preco
+                        : `R$ ${item.preco}`}
+                    </span>
+                    <span className="text-yellow-500">⭐ {item.nota || "4.5"}</span>
                   </div>
                   <div className="mt-2">
                     <p className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full w-max">
-                      Tipo: {quadra.tipo || "Quadra esportiva"}
+                      Tipo: {item.tipo}
                     </p>
                   </div>
+
                   <button
-                    onClick={() => navigate(`/quadra/${quadra.id}`, { state: { quadra } })}
+                    onClick={() =>
+                      navigate(`/quadra/${item.quadraId}`, {
+                        state: {
+                          quadra: {
+                            id: item.quadraId,
+                            nome: item.nome,
+                            preco: item.preco,
+                            local: item.local,
+                            imagem: renderImagem(item),
+                            avaliacao: item.nota,
+                            tipo: item.tipo,
+                          },
+                        },
+                      })
+                    }
                     className="mt-3 text-sm text-blue-600 hover:underline"
                   >
                     Ver detalhes
@@ -111,7 +228,7 @@ export default function Favoritos() {
                 </div>
 
                 <button
-                  onClick={() => removerFavorito(quadra.id)}
+                  onClick={() => removerFavorito(item)}
                   className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 hover:ring-2 ring-offset-1 ring-red-300"
                   title="Remover dos favoritos"
                   aria-label="Remover dos favoritos"
