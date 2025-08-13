@@ -1,103 +1,107 @@
 // server.js
-require('dotenv').config();
+require("dotenv").config();
+const path = require("path");
+const fs = require("fs");
+const express = require("express");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const compression = require("compression");
+const morgan = require("morgan");
 
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-
+// --- App base
 const app = express();
+app.set("trust proxy", 1); // respeita X-Forwarded-* em proxies (Render/AlwaysData)
 
+// --- CORS (origens permitidas)
+const envOrigins = (process.env.FRONTEND_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+// Coloque aqui o domínio do seu front na Vercel (ou use a env FRONTEND_ORIGINS)
 const allowedOrigins = [
-  'http://localhost:5173',
-  /^https:\/\/aluguel-de-quadras-xomr\.vercel\.app$/,
-  /\.vercel\.app$/
+  "http://localhost:5173",
+  "http://localhost:3000",
+  ...envOrigins,
+  /\.vercel\.app$/i, // qualquer subdomínio *.vercel.app
 ];
 
+app.use(
+  cors({
+    origin(origin, cb) {
+      // Permite requisições sem Origin (ex.: curl/insomnia)
+      if (!origin) return cb(null, true);
+      const ok = allowedOrigins.some((o) =>
+        o instanceof RegExp ? o.test(origin) : o === origin
+      );
+      return cb(null, ok);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
+// --- Middlewares úteis
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(compression());
+app.use(morgan("dev"));
+
+// --- Garante pasta de uploads e serve estático
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+app.use("/uploads", express.static(uploadDir, { maxAge: "7d", index: false }));
+
+// --- Rotas
+app.get("/", (_req, res) => res.send("API OK"));
+app.get("/healthz", (_req, res) =>
+  res.json({ ok: true, uptime: process.uptime(), ts: Date.now() })
+);
+
+// Suas rotas (ajuste caminhos se necessário)
+app.use("/api/quadras", require("./routes/quadras"));
+app.use("/api/alugueis", require("./routes/alugueis"));
+app.use("/api/favoritos", require("./routes/favoritos"));
+app.use("/api/notificacoes", require("./routes/notificacoes"));
+app.use("/api/fotos-perfil", require("./routes/fotosPerfil"));
+app.use("/api/usuarios", require("./routes/usuarios"));
+app.use("/api/auth", require("./routes/auth"));
+
+// --- 404 handler
 app.use((req, res, next) => {
-  res.setHeader('Vary', 'Origin'); // para proxies/CDN
-  next();
+  if (req.path.startsWith("/uploads/")) return next(); // já tratado pelo static
+  res.status(404).json({ erro: "Rota não encontrada" });
 });
 
-const corsOptions = {
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // curl/healthcheck
-    const ok = allowedOrigins.some((o) =>
-      o instanceof RegExp ? o.test(origin) : o === origin
-    );
-    if (ok) {
-      return cb(null, true);
-    } else {
-      console.warn('[CORS] blocked origin:', origin);
-      // em vez de lançar erro (que derruba headers), retornamos false:
-      return cb(null, false);
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
+// --- Error handler global (inclui erros do Multer)
+app.use((err, _req, res, _next) => {
+  console.error("🔥 Erro:", err);
 
-
-// aplica CORS antes de tudo
-app.use(cors(corsOptions));
-// garante preflight em qualquer rota
-app.options('*', cors(corsOptions));
-
-// --------- Body parser ----------
-app.use(express.json({ limit: '10mb' }));
-
-// --------- Rotas ----------
-const authRoutes = require('./routes/auth');
-const quadrasRoutes = require('./routes/quadras');
-const favoritosRoutes = require('./routes/favoritos');
-const conversasRoutes = require('./routes/conversas');
-const alugueisRoutes = require('./routes/alugueis');
-const fotosPerfilRoutes = require('./routes/fotosPerfil');
-const notificacoesRoutes = require('./routes/notificacoes');
-const usuariosRoutes = require('./routes/usuarios');
-
-app.use('/api/auth', authRoutes);
-app.use('/api/quadras', quadrasRoutes);
-app.use('/api/favoritos', favoritosRoutes);
-app.use('/api/conversas', conversasRoutes);
-app.use('/api/alugueis', alugueisRoutes);
-app.use('/api/fotos-perfil', fotosPerfilRoutes);
-app.use('/api/notificacoes', notificacoesRoutes);
-app.use('/api/usuarios', usuariosRoutes);
-
-// --------- Arquivos estáticos (sempre PATH, nunca URL) ----------
-// --------- Arquivos estáticos ----------
-app.use('/quadras', express.static(path.join(__dirname, 'public', 'quadras')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// ❌ remova se existir: app.use('/avatars', express.static(path.join(__dirname, 'uploads/avatars')));
-app.use('/avatars', express.static(path.join(__dirname, 'public', 'avatars'))); // ✅ mantenha só este
-
-// --------- Health ----------
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, env: process.env.NODE_ENV || 'dev' });
-});
-
-// --------- Debug do banco (ajuda a checar conexão/qual DB) ----------
-const db = require('./db');
-app.get('/api/_debug/db', async (req, res) => {
-  try {
-    const [dbres] = await db.query('SELECT DATABASE() AS db');
-    const [cnt] = await db.query('SELECT COUNT(*) AS total FROM fotos_perfil');
-    res.json({ db: dbres[0]?.db, fotos_perfil_total: cnt[0]?.total });
-  } catch (e) {
-    console.error('DB debug error:', e);
-    res.status(500).json({ erro: e.message });
+  // Multer: tamanho excedido
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ erro: "Arquivo muito grande (limite 8MB)." });
   }
+
+  // Erro de CORS
+  if (err.message && /CORS|Origin/i.test(err.message)) {
+    return res.status(403).json({ erro: "Origem não autorizada" });
+  }
+
+  // JSON inválido
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({ erro: "JSON inválido no corpo da requisição" });
+  }
+
+  res.status(500).json({ erro: err.message || "Erro interno do servidor" });
 });
 
-// --------- Erros globais ----------
-process.on('uncaughtException', (err) => console.error('❌ uncaught:', err));
-process.on('unhandledRejection', (err) => console.error('❌ unhandled:', err));
-
-// --------- Start ----------
+// --- Start
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 API on ${PORT}`);
-});
+const HOST = process.env.HOST || "0.0.0.0";
+app.listen(PORT, HOST, () =>
+  console.log(`🚀 API ouvindo em http://${HOST}:${PORT} | Uploads: /uploads`)
+);
+
+module.exports = app; // opcional (para testes)

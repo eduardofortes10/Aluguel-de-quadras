@@ -1,42 +1,44 @@
+// backend/routes/quadras.js
 const express = require("express");
 const router = express.Router();
-const db = require("../db"); 
+const db = require("../db");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// Diretório para uploads
+// Garante pasta de uploads
 const uploadDir = path.join(__dirname, "..", "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-// Configuração do Multer
+// Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "");
+    const base = path.basename(file.originalname || "arquivo", ext).replace(/\s+/g, "_");
+    cb(null, `${Date.now()}_${base}${ext}`);
+  }
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8MB por arquivo
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith("image/")) return cb(new Error("Apenas imagens são permitidas"));
+    cb(null, true);
+  }
+});
 
-/* ===== POST - Cadastrar quadra ===== */
+// Util
+function parseNumber(v) {
+  if (v == null) return NaN;
+  const n = Number(String(v).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : NaN;
+}
+
+// ========== POST /quadras  (criar) ==========
 router.post("/", upload.array("imagens", 10), async (req, res) => {
-  console.log("📩 Rota POST /api/quadras chamada");
-
   try {
-    const { nome, local, preco, tipo, descricao, dono_id, nota } = req.body;
-    const imagens = req.files?.map((file) => `/uploads/${file.filename}`) || [];
-    const imagens_json = JSON.stringify(imagens);
-
-    if (!dono_id) {
-      return res.status(400).json({ error: "dono_id é obrigatório" });
-    }
-
-    const query = `
-      INSERT INTO quadras (nome, local, preco, tipo, descricao, dono_id, nota, imagens)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
-    const [result] = await db.query(query, [
+    const {
       nome,
       local,
       preco,
@@ -44,214 +46,146 @@ router.post("/", upload.array("imagens", 10), async (req, res) => {
       descricao,
       dono_id,
       nota,
-      imagens_json,
-    ]);
+      cep,
+      endereco,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      horario_inicio,
+      horario_fim
+    } = req.body;
 
-    console.log("✅ Quadra cadastrada com sucesso. ID:", result.insertId);
-    res.status(200).json({ message: "Quadra cadastrada com sucesso" });
+    // validações básicas
+    const precoNumber = parseNumber(preco);
+    if (!nome || !local || !tipo || !dono_id || isNaN(precoNumber) || precoNumber <= 0) {
+      return res.status(400).json({ erro: "Campos inválidos. Verifique nome, local, tipo, dono_id e preço." });
+    }
+
+    // imagens salvas
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length < 3) {
+      return res.status(400).json({ erro: "Envie no mínimo 3 imagens." });
+    }
+    const imagens = files.map((f) => `/uploads/${f.filename}`);
+
+    // insert
+    const [result] = await db.query(
+      `INSERT INTO quadras
+        (nome, local, preco, tipo, descricao, dono_id, nota, imagens,
+         cep, endereco, numero, complemento, bairro, cidade, uf,
+         horario_inicio, horario_fim, status, criado_em)
+       VALUES (?, ?, ?, ?, ?, ?, ?, CAST(? AS JSON),
+               ?, ?, ?, ?, ?, ?, ?,
+               ?, ?, 'ativa', NOW())`,
+      [
+        nome.trim(),
+        local.trim(),
+        precoNumber,
+        String(tipo).trim(),
+        (descricao || "").trim(),
+        Number(dono_id),
+        parseNumber(nota) || 0,
+        JSON.stringify(imagens),
+        cep || null,
+        endereco || null,
+        numero || null,
+        complemento || null,
+        bairro || null,
+        cidade || null,
+        uf || null,
+        horario_inicio || null,
+        horario_fim || null
+      ]
+    );
+
+    const id = result.insertId;
+    const [rows] = await db.query("SELECT * FROM quadras WHERE id = ?", [id]);
+    const row = rows[0] || null;
+    // Garante que 'imagens' venha como array no response
+    if (row && typeof row.imagens === "string") {
+      try { row.imagens = JSON.parse(row.imagens); } catch {}
+    }
+    return res.status(201).json(row);
   } catch (err) {
-    console.error("❌ Erro ao cadastrar quadra:", err);
-    res.status(500).json({ error: "Erro ao cadastrar quadra" });
+    console.error("POST /quadras erro:", err);
+    return res.status(500).json({ erro: err.message || "Falha ao cadastrar quadra" });
   }
 });
 
-/* ===== GET - Listar quadras por dono_id ===== */
+// ========== GET /quadras  (listar; opcional ?dono_id=) ==========
 router.get("/", async (req, res) => {
   const { dono_id } = req.query;
-  let query = "SELECT * FROM quadras";
+  let sql = "SELECT * FROM quadras";
   const params = [];
-
   if (dono_id) {
-    query += " WHERE dono_id = ?";
+    sql += " WHERE dono_id = ?";
     params.push(dono_id);
   }
+  sql += " ORDER BY id DESC";
 
   try {
-    const [results] = await db.query(query, params);
-
-    const dadosTratados = results.map((quadra) => {
-      try {
-        if (typeof quadra.imagens === "string") {
-          quadra.imagens = JSON.parse(quadra.imagens);
-        }
-        if (!Array.isArray(quadra.imagens)) {
-          quadra.imagens = [];
-        }
-      } catch {
-        quadra.imagens = [];
+    const [rows] = await db.query(sql, params);
+    const out = rows.map((r) => {
+      if (typeof r.imagens === "string") {
+        try { r.imagens = JSON.parse(r.imagens); } catch {}
       }
-      return quadra;
+      return r;
     });
-
-    res.json(dadosTratados);
+    res.json(out);
   } catch (err) {
-    console.error("❌ Erro na query:", err);
-    res.status(500).json({ error: "Erro ao buscar quadras" });
+    console.error("GET /quadras erro:", err);
+    res.status(500).json({ erro: "Falha ao listar quadras" });
   }
 });
 
-/* ===== GET - Filtro usando imagens_quadras ===== */
-router.get("/imagens", async (req, res) => {
-  const { tipo, preco, avaliacao } = req.query;
-  let query = "SELECT * FROM imagens_quadras WHERE 1=1";
-  const params = [];
-
-  if (tipo && tipo.toLowerCase() !== "todos") {
-    const tipoLower = tipo.toLowerCase();
-    if (["futsal", "vôlei", "volei", "basquete"].includes(tipoLower)) {
-      query += " AND LOWER(tipo) = 'poliesportiva'";
-    } else if (tipoLower === "campo") {
-      query += " AND (LOWER(tipo) = 'futebol' OR LOWER(tipo) = 'golfe')";
-    } else {
-      query += " AND LOWER(tipo) = ?";
-      params.push(tipoLower);
-    }
-  }
-
-  if (preco) {
-    query += " AND preco <= ?";
-    params.push(Number(preco));
-  }
-
-  if (avaliacao) {
-    const avaliacoes = Array.isArray(avaliacao) ? avaliacao : [avaliacao];
-    if (avaliacoes.length > 0) {
-      query += ` AND FLOOR(avaliacao) IN (${avaliacoes.map(() => "?").join(",")})`;
-      params.push(...avaliacoes.map(Number));
-    }
-  }
-
-  try {
-    const [results] = await db.query(query, params);
-    res.json(results);
-  } catch (err) {
-    console.error("❌ Erro ao buscar quadras filtradas:", err.message, err.stack);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-/* ===== POST - Filtro com tipos personalizados ===== */
-router.post("/imagens", async (req, res) => {
-  const { tipo, precoMaximo, avaliacaoMinima, local } = req.body;
-  console.log("📥 Filtros recebidos:", req.body);
-
-  const mapaTipos = {
-    Futsal: ["futsal", "poliesportiva"],
-    Basquete: ["basquete", "poliesportiva"],
-    Vôlei: ["vôlei", "poliesportiva"],
-    Poliesportiva: ["futsal", "vôlei", "basquete", "poliesportiva"],
-    Campo: ["futebol", "golfe"],
-    Tênis: ["tênis"],
-    Futebol: ["futebol"],
-    Golfe: ["golfe"]
-  };
-
-  let query = "SELECT * FROM imagens_quadras WHERE 1=1";
-  const params = [];
-
-  if (tipo && tipo.length > 0) {
-    let condicoes = [];
-    tipo.forEach((filtro) => {
-      const valores = mapaTipos[filtro] || [];
-      valores.forEach((v) => {
-        condicoes.push("LOWER(tipo) LIKE ?");
-        params.push(`%${v.toLowerCase()}%`);
-      });
-    });
-    if (condicoes.length > 0) {
-      query += " AND (" + condicoes.join(" OR ") + ")";
-    }
-  }
-
-  if (precoMaximo) {
-    query += " AND preco <= ?";
-    params.push(precoMaximo);
-  }
-
-  if (avaliacaoMinima) {
-    query += " AND avaliacao >= ?";
-    params.push(parseFloat(avaliacaoMinima));
-  }
-
-  if (local) {
-    query += " AND LOWER(local) LIKE ?";
-    params.push(`%${local.toLowerCase()}%`);
-  }
-
-  try {
-    const [results] = await db.query(query, params);
-    res.json(results);
-  } catch (err) {
-    console.error("❌ Erro ao buscar quadras filtradas:", err);
-    res.status(500).json({ error: "Erro ao buscar quadras filtradas" });
-  }
-});
-
-/* ===== GET - Detalhes de uma quadra ===== */
+// ========== GET /quadras/:id ==========
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-
   try {
-    const [results] = await db.query(`
-      SELECT q.*, u.nome AS dono_nome, u.email AS dono_email
-      FROM quadras q
-      JOIN usuarios u ON q.dono_id = u.id
-      WHERE q.id = ?
-    `, [id]);
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: "Quadra não encontrada" });
+    const [rows] = await db.query("SELECT * FROM quadras WHERE id = ?", [id]);
+    if (!rows.length) return res.status(404).json({ erro: "Quadra não encontrada" });
+    const row = rows[0];
+    if (typeof row.imagens === "string") {
+      try { row.imagens = JSON.parse(row.imagens); } catch {}
     }
-
-    const quadra = results[0];
-    try {
-      if (typeof quadra.imagens === "string") {
-        quadra.imagens = JSON.parse(quadra.imagens);
-      }
-      if (!Array.isArray(quadra.imagens)) {
-        quadra.imagens = [];
-      }
-    } catch {
-      quadra.imagens = [];
-    }
-
-    res.json(quadra);
+    res.json(row);
   } catch (err) {
-    console.error("❌ Erro ao buscar detalhes:", err);
-    res.status(500).json({ error: "Erro ao buscar detalhes da quadra" });
+    console.error("GET /quadras/:id erro:", err);
+    res.status(500).json({ erro: "Falha ao obter quadra" });
   }
 });
 
-/* ===== DELETE - Deletar quadra ===== */
+// ========== DELETE /quadras/:id ==========
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
-
   try {
-    const [results] = await db.query("SELECT imagens FROM quadras WHERE id = ?", [id]);
-    if (results.length === 0) {
-      return res.status(404).json({ error: "Quadra não encontrada" });
-    }
+    // pega imagens para tentar apagar do disco
+    const [rows] = await db.query("SELECT imagens FROM quadras WHERE id = ?", [id]);
+    const imgs = rows[0]?.imagens;
+    if (!rows.length) return res.status(404).json({ erro: "Quadra não encontrada" });
 
-    let imagens = [];
-    try {
-      imagens = JSON.parse(results[0].imagens || "[]");
-    } catch {
-      imagens = [];
-    }
-
+    // deleta no banco
     await db.query("DELETE FROM quadras WHERE id = ?", [id]);
 
-    imagens.forEach((imgPath) => {
-      const fullPath = path.join(__dirname, "..", imgPath);
-      fs.unlink(fullPath, (err) => {
-        if (err) console.warn("⚠️ Erro ao deletar imagem:", fullPath);
-      });
-    });
+    // tenta remover arquivos
+    let arr = [];
+    if (typeof imgs === "string") {
+      try { arr = JSON.parse(imgs); } catch {}
+    } else if (Array.isArray(imgs)) {
+      arr = imgs;
+    }
+    for (const rel of arr) {
+      if (typeof rel !== "string") continue;
+      const abs = path.join(__dirname, "..", rel.replace(/^\/+/, ""));
+      fs.promises.unlink(abs).catch(() => {});
+    }
 
-    res.json({ message: "Quadra deletada com sucesso" });
+    res.json({ ok: true });
   } catch (err) {
-    console.error("❌ Erro ao deletar quadra:", err);
-    res.status(500).json({ error: "Erro ao deletar quadra" });
+    console.error("DELETE /quadras/:id erro:", err);
+    res.status(500).json({ erro: "Falha ao excluir quadra" });
   }
 });
 
