@@ -10,8 +10,8 @@ import { api } from "../services/api";
 import { Search, SlidersHorizontal, Bell, Star, MapPin, Heart, ChevronRight } from "lucide-react";
 import { quadras, quadrasCarrossel } from "../data/quadras";
 
-/* ===== ÍCONES PEQUENOS (24px) — viewBox igual e traço simples ===== */
-function IconSoccerMini({ className = "w-6 h-6" }) {
+/* ===== ÍCONES MINI (16px) — viewBox padronizado ===== */
+function IconSoccerMini({ className = "w-4 h-4" }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
       <circle cx="12" cy="12" r="9" />
@@ -20,7 +20,7 @@ function IconSoccerMini({ className = "w-6 h-6" }) {
     </svg>
   );
 }
-function IconBasketMini({ className = "w-6 h-6" }) {
+function IconBasketMini({ className = "w-4 h-4" }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
       <circle cx="12" cy="12" r="9" />
@@ -31,7 +31,7 @@ function IconBasketMini({ className = "w-6 h-6" }) {
     </svg>
   );
 }
-function IconVolleyMini({ className = "w-6 h-6" }) {
+function IconVolleyMini({ className = "w-4 h-4" }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
       <circle cx="12" cy="12" r="9" />
@@ -42,7 +42,7 @@ function IconVolleyMini({ className = "w-6 h-6" }) {
     </svg>
   );
 }
-function IconTennisMini({ className = "w-6 h-6" }) {
+function IconTennisMini({ className = "w-4 h-4" }) {
   return (
     <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
       <circle cx="12" cy="12" r="9" />
@@ -52,7 +52,7 @@ function IconTennisMini({ className = "w-6 h-6" }) {
   );
 }
 
-/* ===== Chip de categoria (pequeno, sem corte) ===== */
+/* ===== Chip de categoria ===== */
 function CategoryChip({ label, onClick, Icon }) {
   return (
     <button
@@ -60,8 +60,8 @@ function CategoryChip({ label, onClick, Icon }) {
       className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white hover:bg-emerald-50 transition ring-1 ring-black/5"
       aria-label={label}
     >
-      <span className="grid place-items-center rounded-full bg-gray-100 w-8 h-8">
-        <Icon className="w-5 h-5 text-emerald-800" />
+      <span className="grid place-items-center rounded-full bg-gray-100 w-7 h-7">
+        <Icon className="w-4 h-4 text-emerald-800" />
       </span>
       <span className="text-sm font-medium text-gray-700">{label}</span>
     </button>
@@ -133,7 +133,7 @@ export default function Home() {
     });
   };
 
-  /* ===== Categorias (usando chips) ===== */
+  /* ===== Categorias ===== */
   const categorias = useMemo(
     () => [
       { nome: "Futebol", Icon: IconSoccerMini },
@@ -158,11 +158,13 @@ export default function Home() {
 
       {/* Conteúdo */}
       <main className="flex-1 w-full">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-          {/* HERO compacto (sem cortes) */}
-          <section className="relative overflow-hidden rounded-b-2xl mt-12 md:mt-4">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800" />
-            <div className="relative z-10 py-4 md:py-6">
+        {/* === HERO FULL-BLEED (sem corte nas laterais) ===
+            A mágica está nas margens negativas abaixo, que “anulam” o padding do container
+            e deixam o gradiente ocupar toda a largura útil. Também removi overflow-hidden. */}
+        <section className="relative mt-12 md:mt-4 -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8">
+          <div className="relative rounded-b-3xl shadow-sm">
+            <div className="absolute inset-0 rounded-b-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800" />
+            <div className="relative px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6">
               {/* Topo */}
               <div className="flex items-center justify-between">
                 <Link to="/notificacao" className="relative group">
@@ -182,10 +184,8 @@ export default function Home() {
               </div>
 
               {/* Saudação */}
-              <div className="mt-1 text-center md:text-left">
-                <h1 className="text-xl md:text-2xl font-semibold text-white">
-                  Olá, {nomeUsuario}
-                </h1>
+              <div className="mt-1 text-center md:text-left text-white">
+                <h1 className="text-xl md:text-2xl font-semibold">Olá, {nomeUsuario}</h1>
                 <p className="text-white/85 text-sm">Sua quadra, seu jogo!</p>
               </div>
 
@@ -208,9 +208,9 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* CATEGORIAS — chips pequenos com rolagem no mobile */}
+              {/* Categorias — chips (mini) */}
               <div className="mt-3">
-                {/* Mobile: rolagem horizontal */}
+                {/* Mobile: rolagem horizontal sem cortes */}
                 <div className="flex gap-2 overflow-x-auto md:hidden py-1 -mx-1 px-1">
                   {categorias.map(({ nome, Icon }) => (
                     <CategoryChip
@@ -229,8 +229,8 @@ export default function Home() {
                       onClick={() => navigate("/resultados", { state: { tipo: [nome] } })}
                       className="group w-full rounded-xl border border-gray-200 bg-white hover:bg-emerald-50 transition ring-1 ring-black/5 px-3 py-3 flex items-center gap-3"
                     >
-                      <span className="grid place-items-center rounded-full bg-gray-100 w-9 h-9">
-                        <Icon className="w-5 h-5 text-emerald-800" />
+                      <span className="grid place-items-center rounded-full bg-gray-100 w-8 h-8">
+                        <Icon className="w-4 h-4 text-emerald-800" />
                       </span>
                       <span className="text-sm font-medium text-gray-700">{nome}</span>
                       <ChevronRight className="w-4 h-4 text-gray-400 ml-auto opacity-0 group-hover:opacity-100 transition" />
@@ -239,9 +239,12 @@ export default function Home() {
                 </div>
               </div>
             </div>
-          </section>
+          </div>
+        </section>
 
-          {/* CARROSSEL — sem alterações funcionais */}
+        {/* Container central para o restante da página */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          {/* CARROSSEL */}
           <section className="mt-6 md:mt-8">
             <div className="flex items-center justify-between mb-2 md:mb-3">
               <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">
@@ -290,7 +293,7 @@ export default function Home() {
             </div>
           </section>
 
-          {/* DESTAQUES — sem alterações funcionais */}
+          {/* DESTAQUES */}
           <section className="mt-8 md:mt-10 mb-16">
             <div className="flex items-center justify-between mb-2 md:mb-3">
               <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">
