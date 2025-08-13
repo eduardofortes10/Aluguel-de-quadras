@@ -1,5 +1,5 @@
 // src/components/DropdownUser.jsx
-console.log("[Dropdown] build marker v9");
+console.log("[Dropdown] build marker v10");
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, LogOut, Bell, ChevronDown } from "lucide-react";
@@ -13,56 +13,46 @@ export default function UserDropdown() {
   const menuRef = useRef(null);
   const btnRef = useRef(null);
 
-  // 1) Fallbacks:
-  // - preferimos um default servido pelo backend (funciona com fileURL + /uploads)
-  // - e, se der erro, caímos para um placeholder que você pode deixar em /public do front
-  const AVATAR_PLACEHOLDER = "/avatar-placeholder.png"; // coloque um PNG/SVG no /public
-  const avatarFallback = fileURL("/uploads/default-avatar.png"); // opcional: suba esse arquivo no back
+  const AVATAR_PLACEHOLDER = "/avatar-placeholder.png"; // /public no front
+  const avatarFallback = fileURL("/avatars/default.png");
 
-  // 2) Normaliza qualquer formato vindo do back (absoluto, relativo, só nome de arquivo)
   const normalizeToFileURL = useCallback((val) => {
     if (!val) return null;
     const s = String(val).trim();
-
-    // já é absoluta
     if (/^https?:\/\//i.test(s)) return s;
 
-    // se o caminho contém /uploads/, mantém a partir daí
-    const idx = s.indexOf("/uploads/");
+    // preferir /avatars/
+    let idx = s.indexOf("/avatars/");
     if (idx >= 0) return fileURL(s.slice(idx));
 
-    // se vier só "arquivo.png" ou "uploads/arquivo.png", força para /uploads/arquivo.png
+    // aceitar legado /uploads/
+    idx = s.indexOf("/uploads/");
+    if (idx >= 0) return fileURL(s.slice(idx));
+
+    // veio só um nome de arquivo -> trate como avatar
     const just = s.replace(/^\/+/, "");
-    const rel = just.startsWith("uploads/") ? `/${just}` : `/uploads/${just}`;
-    return fileURL(rel);
+    return fileURL(`/avatars/${just}`);
   }, []);
 
-  // 3) Cache-buster
   const bust = useCallback((url) => {
     if (!url) return avatarFallback;
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}t=${Date.now()}`;
   }, [avatarFallback]);
 
-  // 4) Busca a foto no servidor
   const loadFromServer = useCallback(async (id) => {
     try {
       const { data } = await api.get(`/fotos-perfil/${id}`);
-      // aceite tanto imagem_url quanto imagem/foto
-      const raw =
-        data?.imagem_url || data?.imagem || data?.foto || data?.path || null;
-
+      const raw = data?.imagem_url || data?.imagem || data?.foto || data?.path || null;
       const url = normalizeToFileURL(raw) || avatarFallback;
       const finalUrl = bust(url);
       setImagemPerfil(finalUrl);
       localStorage.setItem("avatar_url", finalUrl);
-    } catch (e) {
-      // se falhar, usa fallback do back; se quebrar, onError cai no placeholder do front
+    } catch {
       setImagemPerfil(avatarFallback);
     }
   }, [normalizeToFileURL, avatarFallback, bust]);
 
-  // 5) Primeira carga: nome + avatar de cache + sync do servidor
   useEffect(() => {
     const raw = localStorage.getItem("usuario");
     if (!raw) return;
@@ -80,7 +70,6 @@ export default function UserDropdown() {
     }
   }, [loadFromServer, avatarFallback]);
 
-  // 6) Escuta atualizações do avatar vindas do Perfil.jsx
   useEffect(() => {
     const onUpdated = () => {
       const lsAvatar = localStorage.getItem("avatar_url");
@@ -94,7 +83,6 @@ export default function UserDropdown() {
     };
   }, []);
 
-  // 7) Clique fora / ESC
   useEffect(() => {
     if (!isOpen) return;
     const onClickAway = (e) => {
@@ -103,9 +91,7 @@ export default function UserDropdown() {
         !menuRef.current.contains(e.target) &&
         btnRef.current &&
         !btnRef.current.contains(e.target)
-      ) {
-        setIsOpen(false);
-      }
+      ) setIsOpen(false);
     };
     const onKey = (e) => e.key === "Escape" && setIsOpen(false);
     document.addEventListener("mousedown", onClickAway);
@@ -116,15 +102,8 @@ export default function UserDropdown() {
     };
   }, [isOpen]);
 
-  const go = (path) => {
-    setIsOpen(false);
-    navigate(path);
-  };
-
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/login");
-  };
+  const go = (path) => { setIsOpen(false); navigate(path); };
+  const handleLogout = () => { localStorage.clear(); navigate("/login"); };
 
   return (
     <div className="relative inline-block text-left">
@@ -140,11 +119,9 @@ export default function UserDropdown() {
           alt="Avatar"
           className="w-8 h-8 rounded-full mr-2 border-2 border-white shadow-sm object-cover"
           onError={(e) => {
-            // 1º fallback: avatar do back
             if (e.currentTarget.src !== avatarFallback) {
               e.currentTarget.src = avatarFallback;
             } else {
-              // 2º fallback: placeholder local do front (/public/avatar-placeholder.png)
               e.currentTarget.src = AVATAR_PLACEHOLDER;
             }
           }}
@@ -165,31 +142,16 @@ export default function UserDropdown() {
             <p className="text-gray-500 text-xs">Seja bem-vindo(a)!</p>
           </div>
 
-          <button
-            role="menuitem"
-            onClick={() => go("/perfil")}
-            className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-          >
-            <UserIcon className="w-4 h-4 mr-2" />
-            Meus Dados
+          <button role="menuitem" onClick={() => go("/perfil")} className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">
+            <UserIcon className="w-4 h-4 mr-2" /> Meus Dados
           </button>
 
-          <button
-            role="menuitem"
-            onClick={() => go("/notificacao")}
-            className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700"
-          >
-            <Bell className="w-4 h-4 mr-2" />
-            Notificações
+          <button role="menuitem" onClick={() => go("/notificacao")} className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 text-gray-700">
+            <Bell className="w-4 h-4 mr-2" /> Notificações
           </button>
 
-          <button
-            role="menuitem"
-            onClick={handleLogout}
-            className="flex items-center w-full px-4 py-2 text-sm hover:bg-red-100 text-red-600 border-t"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
+          <button role="menuitem" onClick={handleLogout} className="flex items-center w-full px-4 py-2 text-sm hover:bg-red-100 text-red-600 border-t">
+            <LogOut className="w-4 h-4 mr-2" /> Sair
           </button>
         </div>
       )}

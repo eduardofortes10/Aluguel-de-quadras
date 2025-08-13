@@ -46,25 +46,35 @@ app.use(cookieParser());
 app.use(compression());
 app.use(morgan("dev"));
 
-// Uploads (usa UPLOAD_DIR se existir; senão ./uploads)
-const uploadDir =
-  process.env.UPLOAD_DIR
-    ? path.resolve(process.env.UPLOAD_DIR)
-    : path.join(__dirname, "uploads");
+// Diretórios de arquivos
+const uploadDir = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(__dirname, "uploads");
 
+const avatarsDir = process.env.AVATARS_DIR
+  ? path.resolve(process.env.AVATARS_DIR)
+  : path.join(__dirname, "public", "avatars");
+
+
+// Garante as pastas
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
 
-// ✅ servir /uploads (origem) e /api/uploads (alias p/ quando baseURL termina em /api)
+// Static: /uploads e /api/uploads
 app.use("/uploads", express.static(uploadDir, { maxAge: "7d", index: false }));
 app.use("/api/uploads", express.static(uploadDir, { maxAge: "7d", index: false }));
 
-// Rotas básicas
+// Static: /avatars e /api/avatars  ✅ (faltava isso)
+app.use("/avatars", express.static(avatarsDir, { maxAge: "7d", index: false }));
+app.use("/api/avatars", express.static(avatarsDir, { maxAge: "7d", index: false }));
+
+// Rotas base
 app.get("/", (_req, res) => res.send("API OK"));
 app.get("/healthz", (_req, res) =>
   res.json({ ok: true, uptime: process.uptime(), ts: Date.now() })
 );
 
-// Suas rotas
+// Rotas de API
 app.use("/api/quadras", require("./routes/quadras"));
 app.use("/api/alugueis", require("./routes/alugueis"));
 app.use("/api/favoritos", require("./routes/favoritos"));
@@ -75,22 +85,24 @@ app.use("/api/auth", require("./routes/auth"));
 
 // 404
 app.use((req, res, next) => {
-  if (req.path.startsWith("/uploads/") || req.path.startsWith("/api/uploads/")) return next();
+  if (
+    req.path.startsWith("/uploads/") ||
+    req.path.startsWith("/api/uploads/") ||
+    req.path.startsWith("/avatars/") ||
+    req.path.startsWith("/api/avatars/")
+  ) return next();
   res.status(404).json({ erro: "Rota não encontrada" });
 });
 
 // Erros
 app.use((err, _req, res, _next) => {
   console.error("🔥 Erro:", err);
-  if (err.code === "LIMIT_FILE_SIZE") {
+  if (err.code === "LIMIT_FILE_SIZE")
     return res.status(413).json({ erro: "Arquivo muito grande (limite 8MB)." });
-  }
-  if (err.message && /CORS|Origin/i.test(err.message)) {
+  if (err.message && /CORS|Origin/i.test(err.message))
     return res.status(403).json({ erro: "Origem não autorizada" });
-  }
-  if (err.type === "entity.parse.failed") {
+  if (err.type === "entity.parse.failed")
     return res.status(400).json({ erro: "JSON inválido no corpo da requisição" });
-  }
   res.status(500).json({ erro: err.message || "Erro interno do servidor" });
 });
 
@@ -98,7 +110,7 @@ app.use((err, _req, res, _next) => {
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || "0.0.0.0";
 app.listen(PORT, HOST, () =>
-  console.log(`🚀 API ouvindo em http://${HOST}:${PORT} | Uploads: ${uploadDir}`)
+  console.log(`🚀 API ouvindo em http://${HOST}:${PORT} | Uploads: ${uploadDir} | Avatars: ${avatarsDir}`)
 );
 
 module.exports = app;
