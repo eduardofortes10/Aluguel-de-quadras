@@ -10,69 +10,60 @@ import { api } from "../services/api";
 import { Search, SlidersHorizontal, Bell, Star, MapPin, Heart, ChevronRight } from "lucide-react";
 import { quadras, quadrasCarrossel } from "../data/quadras";
 
-/* =======================
-   ÍCONES DE ESPORTE (SVG)
-   Todos com mesma caixa (viewBox 0 0 48 48) e traço simples
-======================= */
-function IconSoccer({ className }) {
-  // bola de futebol estilizada
+/* ===== ÍCONES PEQUENOS (24px) — viewBox igual e traço simples ===== */
+function IconSoccerMini({ className = "w-6 h-6" }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="24" cy="24" r="18" />
-      <polygon points="24,14 18,18 20,24 28,24 30,18" />
-      <path d="M12 24c2 2 6 4 12 4s10-2 12-4" />
-      <path d="M16 34c2-2 5-3 8-3s6 1 8 3" />
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="12" cy="12" r="9" />
+      <polygon points="12,6.5 9,8.5 10,12 14,12 15,8.5" />
+      <path d="M6.5 12c1.1 1.1 3.3 2.2 5.5 2.2s4.4-1.1 5.5-2.2" />
     </svg>
   );
 }
-function IconBasketball({ className }) {
+function IconBasketMini({ className = "w-6 h-6" }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="24" cy="24" r="18" />
-      <path d="M6 24h36" />
-      <path d="M24 6v36" />
-      <path d="M12 12c10 6 14 18 12 30" />
-      <path d="M36 12c-10 6-14 18-12 30" />
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3v18" />
+      <path d="M6.5 6.5c5 3 7 9 6 15" />
+      <path d="M17.5 6.5c-5 3-7 9-6 15" />
     </svg>
   );
 }
-function IconVolleyball({ className }) {
+function IconVolleyMini({ className = "w-6 h-6" }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="24" cy="24" r="18" />
-      <path d="M12 18c8-6 16-6 24 0" />
-      <path d="M10 28c8 4 18 4 28 0" />
-      <path d="M18 8c-4 10-4 20 0 32" />
-      <path d="M30 8c4 10 4 20 0 32" />
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M6.5 9.5c4-3 7-3 11 0" />
+      <path d="M5.5 14c4 2 9 2 13 0" />
+      <path d="M9 4.5c-2 5-2 10 0 15" />
+      <path d="M15 4.5c2 5 2 10 0 15" />
     </svg>
   );
 }
-function IconTennis({ className }) {
+function IconTennisMini({ className = "w-6 h-6" }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="24" cy="24" r="18" />
-      <path d="M9 20c10-8 20-8 30 0" />
-      <path d="M9 28c10 8 20 8 30 0" />
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M4.5 10c5-4 10-4 15 0" />
+      <path d="M4.5 14c5 4 10 4 15 0" />
     </svg>
   );
 }
 
-/* =======================
-   COMPONENTE: Botão de Categoria
-======================= */
-function CategoryButton({ label, onClick, Icon, tint }) {
+/* ===== Chip de categoria (pequeno, sem corte) ===== */
+function CategoryChip({ label, onClick, Icon }) {
   return (
     <button
       onClick={onClick}
-      className={`group w-28 h-28 md:w-32 md:h-32 rounded-2xl ring-1 ring-black/5 shadow-sm bg-white hover:-translate-y-0.5 transition grid place-items-center relative overflow-hidden ${tint}`}
+      className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-full border border-gray-200 bg-white hover:bg-emerald-50 transition ring-1 ring-black/5"
       aria-label={label}
     >
-      {/* halo sutil */}
-      <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition bg-[radial-gradient(ellipse_at_center,white_0%,transparent_60%)]" />
-      <Icon className="w-16 h-16 text-emerald-800" />
-      <span className="absolute bottom-2 left-0 right-0 text-center text-xs font-medium text-gray-700">
-        {label}
+      <span className="grid place-items-center rounded-full bg-gray-100 w-8 h-8">
+        <Icon className="w-5 h-5 text-emerald-800" />
       </span>
+      <span className="text-sm font-medium text-gray-700">{label}</span>
     </button>
   );
 }
@@ -83,7 +74,7 @@ export default function Home() {
   const [mostrarCookies, setMostrarCookies] = useState(false);
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
 
-  // Carrossel
+  /* ===== Carrossel ===== */
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
     renderMode: "performance",
@@ -104,13 +95,13 @@ export default function Home() {
     return () => clearInterval(id);
   }, [instanceRef]);
 
-  // Nome / Cookies
+  /* ===== Inicialização ===== */
   useEffect(() => {
     setNomeUsuario(localStorage.getItem("nomeUsuario") || "Usuário");
     setMostrarCookies(localStorage.getItem("cookiesAceitos") !== "true");
   }, []);
 
-  // Notificações
+  /* ===== Notificações ===== */
   useEffect(() => {
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario?.id) return;
@@ -128,7 +119,7 @@ export default function Home() {
     return () => clearInterval(t);
   }, []);
 
-  // Navegação detalhe
+  /* ===== Navegação detalhe ===== */
   const handleQuadraClick = (quadra) => {
     const imagem_nome = quadra.imagem?.split("/").pop();
     navigate(`/quadra/${quadra.id}`, {
@@ -142,12 +133,13 @@ export default function Home() {
     });
   };
 
+  /* ===== Categorias (usando chips) ===== */
   const categorias = useMemo(
     () => [
-      { nome: "Futebol", Icon: IconSoccer, tint: "after:absolute after:inset-0 after:bg-emerald-50 after:opacity-60" },
-      { nome: "Basquete", Icon: IconBasketball, tint: "after:absolute after:inset-0 after:bg-amber-50 after:opacity-60" },
-      { nome: "Vôlei", Icon: IconVolleyball, tint: "after:absolute after:inset-0 after:bg-indigo-50 after:opacity-60" },
-      { nome: "Tênis", Icon: IconTennis, tint: "after:absolute after:inset-0 after:bg-lime-50 after:opacity-60" },
+      { nome: "Futebol", Icon: IconSoccerMini },
+      { nome: "Basquete", Icon: IconBasketMini },
+      { nome: "Vôlei", Icon: IconVolleyMini },
+      { nome: "Tênis", Icon: IconTennisMini },
     ],
     []
   );
@@ -167,14 +159,14 @@ export default function Home() {
       {/* Conteúdo */}
       <main className="flex-1 w-full">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-          {/* HERO */}
-          <section className="relative overflow-hidden rounded-b-3xl mt-12 md:mt-4">
+          {/* HERO compacto (sem cortes) */}
+          <section className="relative overflow-hidden rounded-b-2xl mt-12 md:mt-4">
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800" />
-            <div className="relative z-10 py-5 md:py-8">
-              {/* Linha do topo */}
+            <div className="relative z-10 py-4 md:py-6">
+              {/* Topo */}
               <div className="flex items-center justify-between">
                 <Link to="/notificacao" className="relative group">
-                  <div className="w-11 h-11 rounded-full bg-white grid place-items-center shadow">
+                  <div className="w-10 h-10 rounded-full bg-white grid place-items-center shadow">
                     <Bell className="w-5 h-5 text-emerald-700" />
                   </div>
                   {notificacoesNaoLidas > 0 && (
@@ -190,16 +182,16 @@ export default function Home() {
               </div>
 
               {/* Saudação */}
-              <div className="mt-2 text-center md:text-left">
-                <h1 className="text-2xl md:text-3xl font-semibold text-white">
+              <div className="mt-1 text-center md:text-left">
+                <h1 className="text-xl md:text-2xl font-semibold text-white">
                   Olá, {nomeUsuario}
                 </h1>
-                <p className="text-white/85 text-sm md:text-base">Sua quadra, seu jogo!</p>
+                <p className="text-white/85 text-sm">Sua quadra, seu jogo!</p>
               </div>
 
               {/* Busca + Filtro */}
-              <div className="mt-4 md:mt-5 flex items-center justify-center md:justify-start">
-                <div className="flex items-center bg-white/95 backdrop-blur rounded-full px-4 py-2 shadow-lg ring-1 ring-black/5 w-full max-w-xl">
+              <div className="mt-3 md:mt-4 flex items-center justify-center md:justify-start">
+                <div className="flex items-center bg-white/95 backdrop-blur rounded-full px-3 py-2 shadow-lg ring-1 ring-black/5 w-full max-w-xl">
                   <Search className="w-5 h-5 text-gray-400 mr-2" />
                   <input
                     type="text"
@@ -208,7 +200,7 @@ export default function Home() {
                   />
                 </div>
                 <button
-                  className="ml-2 p-3 bg-white rounded-xl shadow-lg ring-1 ring-black/5 hover:bg-emerald-50 transition"
+                  className="ml-2 p-2.5 bg-white rounded-xl shadow-lg ring-1 ring-black/5 hover:bg-emerald-50 transition"
                   onClick={() => navigate("/filtro")}
                   aria-label="Abrir filtros"
                 >
@@ -216,22 +208,40 @@ export default function Home() {
                 </button>
               </div>
 
-              {/* Categorias – proporção fixa (quadrados) */}
-              <div className="mt-5 md:mt-6 grid grid-cols-4 gap-3 sm:gap-4">
-                {categorias.map(({ nome, Icon, tint }) => (
-                  <CategoryButton
-                    key={nome}
-                    label={nome}
-                    Icon={Icon}
-                    tint={tint}
-                    onClick={() => navigate("/resultados", { state: { tipo: [nome] } })}
-                  />
-                ))}
+              {/* CATEGORIAS — chips pequenos com rolagem no mobile */}
+              <div className="mt-3">
+                {/* Mobile: rolagem horizontal */}
+                <div className="flex gap-2 overflow-x-auto md:hidden py-1 -mx-1 px-1">
+                  {categorias.map(({ nome, Icon }) => (
+                    <CategoryChip
+                      key={nome}
+                      label={nome}
+                      Icon={Icon}
+                      onClick={() => navigate("/resultados", { state: { tipo: [nome] } })}
+                    />
+                  ))}
+                </div>
+                {/* Desktop: grade compacta */}
+                <div className="hidden md:grid grid-cols-4 gap-3 mt-1">
+                  {categorias.map(({ nome, Icon }) => (
+                    <button
+                      key={nome}
+                      onClick={() => navigate("/resultados", { state: { tipo: [nome] } })}
+                      className="group w-full rounded-xl border border-gray-200 bg-white hover:bg-emerald-50 transition ring-1 ring-black/5 px-3 py-3 flex items-center gap-3"
+                    >
+                      <span className="grid place-items-center rounded-full bg-gray-100 w-9 h-9">
+                        <Icon className="w-5 h-5 text-emerald-800" />
+                      </span>
+                      <span className="text-sm font-medium text-gray-700">{nome}</span>
+                      <ChevronRight className="w-4 h-4 text-gray-400 ml-auto opacity-0 group-hover:opacity-100 transition" />
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
 
-          {/* CARROSSEL */}
+          {/* CARROSSEL — sem alterações funcionais */}
           <section className="mt-6 md:mt-8">
             <div className="flex items-center justify-between mb-2 md:mb-3">
               <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">
@@ -247,7 +257,6 @@ export default function Home() {
                 <div key={q.id} className="keen-slider__slide">
                   <button onClick={() => handleQuadraClick(q)} className="block group w-full h-full">
                     <article className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5">
-                      {/* 3:2 */}
                       <div className="relative" style={{ aspectRatio: "3 / 2" }}>
                         <img
                           src={q.imagem}
@@ -281,7 +290,7 @@ export default function Home() {
             </div>
           </section>
 
-          {/* DESTAQUES */}
+          {/* DESTAQUES — sem alterações funcionais */}
           <section className="mt-8 md:mt-10 mb-16">
             <div className="flex items-center justify-between mb-2 md:mb-3">
               <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">
@@ -297,7 +306,6 @@ export default function Home() {
                   className="group relative rounded-2xl overflow-hidden bg-white shadow-md ring-1 ring-black/5 hover:shadow-lg transition"
                 >
                   <button onClick={() => handleQuadraClick(q)} className="text-left w-full">
-                    {/* 16:10 */}
                     <div className="relative" style={{ aspectRatio: "16 / 10" }}>
                       <img
                         src={q.imagem}
