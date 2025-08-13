@@ -1,82 +1,134 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+// src/pages/Home.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
-import { useNavigate, Link } from "react-router-dom";
-import { quadras, quadrasCarrossel } from "../data/quadras";
-import UserDropdown from "../components/DropdownUser";
-import MobileNav from "../components/MobileNav";
+import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+import MobileNav from "../components/MobileNav";
+import UserDropdown from "../components/DropdownUser";
 import { api } from "../services/api";
-import {
-  Search,
-  SlidersHorizontal,
-  Bell,
-  Star,
-  MapPin,
-  Heart,
-  ChevronRight,
-} from "lucide-react";
+import { Search, SlidersHorizontal, Bell, Star, MapPin, Heart, ChevronRight } from "lucide-react";
+import { quadras, quadrasCarrossel } from "../data/quadras";
+
+/* =======================
+   ÍCONES DE ESPORTE (SVG)
+   Todos com mesma caixa (viewBox 0 0 48 48) e traço simples
+======================= */
+function IconSoccer({ className }) {
+  // bola de futebol estilizada
+  return (
+    <svg viewBox="0 0 48 48" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="24" cy="24" r="18" />
+      <polygon points="24,14 18,18 20,24 28,24 30,18" />
+      <path d="M12 24c2 2 6 4 12 4s10-2 12-4" />
+      <path d="M16 34c2-2 5-3 8-3s6 1 8 3" />
+    </svg>
+  );
+}
+function IconBasketball({ className }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="24" cy="24" r="18" />
+      <path d="M6 24h36" />
+      <path d="M24 6v36" />
+      <path d="M12 12c10 6 14 18 12 30" />
+      <path d="M36 12c-10 6-14 18-12 30" />
+    </svg>
+  );
+}
+function IconVolleyball({ className }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="24" cy="24" r="18" />
+      <path d="M12 18c8-6 16-6 24 0" />
+      <path d="M10 28c8 4 18 4 28 0" />
+      <path d="M18 8c-4 10-4 20 0 32" />
+      <path d="M30 8c4 10 4 20 0 32" />
+    </svg>
+  );
+}
+function IconTennis({ className }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="24" cy="24" r="18" />
+      <path d="M9 20c10-8 20-8 30 0" />
+      <path d="M9 28c10 8 20 8 30 0" />
+    </svg>
+  );
+}
+
+/* =======================
+   COMPONENTE: Botão de Categoria
+======================= */
+function CategoryButton({ label, onClick, Icon, tint }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`group w-28 h-28 md:w-32 md:h-32 rounded-2xl ring-1 ring-black/5 shadow-sm bg-white hover:-translate-y-0.5 transition grid place-items-center relative overflow-hidden ${tint}`}
+      aria-label={label}
+    >
+      {/* halo sutil */}
+      <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition bg-[radial-gradient(ellipse_at_center,white_0%,transparent_60%)]" />
+      <Icon className="w-16 h-16 text-emerald-800" />
+      <span className="absolute bottom-2 left-0 right-0 text-center text-xs font-medium text-gray-700">
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export default function Home() {
   const navigate = useNavigate();
-
-  // ---- State ----
-  const [nomeUsuario, setNomeUsuario] = useState("");
+  const [nomeUsuario, setNomeUsuario] = useState("Usuário");
   const [mostrarCookies, setMostrarCookies] = useState(false);
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
 
-  // ---- Slider ----
+  // Carrossel
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
+    renderMode: "performance",
+    rubberband: true,
     breakpoints: {
       "(max-width: 480px)": { slides: { perView: 1.1, spacing: 10 } },
-      "(min-width: 481px)": { slides: { perView: 2, spacing: 12 } },
-      "(min-width: 768px)": { slides: { perView: 3, spacing: 14 } },
-      "(min-width: 1024px)": { slides: { perView: 4, spacing: 16 } },
-      "(min-width: 1280px)": { slides: { perView: 5, spacing: 18 } },
+      "(min-width: 481px)": { slides: { perView: 1.6, spacing: 12 } },
+      "(min-width: 768px)": { slides: { perView: 2.5, spacing: 14 } },
+      "(min-width: 1024px)": { slides: { perView: 3.5, spacing: 16 } },
+      "(min-width: 1280px)": { slides: { perView: 4.5, spacing: 18 } },
     },
-    slides: { perView: 5, spacing: 18 },
+    slides: { perView: 3.5, spacing: 16 },
   });
 
-  // Autoplay do carrossel com cleanup correto
   useEffect(() => {
     if (!instanceRef.current) return;
-    const id = setInterval(() => instanceRef.current?.next(), 5000);
+    const id = setInterval(() => instanceRef.current?.next(), 4500);
     return () => clearInterval(id);
   }, [instanceRef]);
 
-  // ---- Notificações ----
+  // Nome / Cookies
+  useEffect(() => {
+    setNomeUsuario(localStorage.getItem("nomeUsuario") || "Usuário");
+    setMostrarCookies(localStorage.getItem("cookiesAceitos") !== "true");
+  }, []);
+
+  // Notificações
   useEffect(() => {
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario?.id) return;
-
-    const buscarTodasNotificacoes = async () => {
+    const buscar = async () => {
       try {
         const { data } = await api.get(`/notificacoes/${usuario.id}`);
         const total = Array.isArray(data) ? data.filter((n) => !n.lida).length : 0;
         setNotificacoesNaoLidas(total);
-      } catch (err) {
-        console.error("Erro ao buscar notificações:", err);
+      } catch (e) {
+        console.error("Erro ao buscar notificações:", e);
       }
     };
-
-    buscarTodasNotificacoes();
-    const intervalo = setInterval(buscarTodasNotificacoes, 15000);
-    return () => clearInterval(intervalo);
+    buscar();
+    const t = setInterval(buscar, 15000);
+    return () => clearInterval(t);
   }, []);
 
-  // ---- Inicializações ----
-  useEffect(() => {
-    const nome = localStorage.getItem("nomeUsuario") || "Usuário(a)";
-    setNomeUsuario(nome);
-  }, []);
-
-  useEffect(() => {
-    const cookiesAceitos = localStorage.getItem("cookiesAceitos");
-    setMostrarCookies(cookiesAceitos !== "true");
-  }, []);
-
-  // ---- Navegação para detalhes ----
+  // Navegação detalhe
   const handleQuadraClick = (quadra) => {
     const imagem_nome = quadra.imagem?.split("/").pop();
     navigate(`/quadra/${quadra.id}`, {
@@ -90,233 +142,213 @@ export default function Home() {
     });
   };
 
-  // ---- UI helpers ----
   const categorias = useMemo(
     () => [
-      { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
-      { nome: "Basquete", img: "/quadras/imagem1logo.png" },
-      { nome: "Vôlei", img: "/quadras/imagem4logo.png" },
-      { nome: "Tênis", img: "/quadras/imagem3logo.png" },
+      { nome: "Futebol", Icon: IconSoccer, tint: "after:absolute after:inset-0 after:bg-emerald-50 after:opacity-60" },
+      { nome: "Basquete", Icon: IconBasketball, tint: "after:absolute after:inset-0 after:bg-amber-50 after:opacity-60" },
+      { nome: "Vôlei", Icon: IconVolleyball, tint: "after:absolute after:inset-0 after:bg-indigo-50 after:opacity-60" },
+      { nome: "Tênis", Icon: IconTennis, tint: "after:absolute after:inset-0 after:bg-lime-50 after:opacity-60" },
     ],
     []
   );
 
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-neutral-50">
-      {/* Sidebar - Desktop */}
+    <div className="flex min-h-screen bg-neutral-50">
+      {/* Sidebar Desktop */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      {/* Navbar Mobile */}
-      <div className="md:hidden fixed top-0 left-0 w-full z-50">
+      {/* Mobile Topbar */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-40">
         <MobileNav />
       </div>
 
       {/* Conteúdo */}
-      <div className="flex-1 px-4 md:pl-16 lg:pl-20">
-        {/* Hero */}
-        <section className="relative rounded-b-3xl overflow-hidden shadow-sm">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800" />
-          <div className="relative z-10 px-4 md:px-8 py-6 md:py-8 text-white">
-            {/* Ações topo */}
-            <div className="flex items-center justify-between">
-              <Link to="/notificacao" className="group relative">
-                <div className="w-11 h-11 rounded-full bg-white shadow flex items-center justify-center group-hover:scale-105 transition">
-                  <Bell className="w-5 h-5 text-emerald-700" />
+      <main className="flex-1 w-full">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
+          {/* HERO */}
+          <section className="relative overflow-hidden rounded-b-3xl mt-12 md:mt-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800" />
+            <div className="relative z-10 py-5 md:py-8">
+              {/* Linha do topo */}
+              <div className="flex items-center justify-between">
+                <Link to="/notificacao" className="relative group">
+                  <div className="w-11 h-11 rounded-full bg-white grid place-items-center shadow">
+                    <Bell className="w-5 h-5 text-emerald-700" />
+                  </div>
+                  {notificacoesNaoLidas > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-semibold px-1.5 py-[1px] rounded-full shadow">
+                      {notificacoesNaoLidas}
+                    </span>
+                  )}
+                </Link>
+
+                <div className="relative z-50">
+                  <UserDropdown />
                 </div>
-                {notificacoesNaoLidas > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-semibold px-1.5 py-[1px] rounded-full shadow">
-                    {notificacoesNaoLidas}
-                  </span>
-                )}
-              </Link>
-
-              <div className="fixed top-4 right-4 z-[9999]">
-                <UserDropdown />
-              </div>
-            </div>
-
-            {/* Saudações */}
-            <div className="mt-2 text-center md:text-left">
-              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                Olá, {nomeUsuario}
-              </h1>
-              <p className="text-white/80 text-sm md:text-base">Sua quadra, seu jogo!</p>
-            </div>
-
-            {/* Busca + Filtro */}
-            <div className="mt-5 flex items-center justify-center md:justify-start">
-              <div className="flex items-center bg-white/95 backdrop-blur rounded-full px-4 py-2 shadow-lg ring-1 ring-black/5">
-                <Search className="w-5 h-5 text-gray-400 mr-2" />
-                <input
-                  type="text"
-                  placeholder="Procure sua quadra aqui"
-                  className="outline-none text-gray-700 w-64 sm:w-80 bg-transparent placeholder:text-gray-400"
-                />
               </div>
 
-              <button
-                className="ml-2 p-3 bg-white rounded-xl shadow-lg ring-1 ring-black/5 hover:bg-emerald-50 transition"
-                onClick={() => navigate("/filtro")}
-                aria-label="Abrir filtros"
-              >
-                <SlidersHorizontal className="w-5 h-5 text-emerald-700" />
-              </button>
-            </div>
+              {/* Saudação */}
+              <div className="mt-2 text-center md:text-left">
+                <h1 className="text-2xl md:text-3xl font-semibold text-white">
+                  Olá, {nomeUsuario}
+                </h1>
+                <p className="text-white/85 text-sm md:text-base">Sua quadra, seu jogo!</p>
+              </div>
 
-            {/* Categorias */}
-            <div className="mt-6 flex gap-4 md:gap-6 justify-center md:justify-start flex-wrap">
-              {categorias.map(({ nome, img }) => (
+              {/* Busca + Filtro */}
+              <div className="mt-4 md:mt-5 flex items-center justify-center md:justify-start">
+                <div className="flex items-center bg-white/95 backdrop-blur rounded-full px-4 py-2 shadow-lg ring-1 ring-black/5 w-full max-w-xl">
+                  <Search className="w-5 h-5 text-gray-400 mr-2" />
+                  <input
+                    type="text"
+                    placeholder="Procure sua quadra aqui"
+                    className="outline-none text-gray-700 flex-1 bg-transparent placeholder:text-gray-400 text-sm md:text-base"
+                  />
+                </div>
                 <button
-                  key={nome}
-                  onClick={() =>
-                    navigate("/resultados", {
-                      state: { tipo: [nome] },
-                    })
-                  }
-                  className="group relative overflow-hidden rounded-2xl bg-white text-left w-[150px] md:w-[170px] shadow-lg ring-1 ring-black/5 hover:-translate-y-0.5 transition"
+                  className="ml-2 p-3 bg-white rounded-xl shadow-lg ring-1 ring-black/5 hover:bg-emerald-50 transition"
+                  onClick={() => navigate("/filtro")}
+                  aria-label="Abrir filtros"
                 >
-                  <div className="aspect-[16/10] overflow-hidden">
-                    <img
-                      src={img}
-                      alt={nome}
-                      className="h-full w-full object-cover group-hover:scale-105 transition"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="px-3 py-2">
-                    <span className="text-sm font-medium text-gray-800">{nome}</span>
-                    <ChevronRight className="inline w-4 h-4 text-gray-400 ml-1" />
-                  </div>
+                  <SlidersHorizontal className="w-5 h-5 text-emerald-700" />
                 </button>
+              </div>
+
+              {/* Categorias – proporção fixa (quadrados) */}
+              <div className="mt-5 md:mt-6 grid grid-cols-4 gap-3 sm:gap-4">
+                {categorias.map(({ nome, Icon, tint }) => (
+                  <CategoryButton
+                    key={nome}
+                    label={nome}
+                    Icon={Icon}
+                    tint={tint}
+                    onClick={() => navigate("/resultados", { state: { tipo: [nome] } })}
+                  />
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* CARROSSEL */}
+          <section className="mt-6 md:mt-8">
+            <div className="flex items-center justify-between mb-2 md:mb-3">
+              <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">
+                Descubra quadras por aqui
+              </h2>
+              <Link to="/resultados" className="text-emerald-700 text-xs md:text-sm hover:underline">
+                Ver todas
+              </Link>
+            </div>
+
+            <div ref={sliderRef} className="keen-slider">
+              {quadrasCarrossel.map((q) => (
+                <div key={q.id} className="keen-slider__slide">
+                  <button onClick={() => handleQuadraClick(q)} className="block group w-full h-full">
+                    <article className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5">
+                      {/* 3:2 */}
+                      <div className="relative" style={{ aspectRatio: "3 / 2" }}>
+                        <img
+                          src={q.imagem}
+                          alt={q.nome}
+                          className="h-full w-full object-cover group-hover:scale-105 transition"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+                        <div className="absolute bottom-2 left-2 flex items-center gap-2">
+                          <span className="bg-white/90 text-emerald-800 text-[11px] font-semibold px-2 py-1 rounded">
+                            {q.tipo}
+                          </span>
+                          <span className="bg-yellow-100 text-yellow-800 text-[11px] font-medium px-2 py-1 rounded inline-flex items-center gap-1">
+                            <Star className="w-3.5 h-3.5" />
+                            {q.avaliacao}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="font-semibold text-gray-900 truncate">{q.nome}</h3>
+                        <p className="text-xs text-gray-500 mt-1 inline-flex items-center gap-1">
+                          <MapPin className="w-3.5 h-3.5" />
+                          {q.local}
+                        </p>
+                        <div className="mt-2 text-sm font-medium text-emerald-700">{q.preco}</div>
+                      </div>
+                    </article>
+                  </button>
+                </div>
               ))}
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Carrossel */}
-        <section className="relative mt-8">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900">
-              Descubra quadras por aqui
-            </h2>
-            <Link to="/resultados" className="text-emerald-700 text-sm hover:underline">
-              Ver todas
-            </Link>
-          </div>
+          {/* DESTAQUES */}
+          <section className="mt-8 md:mt-10 mb-16">
+            <div className="flex items-center justify-between mb-2 md:mb-3">
+              <h2 className="text-base md:text-lg lg:text-xl font-semibold text-gray-900">
+                Quadras em destaque
+              </h2>
+              <div className="text-[11px] md:text-xs text-gray-500">Atualizado diariamente</div>
+            </div>
 
-          <div ref={sliderRef} className="keen-slider">
-            {quadrasCarrossel.map((q) => (
-              <div key={q.id} className="keen-slider__slide">
-                <button
-                  onClick={() => handleQuadraClick(q)}
-                  className="w-full h-full group block"
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-5">
+              {quadras.map((q) => (
+                <article
+                  key={q.id}
+                  className="group relative rounded-2xl overflow-hidden bg-white shadow-md ring-1 ring-black/5 hover:shadow-lg transition"
                 >
-                  <article className="overflow-hidden rounded-2xl bg-white shadow-md ring-1 ring-black/5">
-                    <div className="relative aspect-[4/3]">
+                  <button onClick={() => handleQuadraClick(q)} className="text-left w-full">
+                    {/* 16:10 */}
+                    <div className="relative" style={{ aspectRatio: "16 / 10" }}>
                       <img
                         src={q.imagem}
                         alt={q.nome}
                         className="h-full w-full object-cover group-hover:scale-105 transition"
                         loading="lazy"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                      <button
+                        type="button"
+                        className="absolute top-2 right-2 rounded-full bg-white/90 backdrop-blur p-2 shadow hover:scale-105 transition"
+                        aria-label="Favoritar"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <Heart className="w-4 h-4 text-rose-500" />
+                      </button>
+
                       <div className="absolute bottom-2 left-2 flex items-center gap-2">
-                        <span className="bg-white/90 text-emerald-800 text-xs font-semibold px-2 py-1 rounded">
+                        <span className="bg-white/90 text-emerald-800 text-[11px] font-semibold px-2 py-1 rounded">
                           {q.tipo}
                         </span>
-                        <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded inline-flex items-center gap-1">
+                        <span className="bg-yellow-100 text-yellow-800 text-[11px] font-medium px-2 py-1 rounded inline-flex items-center gap-1">
                           <Star className="w-3.5 h-3.5" />
                           {q.avaliacao}
                         </span>
                       </div>
                     </div>
-                    <div className="p-3">
-                      <h3 className="font-semibold text-gray-900 line-clamp-1">{q.nome}</h3>
+
+                    <div className="p-4">
+                      <h3 className="font-semibold text-gray-900 truncate">{q.nome}</h3>
                       <p className="text-xs text-gray-500 mt-1 inline-flex items-center gap-1">
                         <MapPin className="w-3.5 h-3.5" />
                         {q.local}
                       </p>
                       <div className="mt-2 text-sm font-medium text-emerald-700">{q.preco}</div>
                     </div>
-                  </article>
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
+                  </button>
+                </article>
+              ))}
+            </div>
+          </section>
+        </div>
 
-        {/* Quadras em destaque */}
-        <section className="mt-10 mb-16">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900">
-              Quadras em destaque
-            </h2>
-            <div className="text-xs text-gray-500">Atualizado diariamente</div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {quadras.map((q) => (
-              <article
-                key={q.id}
-                className="group relative rounded-2xl overflow-hidden bg-white shadow-md ring-1 ring-black/5 hover:shadow-lg transition"
-              >
-                <button
-                  onClick={() => handleQuadraClick(q)}
-                  className="text-left w-full"
-                >
-                  <div className="relative aspect-[16/10]">
-                    <img
-                      src={q.imagem}
-                      alt={q.nome}
-                      className="h-full w-full object-cover group-hover:scale-105 transition"
-                      loading="lazy"
-                    />
-                    <button
-                      type="button"
-                      className="absolute top-2 right-2 rounded-full bg-white/90 backdrop-blur p-2 shadow hover:scale-105 transition"
-                      aria-label="Favoritar"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        // Apenas visual por enquanto – lógica de favoritar já existe em outras páginas
-                      }}
-                    >
-                      <Heart className="w-4.5 h-4.5 text-rose-500" />
-                    </button>
-
-                    <div className="absolute bottom-2 left-2 flex items-center gap-2">
-                      <span className="bg-white/90 text-emerald-800 text-xs font-semibold px-2 py-1 rounded">
-                        {q.tipo}
-                      </span>
-                      <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-1 rounded inline-flex items-center gap-1">
-                        <Star className="w-3.5 h-3.5" />
-                        {q.avaliacao}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 line-clamp-1">{q.nome}</h3>
-                    <p className="text-xs text-gray-500 mt-1 inline-flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {q.local}
-                    </p>
-                    <div className="mt-2 text-sm font-medium text-emerald-700">{q.preco}</div>
-                  </div>
-                </button>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {/* Cookies */}
+        {/* COOKIES */}
         {mostrarCookies && (
           <section className="fixed bottom-6 left-4 right-4 md:left-10 md:right-auto z-50">
             <div className="max-w-md rounded-2xl bg-emerald-700 text-white p-4 shadow-2xl ring-1 ring-black/10">
               <h3 className="font-semibold text-base mb-1">🍪 Nós usamos cookies!</h3>
-              <p className="text-sm/5 text-white/90 mb-3">
+              <p className="text-sm text-white/90 mb-3">
                 Usamos cookies para melhorar sua experiência e analisar o tráfego do site.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -343,9 +375,9 @@ export default function Home() {
           </section>
         )}
 
-        {/* Rodapé */}
-        <footer className="mt-6 mb-8">
-          <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 text-white p-6">
+        {/* RODAPÉ */}
+        <footer className="mt-6 mb-8 px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-800 via-emerald-700 to-emerald-900 text-white p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <h3 className="text-lg font-semibold mb-2">Aluguel de Quadras</h3>
@@ -372,7 +404,7 @@ export default function Home() {
             </div>
           </div>
         </footer>
-      </div>
+      </main>
     </div>
   );
 }
