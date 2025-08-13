@@ -6,29 +6,18 @@ import { FaPlus, FaTrash } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import { api, fileURL } from "../services/api";
 
-async function getUsuarioAtual() {
+// Lê usuário do localStorage (o RequireAuth já garante token + usuario)
+function getUsuarioLocal() {
   try {
     const raw = localStorage.getItem("usuario");
-    if (raw) {
-      const u = JSON.parse(raw);
-      const id = u?.id ?? u?.usuario_id ?? null;
-      const tipo = u?.tipo || u?.tipo_usuario || null;
-      if (id) return { id: Number(id), tipo };
-    }
-    const uidStr = localStorage.getItem("usuario_id");
-    if (uidStr && /^\d+$/.test(uidStr)) {
-      let tipo = null;
-      try {
-        const raw2 = localStorage.getItem("usuario");
-        if (raw2) tipo = JSON.parse(raw2)?.tipo || JSON.parse(raw2)?.tipo_usuario || null;
-      } catch {}
-      return { id: Number(uidStr), tipo };
-    }
-    const { data } = await api.get("/auth/me");
-    const id = data?.id ?? data?.usuario_id ?? null;
-    const tipo = data?.tipo || data?.tipo_usuario || null;
+    const u = raw ? JSON.parse(raw) : null;
+    const id = u?.id ?? u?.usuario_id ?? null;
+    const tipo = (u?.tipo || u?.tipo_usuario || "").toLowerCase() || null;
     if (id) return { id: Number(id), tipo };
   } catch {}
+  // fallback: alguns projetos guardam separadamente
+  const uidStr = localStorage.getItem("usuario_id");
+  if (uidStr && /^\d+$/.test(uidStr)) return { id: Number(uidStr), tipo: null };
   return { id: null, tipo: null };
 }
 
@@ -67,7 +56,13 @@ function resolveImagem(quadra) {
 
 function StatusPill({ active = true }) {
   return (
-    <span className={`px-2 py-0.5 text-xs rounded-full border ${active ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-100 text-gray-600 border-gray-300"}`}>
+    <span
+      className={`px-2 py-0.5 text-xs rounded-full border ${
+        active
+          ? "bg-green-50 text-green-700 border-green-200"
+          : "bg-gray-100 text-gray-600 border-gray-300"
+      }`}
+    >
       {active ? "Ativa" : "Inativa"}
     </span>
   );
@@ -100,11 +95,13 @@ function QuadraCard({ quadra, onExcluir }) {
         <div className="mt-3 flex items-center justify-between">
           <span className="text-green-700 font-bold">{formatPreco(quadra.preco)}</span>
           <div className="flex items-center gap-3 text-sm">
-            {/* REMOVIDO ':id' do path — use só o valor */}
             <Link to={`/quadra-locador/${quadra.id}`} className="text-blue-600 hover:underline">
               Ver detalhes
             </Link>
-            <button onClick={() => onExcluir(quadra.id)} className="text-red-600 hover:underline flex items-center gap-1">
+            <button
+              onClick={() => onExcluir(quadra.id)}
+              className="text-red-600 hover:underline flex items-center gap-1"
+            >
               <FaTrash className="text-[12px]" /> Excluir
             </button>
           </div>
@@ -135,15 +132,12 @@ export default function HomeLocador() {
   useEffect(() => {
     let cancelado = false;
     async function carregar() {
-      const { id, tipo } = await getUsuarioAtual();
+      // RequireAuth já barrou quem não é locador, aqui só pegamos o id
+      const { id } = getUsuarioLocal();
       if (!id) {
-        toast.error("Faça login para acessar suas quadras.");
+        // fallback — em teoria não entra aqui
+        toast.error("Sessão expirada. Faça login novamente.");
         navigate("/login", { replace: true });
-        return;
-      }
-      if ((tipo || "").toLowerCase() !== "locador") {
-        toast("Redirecionando para sua home.", { icon: "↩️" });
-        navigate("/home", { replace: true });
         return;
       }
       try {
@@ -159,11 +153,13 @@ export default function HomeLocador() {
       }
     }
     carregar();
-    return () => { cancelado = true; };
+    return () => {
+      cancelado = true;
+    };
   }, [navigate]);
 
-  // AJUSTE: use a rota oficial (ou altere aqui para a sua)
-  const handleNovaQuadra = () => navigate("/cadastrar-quadra");
+  // Rota de cadastro segundo seu App.jsx
+  const handleNovaQuadra = () => navigate("/cadastrarquadra");
 
   const handleExcluirQuadra = async (id) => {
     if (!confirm("Tem certeza que deseja excluir esta quadra?")) return;
@@ -210,7 +206,9 @@ export default function HomeLocador() {
       {/* Lista */}
       {carregando ? (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
         </div>
       ) : quadras.length === 0 ? (
         <div className="bg-white border rounded-2xl p-10 text-center">
