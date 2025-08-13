@@ -1,3 +1,4 @@
+// src/pages/Home.jsx
 import React, { useEffect, useState } from "react";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
@@ -8,12 +9,46 @@ import MobileNav from "../components/MobileNav";
 import Sidebar from "../components/Sidebar";
 import { api } from "../services/api";
 
+// Helper que resolve o nome do usuário a partir de múltiplas fontes
+async function resolverNomeUsuario() {
+  try {
+    // 1) usuário salvo como objeto
+    const raw = localStorage.getItem("usuario");
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.nome) return u.nome;
+      if (u?.name) return u.name;
+    }
+
+    // 2) nome salvo isolado
+    const nomeisolado = localStorage.getItem("nomeUsuario");
+    if (nomeisolado) return nomeisolado;
+
+    // 3) tentar via backend (se tiver token aplicado no axios)
+    try {
+      const { data } = await api.get("/auth/me");
+      if (data?.nome) return data.nome;
+      if (data?.name) return data.name;
+    } catch {
+      const uid = localStorage.getItem("usuario_id");
+      if (uid) {
+        const { data } = await api.get(`/usuarios/${uid}`);
+        if (data?.nome) return data.nome;
+        if (data?.name) return data.name;
+      }
+    }
+  } catch (e) {
+    console.warn("Falha ao resolver nome do usuário:", e);
+  }
+  return "Usuário(a)";
+}
+
 export default function Home() {
   const navigate = useNavigate();
 
-  const [nomeUsuario, setNomeUsuario] = useState("");
+  const [nomeUsuario, setNomeUsuario] = useState("Usuário(a)");
   const [mostrarCookies, setMostrarCookies] = useState(false);
-  const [tipoSelecionado, setTipoSelecionado] = useState("Todos"); // (se quiser usar depois)
+  const [tipoSelecionado, setTipoSelecionado] = useState("Todos");
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
 
   const [sliderRef, instanceRef] = useKeenSlider({
@@ -38,10 +73,10 @@ export default function Home() {
     const buscarTodasNotificacoes = async () => {
       try {
         const { data } = await api.get(`/notificacoes/${usuario.id}`);
-        const total = data?.length || 0;
+        const total = Array.isArray(data) ? data.length : 0;
         setNotificacoesNaoLidas(total);
       } catch (err) {
-        console.error("Erro ao buscar notificações:", err);
+        console.error("Erro ao buscar notificações:", err?.response?.data || err?.message);
       }
     };
 
@@ -63,11 +98,31 @@ export default function Home() {
     });
   };
 
+  // Carregar nome do usuário de forma robusta + reagir a mudanças do localStorage
   useEffect(() => {
-    const nome = localStorage.getItem("nomeUsuario") || "Usuário(a)";
-    setNomeUsuario(nome);
+    let cancelado = false;
+
+    async function carregarNome() {
+      const nome = await resolverNomeUsuario();
+      if (!cancelado) setNomeUsuario(nome || "Usuário(a)");
+    }
+
+    carregarNome();
+
+    function onStorage(e) {
+      if (e.key === "usuario" || e.key === "nomeUsuario" || e.key === "usuario_id") {
+        carregarNome();
+      }
+    }
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      cancelado = true;
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
+  // Cookie banner
   useEffect(() => {
     const cookiesAceitos = localStorage.getItem("cookiesAceitos");
     setMostrarCookies(cookiesAceitos !== "true");
@@ -85,7 +140,8 @@ export default function Home() {
 
       <div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
         <div className="relative bg-gradient-to-b from-[#1E8449] to-[#14532d] text-white p-6 pb-10 rounded-b-3xl shadow-md z-10">
-          <Link to="/notificacao" className="absolute top-6 left-4 sm:left-16">
+          {/* Sino / Notificações */}
+          <Link to="/notificacoes" className="absolute top-6 left-4 sm:left-16">
             <div className="relative group">
               <div className="bg-white rounded-full w-10 h-10 shadow flex items-center justify-center group-hover:scale-105 transition">
                 <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
@@ -100,6 +156,7 @@ export default function Home() {
             </div>
           </Link>
 
+          {/* Dropdown do usuário */}
           <div className="fixed top-4 right-4 z-[9999]">
             <UserDropdown />
           </div>
@@ -107,6 +164,7 @@ export default function Home() {
           <h1 className="text-2xl font-bold text-center">Olá, {nomeUsuario}</h1>
           <p className="text-sm mt-1 text-center">Sua quadra, seu jogo!</p>
 
+          {/* Busca + Filtro */}
           <div className="flex items-center justify-center mt-4">
             <div className="flex items-center bg-white rounded-full px-4 py-2 shadow-md">
               <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,6 +187,7 @@ export default function Home() {
             </button>
           </div>
 
+          {/* Atalhos por tipo */}
           <div className="flex gap-6 mt-6 justify-center flex-wrap">
             {[
               { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
@@ -159,6 +218,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Carrossel "Para você" */}
         <div className="mt-10">
           <h2 className="text-xl font-semibold mb-4">Para você</h2>
           <div ref={sliderRef} className="keen-slider">

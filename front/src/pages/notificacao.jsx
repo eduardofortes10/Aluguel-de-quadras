@@ -13,28 +13,42 @@ import {
 } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { api } from "../services/api"; // importando o axios configurado
+// ✅ IMPORT CERTO: cliente configurado com baseURL/headers
+import { api } from "../services/api";
 
 export default function Notificacoes() {
   const [notificacoes, setNotificacoes] = useState([]);
+  const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
     const userId = localStorage.getItem("usuario_id");
-    console.log("🆔 Usuário ID do localStorage:", userId);
+    if (!userId) {
+      setCarregando(false);
+      toast.info("Você precisa estar logado para ver as notificações.");
+      return;
+    }
 
-    if (!userId) return;
-
-    const buscarNotificacoes = async () => {
+    let cancelado = false;
+    async function buscarNotificacoes() {
       try {
+        setCarregando(true);
         const res = await api.get(`/notificacoes/${userId}`);
-        console.log("🔔 Notificações recebidas do backend:", res.data);
-        setNotificacoes(res.data);
+        if (!cancelado) {
+          const data = Array.isArray(res.data) ? res.data : [];
+          setNotificacoes(data);
+        }
       } catch (error) {
-        console.error("❌ Erro ao buscar notificações:", error.response?.data || error.message);
+        console.error("❌ Erro ao buscar notificações:", error?.response?.data || error?.message);
+        toast.error("Não foi possível carregar as notificações.");
+      } finally {
+        if (!cancelado) setCarregando(false);
       }
-    };
+    }
 
     buscarNotificacoes();
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   const icones = {
@@ -51,7 +65,7 @@ export default function Notificacoes() {
       setNotificacoes((prev) => prev.filter((n) => n.id !== id));
       toast.success("Notificação excluída com sucesso!");
     } catch (error) {
-      console.error("❌ Erro ao excluir notificação:", error);
+      console.error("❌ Erro ao excluir notificação:", error?.response?.data || error?.message);
       toast.error("Erro ao excluir notificação.");
     }
   };
@@ -59,7 +73,6 @@ export default function Notificacoes() {
   return (
     <div className="flex">
       <ToastContainer />
-
       {/* Sidebar (desktop) */}
       <div className="md:block hidden">
         <Sidebar />
@@ -71,7 +84,7 @@ export default function Notificacoes() {
           <MobileNav />
         </div>
 
-        {/* Topo com dropdown e sino de notificação */}
+        {/* Topo com dropdown e sino */}
         <div className="flex justify-end items-center mb-4 gap-4">
           <div className="relative">
             <FaBell className="text-gray-700 w-6 h-6" />
@@ -106,34 +119,44 @@ export default function Notificacoes() {
           </span>
         </h1>
 
-        {/* Lista de notificações */}
-        <div className="space-y-4">
-          {notificacoes.map((n) => (
-            <div
-              key={n.id}
-              className="flex items-start justify-between p-4 bg-white border-l-4 border-green-600 shadow rounded-lg hover:bg-green-50 transition-all"
-            >
-              <div className="flex items-start gap-4">
-                <div>{icones[n.tipo] || <FaCheckCircle className="text-gray-400 w-6 h-6" />}</div>
-                <div>
-                  <p className="text-gray-800 font-medium">{n.mensagem}</p>
-                  {n.data && (
-                    <span className="text-sm text-gray-500">
-                      {new Date(n.data).toLocaleString("pt-BR")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <button
-                onClick={() => excluirNotificacao(n.id)}
-                className="text-red-600 hover:text-red-800 p-2 rounded-full transition"
-                title="Excluir notificação"
+        {/* Lista / estados */}
+        {carregando ? (
+          <div className="text-gray-500">Carregando notificações...</div>
+        ) : notificacoes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center p-8 bg-white rounded-lg border shadow">
+            <FaBell className="w-10 h-10 text-gray-400 mb-2" />
+            <p className="text-gray-700 font-medium">Nenhuma notificação por aqui</p>
+            <p className="text-gray-500 text-sm">Quando algo acontecer, você verá por aqui.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {notificacoes.map((n) => (
+              <div
+                key={n.id}
+                className="flex items-start justify-between p-4 bg-white border-l-4 border-green-600 shadow rounded-lg hover:bg-green-50 transition-all"
               >
-                <FaTrashAlt />
-              </button>
-            </div>
-          ))}
-        </div>
+                <div className="flex items-start gap-4">
+                  <div>{icones[n.tipo] || <FaCheckCircle className="text-gray-400 w-6 h-6" />}</div>
+                  <div>
+                    <p className="text-gray-800 font-medium">{n.mensagem}</p>
+                    {n.data && (
+                      <span className="text-sm text-gray-500 block">
+                        {new Date(n.data).toLocaleString("pt-BR")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => excluirNotificacao(n.id)}
+                  className="text-red-600 hover:text-red-800 p-2 rounded-full transition"
+                  title="Excluir notificação"
+                >
+                  <FaTrashAlt />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
