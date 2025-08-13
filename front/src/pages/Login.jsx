@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { api } from "../services/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -45,11 +45,8 @@ export default function Login() {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.post(
-        LOGIN_URL,
-        { email, senha: password },
-        { headers: { "Content-Type": "application/json" } }
-      );
+      const res = await api.post("/auth/login", { email, senha: password });
+      
       const { usuario, token } = res.data || {};
       if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
       if (token) localStorage.setItem("token", token);

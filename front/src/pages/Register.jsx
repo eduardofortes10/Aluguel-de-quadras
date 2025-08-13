@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
+ import { api } from "../services/api";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -54,17 +54,9 @@ export default function Register() {
 
     setLoading(true);
     try {
-      await axios.post(
-        REGISTER_URL,
-        { nome, email, senha, tipo_usuario: tipo, telefone: telefone || null, data_nascimento: dataNascimento || null },
-        { headers: { "Content-Type": "application/json" } }
-      );
+      await api.post("/auth/register", { ...dados });
 
-      const res = await axios.post(
-        LOGIN_URL,
-        { email, senha },
-        { headers: { "Content-Type": "application/json" } }
-      );
+      const res = await api.post("/auth/login", { email, senha });
       const { usuario, token } = res.data || {};
       if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
       if (token) localStorage.setItem("token", token);
