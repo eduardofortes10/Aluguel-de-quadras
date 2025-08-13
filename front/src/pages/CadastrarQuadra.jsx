@@ -4,10 +4,10 @@ import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import { FaSpinner, FaTrash } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import { toast } from "react-toast-toast";
 import { api } from "../services/api";
 
-// ---- helpers -------------------------------------------------
+// helpers
 async function getUsuarioAtual() {
   try {
     const raw = localStorage.getItem("usuario");
@@ -29,7 +29,6 @@ async function getUsuarioAtual() {
       } catch {}
       return { id: Number(uidStr), tipo };
     }
-    // tenta /auth/me
     const { data } = await api.get("/auth/me");
     const id = data?.id ?? data?.usuario_id ?? null;
     const tipo = data?.tipo || data?.tipo_usuario || null;
@@ -45,13 +44,10 @@ function normalizarTipo(v) {
 }
 
 function parsePrecoToNumber(v) {
-  if (v == null) return NaN;
-  // remove tudo que não for dígito, vírgula, ponto, ou sinal
-  const cleaned = String(v).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
+  const cleaned = String(v ?? "").replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
   const num = parseFloat(cleaned);
-  return num;
+  return Number.isFinite(num) ? num : NaN;
 }
-// --------------------------------------------------------------
 
 export default function CadastrarQuadra() {
   const navigate = useNavigate();
@@ -100,7 +96,6 @@ export default function CadastrarQuadra() {
   };
 
   const handleCadastrar = async () => {
-    // validações
     const { id: donoId } = await getUsuarioAtual();
     if (!donoId) {
       toast.error("Sessão expirada. Faça login novamente.");
@@ -119,22 +114,20 @@ export default function CadastrarQuadra() {
 
     formData.append("nome", nome.trim());
     formData.append("local", local.trim());
-    formData.append("preco", String(precoNumber)); // número em string
+    formData.append("preco", String(precoNumber));
     formData.append("tipo", normalizarTipo(tipo));
     formData.append("descricao", descricao.trim());
     formData.append("dono_id", String(donoId));
     formData.append("nota", "0");
 
-    // envia com as duas chaves para compatibilidade do backend
-    imagens.forEach((img) => {
-      formData.append("imagens", img);
-      formData.append("imagens[]", img);
+    // ⚠️ ENVIE APENAS O CAMPO QUE O MULTER ACEITA
+    // Backend provavelmente: upload.array('imagens', ...)
+    imagens.forEach((file) => {
+      formData.append("imagens", file, file.name); // <-- use só "imagens"
     });
 
     try {
-      const { data } = await api.post("/quadras", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const { data } = await api.post("/quadras", formData /* não defina Content-Type aqui */);
       console.log("🟢 Resposta do servidor:", data);
       toast.success("Quadra cadastrada com sucesso!");
       navigate("/home-locador");
@@ -144,6 +137,7 @@ export default function CadastrarQuadra() {
         err?.response?.data?.erro ||
         err?.response?.data?.error ||
         err?.response?.data?.message ||
+        err?.message ||
         "Erro ao cadastrar quadra.";
       toast.error(msg);
     } finally {
@@ -165,7 +159,7 @@ export default function CadastrarQuadra() {
 
       <div className="flex-1 p-4 md:ml-64 pb-24">
         <div className="mb-4 flex items-center text-sm text-gray-500 gap-1">
-          <Link to="/home-locador" className="text-gray-600 hover:underline flex items-center" title="Início do locador">
+          <Link to="/home-locador" className="text-gray-600 hover:underline flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
             </svg>
