@@ -1,81 +1,175 @@
-import React, { useState } from "react";
+// src/pages/CadastrarQuadra.jsx
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import { FaSpinner, FaTrash } from "react-icons/fa";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 import { api } from "../services/api";
+
+// ---- helpers -------------------------------------------------
+async function getUsuarioAtual() {
+  try {
+    const raw = localStorage.getItem("usuario");
+    if (raw) {
+      const u = JSON.parse(raw);
+      const id = u?.id ?? u?.usuario_id ?? null;
+      const tipo = u?.tipo || u?.tipo_usuario || null;
+      if (id) return { id: Number(id), tipo };
+    }
+    const uidStr = localStorage.getItem("usuario_id");
+    if (uidStr && /^\d+$/.test(uidStr)) {
+      let tipo = null;
+      try {
+        const raw2 = localStorage.getItem("usuario");
+        if (raw2) {
+          const u2 = JSON.parse(raw2);
+          tipo = u2?.tipo || u2?.tipo_usuario || null;
+        }
+      } catch {}
+      return { id: Number(uidStr), tipo };
+    }
+    // tenta /auth/me
+    const { data } = await api.get("/auth/me");
+    const id = data?.id ?? data?.usuario_id ?? null;
+    const tipo = data?.tipo || data?.tipo_usuario || null;
+    if (id) return { id: Number(id), tipo };
+  } catch {}
+  return { id: null, tipo: null };
+}
+
+function normalizarTipo(v) {
+  if (!v) return "Futebol";
+  const s = String(v).trim().toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function parsePrecoToNumber(v) {
+  if (v == null) return NaN;
+  // remove tudo que não for dígito, vírgula, ponto, ou sinal
+  const cleaned = String(v).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  return num;
+}
+// --------------------------------------------------------------
+
 export default function CadastrarQuadra() {
+  const navigate = useNavigate();
+
   const [nome, setNome] = useState("");
   const [local, setLocal] = useState("");
   const [preco, setPreco] = useState("");
   const [tipo, setTipo] = useState("Futebol");
-  const [imagens, setImagens] = useState([]);
+  const [imagens, setImagens] = useState([]); // File[]
   const [descricao, setDescricao] = useState("");
   const [carregando, setCarregando] = useState(false);
-  const navigate = useNavigate();
-  const usuario = JSON.parse(localStorage.getItem("usuario"));
+
+  // garante login + papel locador
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const { id, tipo } = await getUsuarioAtual();
+      if (!id) {
+        toast.error("Faça login para cadastrar quadras.");
+        navigate("/login", { replace: true });
+        return;
+      }
+      if (tipo !== "locador") {
+        toast("Você não tem acesso a esta página.", { icon: "⛔" });
+        navigate("/home", { replace: true });
+        return;
+      }
+      if (cancel) return;
+    })();
+    return () => {
+      cancel = true;
+    };
+  }, [navigate]);
+
   const handleImagemChange = (e) => {
-    
-    const files = Array.from(e.target.files);
-    setImagens((prev) => [...prev, ...files]);
+    const files = Array.from(e.target.files || []);
+    const onlyImages = files.filter((f) => f.type.startsWith("image/"));
+    if (onlyImages.length !== files.length) {
+      toast("Alguns arquivos foram ignorados por não serem imagens.", { icon: "⚠️" });
+    }
+    setImagens((prev) => [...prev, ...onlyImages]);
   };
+
   const handleRemoverImagem = (index) => {
-    const novasImagens = imagens.filter((_, i) => i !== index);
-    setImagens(novasImagens);
+    setImagens((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCadastrar = async () => {
-    if (!nome || !local || !preco || !tipo || imagens.length < 3) {
-      toast.error("Preencha todos os campos e envie no mínimo 3 imagens da quadra.");
+    // validações
+    const { id: donoId } = await getUsuarioAtual();
+    if (!donoId) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    const precoNumber = parsePrecoToNumber(preco);
+    if (!nome || !local || isNaN(precoNumber) || precoNumber <= 0 || !tipo || imagens.length < 3) {
+      toast.error("Preencha todos os campos corretamente e envie no mínimo 3 imagens.");
       return;
     }
 
     setCarregando(true);
     const formData = new FormData();
 
-    const tipoFormatado = tipo.charAt(0).toUpperCase() + tipo.slice(1).toLowerCase();
+    formData.append("nome", nome.trim());
+    formData.append("local", local.trim());
+    formData.append("preco", String(precoNumber)); // número em string
+    formData.append("tipo", normalizarTipo(tipo));
+    formData.append("descricao", descricao.trim());
+    formData.append("dono_id", String(donoId));
+    formData.append("nota", "0");
 
-    formData.append("nome", nome);
-    formData.append("local", local);
-    formData.append("preco", parseFloat(preco));
-    formData.append("tipo", tipoFormatado);
-    formData.append("descricao", descricao);
-    formData.append("dono_id", usuario?.id || 1);
-    formData.append("nota", 0);
-    imagens.forEach((img) => formData.append("imagens", img));
-  
+    // envia com as duas chaves para compatibilidade do backend
+    imagens.forEach((img) => {
+      formData.append("imagens", img);
+      formData.append("imagens[]", img);
+    });
+
     try {
-  const { data } = await api.post("/quadras", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-
-  console.log("🟢 Resposta do servidor:", data);
-  toast.success("Quadra cadastrada com sucesso!");
-  navigate("/home-locador");
-} catch (err) {
-  console.error("❌ Erro na requisição:", err);
-  const msg = err?.response?.data?.error || "Erro ao cadastrar quadra";
-  toast.error(msg);
-} finally {
-  setCarregando(false);
-}
-
+      const { data } = await api.post("/quadras", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      console.log("🟢 Resposta do servidor:", data);
+      toast.success("Quadra cadastrada com sucesso!");
+      navigate("/home-locador");
+    } catch (err) {
+      console.error("❌ Erro na requisição:", err);
+      const msg =
+        err?.response?.data?.erro ||
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        "Erro ao cadastrar quadra.";
+      toast.error(msg);
+    } finally {
+      setCarregando(false);
+    }
   };
 
   return (
     <div className="flex bg-gray-100 min-h-screen">
+      {/* Sidebar desktop */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
-      <MobileNav />
+
+      {/* Nav mobile */}
+      <div className="md:hidden fixed bottom-14 left-0 w-full bg-[#14532d] p-4 flex justify-between items-center z-50 shadow-inner">
+        <MobileNav />
+      </div>
 
       <div className="flex-1 p-4 md:ml-64 pb-24">
         <div className="mb-4 flex items-center text-sm text-gray-500 gap-1">
-          <Link to="/home-locador" className="text-gray-600 hover:underline flex items-center">
+          <Link to="/home-locador" className="text-gray-600 hover:underline flex items-center" title="Início do locador">
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
             </svg>
+            Início
           </Link>
           <span className="mx-1">/</span>
           <span className="text-blue-600 font-medium">Cadastrar Quadra</span>
@@ -84,7 +178,7 @@ export default function CadastrarQuadra() {
         <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
           <h1 className="text-2xl font-bold text-green-700 mb-6">Cadastrar Nova Quadra</h1>
 
-          <form className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <form className="grid grid-cols-1 md:grid-cols-2 gap-6" onSubmit={(e) => e.preventDefault()}>
             <div>
               <label className="block text-sm font-medium text-gray-700">Nome</label>
               <input
@@ -114,7 +208,7 @@ export default function CadastrarQuadra() {
                 value={preco}
                 onChange={(e) => setPreco(e.target.value)}
                 className="mt-1 block w-full p-3 border rounded"
-                placeholder="Ex: 180"
+                placeholder="Ex: 180 ou 180,50"
               />
             </div>
 
@@ -145,7 +239,9 @@ export default function CadastrarQuadra() {
                 <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3" />
                 </svg>
-                <span className="text-sm text-gray-500 mt-2">Clique para selecionar imagens</span>
+                <span className="text-sm text-gray-500 mt-2">
+                  Clique para selecionar imagens (mínimo 3)
+                </span>
                 <input
                   id="imagens"
                   type="file"
@@ -155,6 +251,7 @@ export default function CadastrarQuadra() {
                   onChange={handleImagemChange}
                 />
               </label>
+
               {imagens.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-4">
                   {imagens.map((img, i) => (
@@ -165,6 +262,7 @@ export default function CadastrarQuadra() {
                         className="object-cover w-full h-full rounded"
                       />
                       <button
+                        type="button"
                         onClick={() => handleRemoverImagem(i)}
                         className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                         title="Remover"
