@@ -1,9 +1,9 @@
 // src/pages/Resultados.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
-import { api, fileURL } from "../services/api";
+import { quadras, quadrasCarrossel } from "../data/quadras";
 
 function normalizarTipo(v) {
   if (!v) return "";
@@ -17,117 +17,98 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-// Resolve a melhor imagem para exibir (1ª válida); fallback local
-function resolveImagem(quadra) {
-  const list = Array.isArray(quadra?.imagens) ? quadra.imagens : [];
-  for (let c of list) {
-    if (!c) continue;
-    const s = String(c).trim().replace(/\\/g, "/");
-    if (!s) continue;
-    if (/^https?:\/\//i.test(s)) return s;              // URL absoluta
-    if (s.includes("/uploads/") || s.startsWith("/"))   // servido pelo back
-      return fileURL(s);
-    return `/quadras/${s}`;                              // arquivo local em /public/quadras
-  }
-  return "/quadras/quadra1.png";                         // fallback real do projeto
+function parsePreco(str) {
+  if (str == null) return NaN;
+  // extrai números com , ou . (ex.: "R$ 200 /hora" -> 200)
+  const cleaned = String(str).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  return Number.isFinite(num) ? num : NaN;
 }
 
 export default function Resultados() {
   const { state: filtros } = useLocation();
   const navigate = useNavigate();
 
-  const [carregando, setCarregando] = useState(true);
-  const [quadras, setQuadras] = useState([]); // resultado final já filtrado
-
-  // Normaliza filtros recebidos
+  // normaliza filtros vindos do Filtro.jsx
   const filtrosNorm = useMemo(() => {
     if (!filtros) return null;
     return {
       tipos: Array.isArray(filtros.tipo) ? filtros.tipo.map(normalizarTipo) : [],
       precoMaximo: toNumberOrNull(filtros.precoMaximo),
       avaliacaoMinima: toNumberOrNull(filtros.avaliacaoMinima),
-      local: (filtros.local || "").trim(),
+      local: (filtros.local || "").trim().toLowerCase(),
     };
   }, [filtros]);
 
-  // Guarda/retorna se não veio filtro (acesso direto à página)
-  useEffect(() => {
-    if (!filtrosNorm) {
-      navigate("/filtro", { replace: true });
+  // catálogo local (somente data/quadras.js)
+  const catalogo = useMemo(() => {
+    const base = [...quadrasCarrossel, ...quadras];
+    // dedup por id, mantendo o primeiro que aparecer
+    const seen = new Set();
+    const dedup = [];
+    for (const q of base) {
+      if (seen.has(q.id)) continue;
+      seen.add(q.id);
+      dedup.push({
+        ...q,
+        tipoNorm: normalizarTipo(q.tipo),
+        localNorm: String(q.local || "").toLowerCase(),
+        precoNumber: parsePreco(q.preco),
+        avaliacaoNumber: Number(q.avaliacao || q.nota || 0),
+      });
     }
-  }, [filtrosNorm, navigate]);
+    return dedup;
+  }, []);
 
-  useEffect(() => {
-    if (!filtrosNorm) return;
+  const resultados = useMemo(() => {
+    if (!filtrosNorm) return [];
 
-    let cancel = false;
+    const tiposSet = filtrosNorm.tipos.length ? new Set(filtrosNorm.tipos) : null;
 
-    async function buscar() {
-      try {
-        setCarregando(true);
+    const filtrado = catalogo.filter((q) => {
+      if (tiposSet && !tiposSet.has(q.tipoNorm)) return false;
 
-        // Monta params para o backend
-        const params = { limit: 100 };
-        if (filtrosNorm.local) params.q = filtrosNorm.local;
-
-        // Se houver APENAS 1 tipo, pedimos já filtrado no back
-        if (filtrosNorm.tipos.length === 1) {
-          params.tipo = filtrosNorm.tipos[0];
-        }
-
-        const { data } = await api.get("/quadras", { params });
-        const base = Array.isArray(data) ? data : [];
-
-        // Filtro adicional no front:
-        // - quando houver 0 ou vários tipos
-        // - preço máximo
-        // - avaliação mínima (usa 'nota' que é o campo do back)
-        const tiposSet =
-          filtrosNorm.tipos.length > 1
-            ? new Set(filtrosNorm.tipos.map(normalizarTipo))
-            : null;
-
-        const filtrado = base
-          .filter((q) => {
-            if (tiposSet) {
-              const t = normalizarTipo(q.tipo);
-              if (!tiposSet.has(t)) return false;
-            }
-            if (filtrosNorm.precoMaximo != null) {
-              const precoNum = Number(q.preco);
-              if (!Number.isFinite(precoNum) || precoNum > filtrosNorm.precoMaximo) return false;
-            }
-            if (filtrosNorm.avaliacaoMinima != null) {
-              const nota = Number(q.nota || 0);
-              if (!Number.isFinite(nota) || nota < filtrosNorm.avaliacaoMinima) return false;
-            }
-            return true;
-          })
-          // ordena por melhor avaliação e depois menor preço (opcional)
-          .sort((a, b) => {
-            const na = Number(a.nota || 0), nb = Number(b.nota || 0);
-            if (nb !== na) return nb - na;
-            const pa = Number(a.preco || 0), pb = Number(b.preco || 0);
-            return pa - pb;
-          });
-
-        if (!cancel) setQuadras(filtrado);
-      } catch (err) {
-        console.error("Erro ao buscar quadras:", err?.response?.data || err?.message || err);
-        if (!cancel) setQuadras([]);
-      } finally {
-        if (!cancel) setCarregando(false);
+      if (filtrosNorm.local) {
+        const alvo = filtrosNorm.local;
+        const matchLocal =
+          q.localNorm.includes(alvo) ||
+          String(q.nome || "").toLowerCase().includes(alvo);
+        if (!matchLocal) return false;
       }
-    }
 
-    buscar();
-    return () => { cancel = true; };
-  }, [filtrosNorm]);
+      if (filtrosNorm.precoMaximo != null) {
+        if (!Number.isFinite(q.precoNumber) || q.precoNumber > filtrosNorm.precoMaximo) return false;
+      }
+
+      if (filtrosNorm.avaliacaoMinima != null) {
+        if (!Number.isFinite(q.avaliacaoNumber) || q.avaliacaoNumber < filtrosNorm.avaliacaoMinima) return false;
+      }
+
+      return true;
+    });
+
+    // ordena: maior avaliação → menor preço
+    filtrado.sort((a, b) => {
+      const nb = b.avaliacaoNumber - a.avaliacaoNumber;
+      if (nb !== 0) return nb;
+      const pa = Number.isFinite(a.precoNumber) ? a.precoNumber : Infinity;
+      const pb = Number.isFinite(b.precoNumber) ? b.precoNumber : Infinity;
+      return pa - pb;
+    });
+
+    return filtrado;
+  }, [catalogo, filtrosNorm]);
 
   const handleCliqueQuadra = (q) => {
-    // Deixa o detalhe buscar do backend pelo ID
-    navigate(`/quadra/${q.id}`);
+    // manda os dados estáticos via state para o detalhe (caso ele queira usar)
+    navigate(`/quadra/${q.id}`, { state: { fromStatic: true, quadra: q } });
   };
+
+  if (!filtrosNorm) {
+    // acesso direto à página sem passar pelo Filtro
+    navigate("/filtro", { replace: true });
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -155,82 +136,66 @@ export default function Resultados() {
         <h1 className="text-2xl font-bold text-green-800 mb-4">Resultados da Busca</h1>
 
         {/* Resumo dos filtros */}
-        {filtrosNorm && (
-          <div className="text-sm text-gray-600 mb-6">
-            {filtrosNorm.tipos.length > 0 && (
-              <span className="mr-4">
-                Tipos: <strong>{filtrosNorm.tipos.join(", ")}</strong>
-              </span>
-            )}
-            {filtrosNorm.local && (
-              <span className="mr-4">
-                Local: <strong>{filtrosNorm.local}</strong>
-              </span>
-            )}
-            {filtrosNorm.precoMaximo != null && (
-              <span className="mr-4">
-                Até:{" "}
-                <strong>
-                  {filtrosNorm.precoMaximo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </strong>
-              </span>
-            )}
-            {filtrosNorm.avaliacaoMinima != null && (
-              <span>
-                Nota mínima: <strong>{filtrosNorm.avaliacaoMinima}</strong>
-              </span>
-            )}
-          </div>
-        )}
+        <div className="text-sm text-gray-600 mb-6">
+          {filtrosNorm.tipos.length > 0 && (
+            <span className="mr-4">
+              Tipos: <strong>{filtrosNorm.tipos.join(", ")}</strong>
+            </span>
+          )}
+          {filtrosNorm.local && (
+            <span className="mr-4">
+              Local: <strong>{filtrosNorm.local}</strong>
+            </span>
+          )}
+          {filtrosNorm.precoMaximo != null && (
+            <span className="mr-4">
+              Até:{" "}
+              <strong>
+                {filtrosNorm.precoMaximo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </strong>
+            </span>
+          )}
+          {filtrosNorm.avaliacaoMinima != null && (
+            <span>
+              Nota mínima: <strong>{filtrosNorm.avaliacaoMinima}</strong>
+            </span>
+          )}
+        </div>
 
         {/* Lista */}
-        {carregando ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white rounded-xl shadow-sm border p-4">
-                <div className="w-full h-36 bg-gray-200 animate-pulse rounded-lg mb-3" />
-                <div className="h-4 bg-gray-200 rounded w-2/3 mb-2" />
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-2" />
-                <div className="h-4 bg-gray-200 rounded w-1/3" />
-              </div>
-            ))}
-          </div>
-        ) : !quadras.length ? (
+        {!resultados.length ? (
           <p className="text-gray-600">Nenhuma quadra encontrada com os filtros selecionados.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {quadras.map((q) => {
-              const img = resolveImagem(q);
-              return (
-                <div
-                  key={q.id}
-                  onClick={() => handleCliqueQuadra(q)}
-                  className="cursor-pointer bg-white rounded-xl shadow-md hover:shadow-xl hover:scale-[1.02] transition-transform duration-300 overflow-hidden border"
-                >
-                  <img
-                    src={img}
-                    alt={q.nome}
-                    className="w-full h-44 object-cover"
-                    onError={(e) => (e.currentTarget.src = "/quadras/quadra1.png")}
-                    loading="lazy"
-                  />
+            {resultados.map((q) => (
+              <div
+                key={q.id}
+                onClick={() => handleCliqueQuadra(q)}
+                className="cursor-pointer bg-white rounded-xl shadow-md hover:shadow-xl hover:scale-[1.02] transition-transform duration-300 overflow-hidden border"
+              >
+                <img
+                  src={q.imagem || "/quadras/quadra1.png"}
+                  alt={q.nome}
+                  className="w-full h-44 object-cover"
+                  onError={(e) => (e.currentTarget.src = "/quadras/quadra1.png")}
+                  loading="lazy"
+                />
 
-                  <div className="p-4 space-y-1">
-                    <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">{q.nome}</h3>
-                    <p className="text-sm text-gray-600 line-clamp-1">{q.local}</p>
+                <div className="p-4 space-y-1">
+                  <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">{q.nome}</h3>
+                  <p className="text-sm text-gray-600 line-clamp-1">{q.local}</p>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-green-700 font-bold">
-                        {Number(q.preco || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                      </span>
-                      <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">
-                        ★ {Number(q.nota || 0).toFixed(1)}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-green-700 font-bold">
+                      {q.preco || q.precoNumber?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </span>
+                    <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">
+                      ★ {Number(q.avaliacaoNumber || q.avaliacao || q.nota || 0).toFixed(1)}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>
