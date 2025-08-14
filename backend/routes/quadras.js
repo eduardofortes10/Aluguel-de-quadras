@@ -14,9 +14,12 @@ const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadRoot),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname || "");
-    const base = path.basename(file.originalname || "arquivo", ext).replace(/\s+/g, "_");
-    cb(null, `${Date.now()}_${base}${ext}`);
-  }
+    const base = path
+      .basename(file.originalname || "arquivo", ext)
+      .replace(/\s+/g, "_")
+      .replace(/[^\w.-]/g, "");
+    cb(null, `${Date.now()}_${Math.random().toString(36).slice(2)}_${base}${ext || ".png"}`);
+  },
 });
 const upload = multer({
   storage,
@@ -26,7 +29,7 @@ const upload = multer({
       return cb(new Error("Apenas imagens são permitidas"));
     }
     cb(null, true);
-  }
+  },
 });
 
 // ====== Helpers ======
@@ -41,11 +44,13 @@ async function getQuadrasColumns() {
       AND TABLE_NAME = 'quadras'
   `;
   const [rows] = await db.query(sql);
-  schemaCache.cols = new Set(rows.map(r => r.name));
+  schemaCache.cols = new Set(rows.map((r) => r.name));
   schemaCache.ts = now;
   return schemaCache.cols;
 }
-function hasCol(cols, c) { return cols.has(c); }
+function hasCol(cols, c) {
+  return cols.has(c);
+}
 
 function parseNumber(v) {
   if (v == null) return NaN;
@@ -53,15 +58,19 @@ function parseNumber(v) {
   return Number.isFinite(n) ? n : NaN;
 }
 function toRelUrl(absPath) {
-  // guarda em banco como caminho relativo servido pelo express static
+  // guarda no banco como caminho relativo servido pelo express static
   return `/uploads/${path.basename(absPath)}`;
 }
 function parseImagensField(val) {
   if (!val) return [];
-  if (Array.isArray(val)) return val;
+  if (Array.isArray(val)) return val.filter(Boolean);
   if (typeof val === "string") {
-    try { const arr = JSON.parse(val); return Array.isArray(arr) ? arr : []; }
-    catch { return []; }
+    try {
+      const arr = JSON.parse(val);
+      return Array.isArray(arr) ? arr.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
   }
   return [];
 }
@@ -82,10 +91,15 @@ router.get("/", async (req, res) => {
     const where = [];
     const params = [];
 
-    if (dono_id) { where.push("dono_id = ?"); params.push(dono_id); }
-    if (tipo) { where.push("tipo = ?"); params.push(tipo); }
+    if (dono_id) {
+      where.push("dono_id = ?");
+      params.push(dono_id);
+    }
+    if (tipo) {
+      where.push("tipo = ?");
+      params.push(tipo);
+    }
     if (q) {
-      // busca simples por nome/local
       where.push("(nome LIKE ? OR local LIKE ?)");
       params.push(`%${q}%`, `%${q}%`);
     }
@@ -93,6 +107,7 @@ router.get("/", async (req, res) => {
       where.push("status = ?");
       params.push(status);
     }
+
     if (where.length) sql += " WHERE " + where.join(" AND ");
     sql += " ORDER BY id DESC";
     sql += " LIMIT ? OFFSET ?";
@@ -125,11 +140,24 @@ router.post("/", upload.array("imagens", 10), async (req, res) => {
     const cols = await getQuadrasColumns();
 
     const {
-      nome, local, preco, tipo, descricao,
-      dono_id, nota,
-      // campos adicionais (só serão usados se existirem)
-      cep, endereco, numero, complemento, bairro, cidade, uf,
-      horario_inicio, horario_fim, status
+      nome,
+      local,
+      preco,
+      tipo,
+      descricao,
+      dono_id,
+      nota,
+      // opcionais (só inserimos se existirem na tabela)
+      cep,
+      endereco,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf,
+      horario_inicio,
+      horario_fim,
+      status,
     } = req.body;
 
     const precoNumber = parseNumber(preco);
@@ -141,39 +169,84 @@ router.post("/", upload.array("imagens", 10), async (req, res) => {
     if (files.length < 3) {
       return res.status(400).json({ erro: "Envie no mínimo 3 imagens." });
     }
-    const imagens = files.map(f => toRelUrl(path.join(uploadRoot, f.filename)));
+    const imagens = files.map((f) => toRelUrl(path.join(uploadRoot, f.filename)));
 
-    // Monta INSERT apenas com as colunas que existem
-    const fields = ["nome", "local", "preco", "tipo", "descricao", "dono_id", "nota", "imagens", "criado_em"];
-    const values = [nome.trim(), local.trim(), precoNumber, String(tipo).trim(), (descricao || "").trim(), Number(dono_id), parseNumber(nota) || 0, JSON.stringify(imagens), /* NOW() placeholder */];
-    const placeholders = ["?", "?", "?", "?", "?", "?", "?", "?", "NOW()"];
+    // ---- MONTAÇÃO CORRETA (sem splice) ----
+    const fields = ["nome", "local", "preco", "tipo", "descricao", "dono_id", "nota", "imagens"];
+    const placeholders = ["?", "?", "?", "?", "?", "?", "?", "?"];
+    const values = [
+      nome.trim(),
+      local.trim(),
+      precoNumber,
+      String(tipo).trim(),
+      (descricao || "").trim(),
+      Number(dono_id),
+      parseNumber(nota) || 0,
+      JSON.stringify(imagens),
+    ];
 
-    // opcionais
-    if (hasCol(cols, "cep")) { fields.push("cep"); values.splice(values.length - 1, 0, cep || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
-    if (hasCol(cols, "endereco")) { fields.push("endereco"); values.splice(values.length - 1, 0, endereco || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
-    if (hasCol(cols, "numero")) { fields.push("numero"); values.splice(values.length - 1, 0, numero || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
-    if (hasCol(cols, "complemento")) { fields.push("complemento"); values.splice(values.length - 1, 0, complemento || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
-    if (hasCol(cols, "bairro")) { fields.push("bairro"); values.splice(values.length - 1, 0, bairro || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
-    if (hasCol(cols, "cidade")) { fields.push("cidade"); values.splice(values.length - 1, 0, cidade || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
-    if (hasCol(cols, "uf")) { fields.push("uf"); values.splice(values.length - 1, 0, uf || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
-    if (hasCol(cols, "horario_inicio")) { fields.push("horario_inicio"); values.splice(values.length - 1, 0, horario_inicio || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
-    if (hasCol(cols, "horario_fim")) { fields.push("horario_fim"); values.splice(values.length - 1, 0, horario_fim || null); placeholders.splice(placeholders.length - 1, 0, "?"); }
+    // opcionais (só se a coluna existir mesmo)
+    if (hasCol(cols, "cep")) {
+      fields.push("cep");
+      placeholders.push("?");
+      values.push(cep || null);
+    }
+    if (hasCol(cols, "endereco")) {
+      fields.push("endereco");
+      placeholders.push("?");
+      values.push(endereco || null);
+    }
+    if (hasCol(cols, "numero")) {
+      fields.push("numero");
+      placeholders.push("?");
+      values.push(numero || null);
+    }
+    if (hasCol(cols, "complemento")) {
+      fields.push("complemento");
+      placeholders.push("?");
+      values.push(complemento || null);
+    }
+    if (hasCol(cols, "bairro")) {
+      fields.push("bairro");
+      placeholders.push("?");
+      values.push(bairro || null);
+    }
+    if (hasCol(cols, "cidade")) {
+      fields.push("cidade");
+      placeholders.push("?");
+      values.push(cidade || null);
+    }
+    if (hasCol(cols, "uf")) {
+      fields.push("uf");
+      placeholders.push("?");
+      values.push(uf || null);
+    }
+    if (hasCol(cols, "horario_inicio")) {
+      fields.push("horario_inicio");
+      placeholders.push("?");
+      values.push(horario_inicio || null);
+    }
+    if (hasCol(cols, "horario_fim")) {
+      fields.push("horario_fim");
+      placeholders.push("?");
+      values.push(horario_fim || null);
+    }
     if (hasCol(cols, "status")) {
       fields.push("status");
-      values.splice(values.length - 1, 0, status || "ativa");
-      placeholders.splice(placeholders.length - 1, 0, "?");
+      placeholders.push("?");
+      values.push(status || "ativa");
     }
 
-    const sql = `INSERT INTO quadras (${fields.join(",")}) VALUES (${placeholders.join(",")})`;
+    // criado_em SEMPRE por último com NOW()
+    fields.push("criado_em");
+    placeholders.push("NOW()");
 
+    const sql = `INSERT INTO quadras (${fields.join(",")}) VALUES (${placeholders.join(",")})`;
     const [result] = await db.query(sql, values);
     const id = result.insertId;
 
-    const [rows] = await db.query("SELECT * FROM quadras WHERE id = ?", [id]);
-    const row = rows[0] || null;
-    if (!row) return res.status(201).json({ id, imagens });
-
-    res.status(201).json(mapRow(row));
+    const [[row]] = await db.query("SELECT * FROM quadras WHERE id = ?", [id]);
+    return res.status(201).json(mapRow(row));
   } catch (err) {
     console.error("POST /quadras erro:", err.code || "", err.message || err);
     res.status(500).json({ erro: "Falha ao cadastrar quadra", detalhe: err.message || String(err) });
@@ -189,13 +262,34 @@ router.patch("/:id", upload.array("imagens", 10), async (req, res) => {
     const up = [];
     const params = [];
 
-    // campos simples
-    const fields = ["nome","local","preco","tipo","descricao","nota","dono_id","cep","endereco","numero","complemento","bairro","cidade","uf","horario_inicio","horario_fim","status"];
+    // campos simples (se existem na tabela)
+    const fields = [
+      "nome",
+      "local",
+      "preco",
+      "tipo",
+      "descricao",
+      "nota",
+      "dono_id",
+      "cep",
+      "endereco",
+      "numero",
+      "complemento",
+      "bairro",
+      "cidade",
+      "uf",
+      "horario_inicio",
+      "horario_fim",
+      "status",
+    ];
     for (const f of fields) {
       if (req.body[f] != null && hasCol(cols, f)) {
         if (f === "preco") {
           const n = parseNumber(req.body[f]);
-          if (!isNaN(n)) { up.push(`${f} = ?`); params.push(n); }
+          if (!isNaN(n)) {
+            up.push(`${f} = ?`);
+            params.push(n);
+          }
         } else {
           up.push(`${f} = ?`);
           params.push(req.body[f]);
@@ -203,17 +297,14 @@ router.patch("/:id", upload.array("imagens", 10), async (req, res) => {
       }
     }
 
-    // imagens novas (se enviadas)
-    if (req.files && req.files.length) {
-      const novas = req.files.map(f => toRelUrl(path.join(uploadRoot, f.filename)));
-      if (hasCol(cols, "imagens")) {
-        // junta com as antigas
-        const [rows] = await db.query("SELECT imagens FROM quadras WHERE id = ?", [id]);
-        const antigas = parseImagensField(rows[0]?.imagens);
-        const merged = [...antigas, ...novas].slice(0, 10);
-        up.push("imagens = ?");
-        params.push(JSON.stringify(merged));
-      }
+    // novas imagens anexadas
+    if (req.files && req.files.length && hasCol(cols, "imagens")) {
+      const novas = req.files.map((f) => toRelUrl(path.join(uploadRoot, f.filename)));
+      const [[row]] = await db.query("SELECT imagens FROM quadras WHERE id = ?", [id]);
+      const antigas = parseImagensField(row?.imagens);
+      const merged = [...antigas, ...novas].slice(0, 10);
+      up.push("imagens = ?");
+      params.push(JSON.stringify(merged));
     }
 
     if (!up.length) return res.status(400).json({ erro: "Nenhum campo válido para atualizar" });
@@ -222,9 +313,9 @@ router.patch("/:id", upload.array("imagens", 10), async (req, res) => {
     params.push(id);
     await db.query(sql, params);
 
-    const [rows2] = await db.query("SELECT * FROM quadras WHERE id = ?", [id]);
-    if (!rows2.length) return res.status(404).json({ erro: "Quadra não encontrada" });
-    res.json(mapRow(rows2[0]));
+    const [[row2]] = await db.query("SELECT * FROM quadras WHERE id = ?", [id]);
+    if (!row2) return res.status(404).json({ erro: "Quadra não encontrada" });
+    res.json(mapRow(row2));
   } catch (err) {
     console.error("PATCH /quadras/:id erro:", err.code || "", err.message || err);
     res.status(500).json({ erro: "Falha ao atualizar quadra" });
@@ -236,10 +327,10 @@ router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
     // pega imagens para tentar apagar do disco
-    const [rows] = await db.query("SELECT imagens FROM quadras WHERE id = ?", [id]);
-    if (!rows.length) return res.status(404).json({ erro: "Quadra não encontrada" });
+    const [[row]] = await db.query("SELECT imagens FROM quadras WHERE id = ?", [id]);
+    if (!row) return res.status(404).json({ erro: "Quadra não encontrada" });
 
-    const imgs = parseImagensField(rows[0].imagens);
+    const imgs = parseImagensField(row.imagens);
 
     await db.query("DELETE FROM quadras WHERE id = ?", [id]);
 

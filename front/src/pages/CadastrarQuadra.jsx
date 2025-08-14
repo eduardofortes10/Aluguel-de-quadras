@@ -226,7 +226,19 @@ export default function CadastrarQuadra() {
     formData.append("descricao", `${descricao.trim()} | Funcionamento: ${horarioInicio}–${horarioFim}`);
     formData.append("dono_id", String(donoId));
     formData.append("nota", "0");
-
+    formData.append("cep", String(cep || "").replace(/\D/g, "")); // só números
+    formData.append("endereco", endereco.trim());                 // logradouro
+    formData.append("numero", numero.trim());
+    formData.append("complemento", complemento.trim());
+    formData.append("bairro", bairro.trim());
+    formData.append("cidade", cidade.trim());
+    formData.append("uf", uf.trim().toUpperCase().slice(0, 2));
+    
+    formData.append("horario_inicio", horarioInicio);             // "08:00"
+    formData.append("horario_fim", horarioFim);                   // "22:00"
+    
+    // opcional, mas garante o status inicial
+    formData.append("status", "ativa");
     imagens.forEach((file) => {
       formData.append("imagens", file, file.name);
     });
