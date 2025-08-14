@@ -1,151 +1,237 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+// src/pages/Chat.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import { FaEllipsisV, FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 
+function getUsuarioLocal() {
+  try {
+    const raw = localStorage.getItem("usuario");
+    if (!raw) return { id: null, tipo: null };
+    const u = JSON.parse(raw);
+    const id = u?.id ?? u?.usuario_id ?? null;
+    const tipo = u?.tipo || u?.tipo_usuario || null;
+    return { id: id ? Number(id) : null, tipo };
+  } catch {
+    return { id: null, tipo: null };
+  }
+}
+
+function normalizarNumero(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 export default function Chat() {
-  const usuario = JSON.parse(localStorage.getItem("usuario") || "{}");
-  const usuarioId = usuario?.id;
-  if (!usuarioId) return null;
-
+  const navigate = useNavigate();
   const [params] = useSearchParams();
-  const destinatarioIdParam = params.get("id");
 
+  // Usuário atual
+  const { id: meId, tipo: meTipo } = getUsuarioLocal();
+
+  // Redireciona sem login
+  useEffect(() => {
+    if (!meId) {
+      toast.error("Faça login para usar o chat.");
+      navigate("/login", { replace: true });
+    }
+  }, [meId, navigate]);
+
+  // Estado principal
   const [conversas, setConversas] = useState([]);
-  const [destinatario, setDestinatario] = useState(null);
+  const [conversaAtiva, setConversaAtiva] = useState(null); // objeto retornado pelo back
   const [mensagens, setMensagens] = useState([]);
   const [novaMensagem, setNovaMensagem] = useState("");
-  const mensagensRef = useRef(null);
-  const [menuAbertoId, setMenuAbertoId] = useState(null);
   const [filtro, setFiltro] = useState("");
+  const [menuAbertoId, setMenuAbertoId] = useState(null);
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  const carregarMensagens = async (conversaId) => {
-    try {
-      const { data } = await api.get(`/conversas/mensagens/${conversaId}`);
-      setMensagens(data);
-    } catch (err) {
-      console.error("Erro ao carregar mensagens:", err);
-    }
-  };
-
-  const carregarContatos = async () => {
-    if (!usuario?.id) return;
-    try {
-      const { data } = await api.get(`/conversas/ultimas/${usuario.id}`);
-      setConversas(data);
-    } catch (err) {
-      console.error("Erro ao carregar conversas:", err);
-    }
-  };
-
-  const excluirConversa = async (conversaId) => {
-    try {
-      await api.delete(`/conversas/${conversaId}`);
-      toast.success("Conversa excluída com sucesso");
-      setDestinatario(null);
-      carregarContatos();
-    } catch (err) {
-      toast.error("Erro ao excluir conversa");
-    }
-  };
-
-  // Atualiza flag de mobile no resize
+  // Responsivo
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Carrega lista de conversas ao abrir
-  useEffect(() => {
-    carregarContatos();
-  }, [usuario]);
+  // Refs
+  const mensagensRef = useRef(null);
+  const pollRef = useRef(null);
+  const carregandoConversasRef = useRef(false);
+  const carregandoMensagensRef = useRef(false);
 
-  // Sempre que escolher um destinatário, carrega mensagens
-  useEffect(() => {
-    if (destinatario?.conversa_id) {
-      carregarMensagens(destinatario.conversa_id);
-    }
-  }, [destinatario]);
+  // Param ?id= (alvo com quem queremos conversar)
+  const alvoId = useMemo(() => normalizarNumero(params.get("id")), [params]);
 
-  // Se veio com ?id=... na URL, inicia a conversa (sem duplicar)
-  useEffect(() => {
-    if (!usuario?.id || !destinatarioIdParam) return;
-
-    const iniciarConversa = async () => {
-      const { data: lista } = await api.get(`/conversas/ultimas/${usuario.id}`);
-      const alvo = parseInt(destinatarioIdParam, 10);
-
-      const existente = lista.find(
-        (c) =>
-          (c.cliente_id === usuario.id && c.locador_id === alvo) ||
-          (c.locador_id === usuario.id && c.cliente_id === alvo)
-      );
-
-      if (!existente) {
-        await api.post("/conversas", {
-          cliente_id: usuario.id,
-          locador_id: destinatarioIdParam,
-          autor_id: usuario.id,
-          mensagem: "Olá, gostaria de saber mais sobre o aluguel.",
-        });
-      }
-
-      await carregarContatos();
-
-      const { data: lista2 } = await api.get(`/conversas/ultimas/${usuario.id}`);
-      const conversa = lista2.find(
-        (c) =>
-          (c.cliente_id === usuario.id && c.locador_id === alvo) ||
-          (c.locador_id === usuario.id && c.cliente_id === alvo)
-      );
-      if (conversa) {
-        setDestinatario(conversa);
-        await carregarMensagens(conversa.conversa_id);
-      }
-    };
-
-    iniciarConversa();
-  }, [usuario.id, destinatarioIdParam]);
-
-  // Scroll para o fim ao receber novas mensagens
+  // Util: scroll pro fim quando mensagens mudarem
   useEffect(() => {
     if (mensagensRef.current) {
       mensagensRef.current.scrollTop = mensagensRef.current.scrollHeight;
     }
   }, [mensagens]);
 
-  const enviarMensagem = async () => {
-    if (!novaMensagem.trim() || !destinatario) return;
-    const clienteId = destinatario.cliente_id;
-    const locadorId = destinatario.locador_id;
-
-    await api.post("/conversas", {
-      cliente_id: clienteId,
-      locador_id: locadorId,
-      autor_id: usuario.id,
-      mensagem: novaMensagem,
-    });
-
-    setNovaMensagem("");
-
-    const { data: lista } = await api.get(`/conversas/ultimas/${usuario.id}`);
-    const conversaAtual = lista.find(
-      (c) =>
-        (c.cliente_id === clienteId && c.locador_id === locadorId) ||
-        (c.locador_id === clienteId && c.cliente_id === locadorId)
-    );
-    if (conversaAtual) {
-      setDestinatario(conversaAtual);
-      carregarMensagens(conversaAtual.conversa_id);
+  // Buscar lista de conversas
+  const carregarConversas = async () => {
+    if (!meId || carregandoConversasRef.current) return;
+    try {
+      carregandoConversasRef.current = true;
+      const { data } = await api.get(`/conversas/ultimas/${meId}`);
+      setConversas(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Erro ao carregar conversas:", err);
+    } finally {
+      carregandoConversasRef.current = false;
     }
   };
 
+  // Buscar mensagens da conversa ativa
+  const carregarMensagens = async (conversaId) => {
+    if (!conversaId || carregandoMensagensRef.current) return;
+    try {
+      carregandoMensagensRef.current = true;
+      const { data } = await api.get(`/conversas/mensagens/${conversaId}`);
+      setMensagens(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Erro ao carregar mensagens:", err);
+    } finally {
+      carregandoMensagensRef.current = false;
+    }
+  };
+
+  // Inicia/garante uma conversa com o alvo (?id=) sem duplicar
+  const garantirConversaComAlvo = async (alvo) => {
+    if (!meId || !alvo) return;
+
+    // Descobre quem é cliente e quem é locador de acordo com o tipo do usuário
+    const euSouLocador = (meTipo || "").toLowerCase() === "locador";
+    const cliente_id = euSouLocador ? alvo : meId;
+    const locador_id = euSouLocador ? meId : alvo;
+
+    // Procura conversa existente
+    const { data: lista } = await api.get(`/conversas/ultimas/${meId}`);
+    const existente =
+      (lista || []).find(
+        (c) =>
+          (Number(c.cliente_id) === Number(cliente_id) &&
+            Number(c.locador_id) === Number(locador_id)) ||
+          (Number(c.cliente_id) === Number(locador_id) &&
+            Number(c.locador_id) === Number(cliente_id))
+      ) || null;
+
+    // Se não existir, cria com 1ª mensagem "olá..."
+    if (!existente) {
+      await api.post("/conversas", {
+        cliente_id,
+        locador_id,
+        autor_id: meId,
+        mensagem: "Olá, gostaria de saber mais sobre o aluguel.",
+      });
+    }
+
+    // Recarrega lista e seleciona conversa
+    await carregarConversas();
+    const { data: lista2 } = await api.get(`/conversas/ultimas/${meId}`);
+    const conv =
+      (lista2 || []).find(
+        (c) =>
+          (Number(c.cliente_id) === Number(cliente_id) &&
+            Number(c.locador_id) === Number(locador_id)) ||
+          (Number(c.cliente_id) === Number(locador_id) &&
+            Number(c.locador_id) === Number(cliente_id))
+      ) || null;
+
+    if (conv) {
+      setConversaAtiva(conv);
+      await carregarMensagens(conv.conversa_id);
+    }
+  };
+
+  // Carrega conversas ao abrir
+  useEffect(() => {
+    if (!meId) return;
+    carregarConversas();
+  }, [meId]);
+
+  // Se veio com ?id=, tenta garantir a conversa
+  useEffect(() => {
+    if (!meId || !alvoId) return;
+    garantirConversaComAlvo(alvoId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meId, alvoId]);
+
+  // Sempre que troca conversa ativa, carrega mensagens
+  useEffect(() => {
+    if (conversaAtiva?.conversa_id) {
+      carregarMensagens(conversaAtiva.conversa_id);
+    }
+  }, [conversaAtiva]);
+
+  // Polling leve (atualiza mensagens da conversa ativa e a lista)
+  useEffect(() => {
+    if (!conversaAtiva?.conversa_id) return;
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      await carregarMensagens(conversaAtiva.conversa_id);
+      await carregarConversas();
+    }, 6000); // a cada 6s
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversaAtiva?.conversa_id]);
+
+  // Enviar mensagem
+  const enviarMensagem = async () => {
+    const texto = (novaMensagem || "").trim();
+    if (!texto || !conversaAtiva) return;
+
+    // Garante papéis corretos
+    const euSouLocador = (meTipo || "").toLowerCase() === "locador";
+    const cliente_id = euSouLocador ? conversaAtiva.cliente_id : meId;
+    const locador_id = euSouLocador ? meId : conversaAtiva.locador_id;
+
+    try {
+      await api.post("/conversas", {
+        cliente_id,
+        locador_id,
+        autor_id: meId,
+        mensagem: texto,
+      });
+      setNovaMensagem("");
+      await carregarMensagens(conversaAtiva.conversa_id);
+      await carregarConversas();
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+      toast.error("Não foi possível enviar sua mensagem.");
+    }
+  };
+
+  // Enter para enviar
+  const onKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      enviarMensagem();
+    }
+  };
+
+  // Excluir conversa
+  const excluirConversa = async (conversaId) => {
+    try {
+      await api.delete(`/conversas/${conversaId}`);
+      toast.success("Conversa excluída com sucesso");
+      if (conversaAtiva?.conversa_id === conversaId) {
+        setConversaAtiva(null);
+        setMensagens([]);
+      }
+      carregarConversas();
+    } catch (err) {
+      toast.error("Erro ao excluir conversa");
+    }
+  };
+
+  // Excluir mensagem (com confirmação)
   const excluirMensagem = async (id) => {
     toast(
       (t) => (
@@ -158,7 +244,7 @@ export default function Chat() {
                   await api.delete(`/conversas/mensagens/${id}`);
                   toast.dismiss(t.id);
                   toast.success("Mensagem excluída com sucesso!");
-                  if (destinatario) carregarMensagens(destinatario.conversa_id);
+                  if (conversaAtiva) carregarMensagens(conversaAtiva.conversa_id);
                 } catch (err) {
                   toast.error("Erro ao excluir a mensagem.");
                 }
@@ -180,22 +266,23 @@ export default function Chat() {
     );
   };
 
-  const formatarHora = (dataString) => {
+  // Formatações
+  const formatarHora = (iso) => {
     try {
-      const data = new Date(dataString);
+      const d = new Date(iso);
       return new Intl.DateTimeFormat("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
         timeZone: "America/Sao_Paulo",
-      }).format(data);
+      }).format(d);
     } catch {
-      return "hora inválida";
+      return "—";
     }
   };
 
-  const formatarDataMensagem = (dataString) => {
-    const data = new Date(dataString);
+  const formatarDataMensagem = (iso) => {
+    const data = new Date(iso);
     const hoje = new Date();
     const ontem = new Date();
     ontem.setDate(hoje.getDate() - 1);
@@ -204,16 +291,31 @@ export default function Chat() {
     return data.toLocaleDateString("pt-BR");
   };
 
+  // Filtra contatos por nome
+  const conversasFiltradas = useMemo(() => {
+    const f = (filtro || "").toLowerCase();
+    return conversas.filter((c) => (c?.nome || "").toLowerCase().includes(f));
+  }, [conversas, filtro]);
+
+  if (!meId) return null;
+
   return (
     <div className="flex bg-gray-100 min-h-screen pb-16 md:pb-0">
       <div className="hidden md:block">
         <Sidebar />
       </div>
-      <MobileNav />
+
+      {/* mobile nav */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+        <MobileNav />
+      </div>
+
       <div className="flex-1 md:ml-64 flex flex-col md:flex-row">
-        {!destinatario || !isMobile ? (
+        {/* Lista de conversas (esconde no mobile quando há conversa ativa) */}
+        {!conversaAtiva || !isMobile ? (
           <div className="w-full md:w-1/3 border-r bg-white p-4 overflow-y-auto max-h-[calc(100dvh-80px)]">
             <h2 className="text-lg font-semibold mb-4">Conversas</h2>
+
             <input
               type="text"
               placeholder="Buscar por nome..."
@@ -221,109 +323,113 @@ export default function Chat() {
               onChange={(e) => setFiltro(e.target.value)}
               className="w-full mb-4 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
             />
-            {conversas
-              .filter((c) => c.nome.toLowerCase().includes(filtro.toLowerCase()))
-              .map((c) => (
-                <div
-                  key={c.conversa_id}
-                  className={`group relative block w-full text-left px-4 py-3 rounded-lg mb-3 shadow-sm transition cursor-pointer
-                  ${
-                    destinatario?.conversa_id === c.conversa_id
-                      ? "bg-green-100 font-bold border-l-4 border-green-600"
-                      : "hover:bg-gray-50"
-                  }`}
-                  onClick={() => {
-                    setDestinatario(c);
-                    carregarMensagens(c.conversa_id);
-                  }}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="font-medium text-gray-800 truncate">{c.nome}</div>
-                      <p className="text-sm text-gray-500">
-                        {c.ultima_mensagem || "Mensagem vazia"}
-                        {c.data_envio && (
-                          <span className="ml-2 text-xs text-gray-400">
-                            {formatarHora(c.data_envio)}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMenuAbertoId(menuAbertoId === c.conversa_id ? null : c.conversa_id);
-                        }}
-                        className="text-gray-600 hover:text-gray-900 p-2 rounded-full"
-                      >
-                        <FaEllipsisV />
-                      </button>
 
-                      {menuAbertoId === c.conversa_id && (
-                        <div
-                          onClick={(e) => e.stopPropagation()}
-                          className="absolute right-0 mt-2 w-36 bg-white border rounded-md shadow-lg z-20"
-                        >
-                          <button
-                            onClick={() => excluirConversa(c.conversa_id)}
-                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                          >
-                            Excluir conversa
-                          </button>
-                        </div>
+            {conversasFiltradas.map((c) => (
+              <div
+                key={c.conversa_id}
+                className={`group relative block w-full text-left px-4 py-3 rounded-lg mb-3 shadow-sm transition cursor-pointer ${
+                  conversaAtiva?.conversa_id === c.conversa_id
+                    ? "bg-green-100 font-bold border-l-4 border-green-600"
+                    : "hover:bg-gray-50"
+                }`}
+                onClick={() => {
+                  setConversaAtiva(c);
+                  carregarMensagens(c.conversa_id);
+                }}
+              >
+                <div className="flex justify-between items-center">
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-800 truncate">{c.nome}</div>
+                    <p className="text-sm text-gray-500 truncate">
+                      {c.ultima_mensagem || "—"}
+                      {c.data_envio && (
+                        <span className="ml-2 text-xs text-gray-400">
+                          {formatarHora(c.data_envio)}
+                        </span>
                       )}
-                    </div>
+                    </p>
+                  </div>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuAbertoId(menuAbertoId === c.conversa_id ? null : c.conversa_id);
+                      }}
+                      className="text-gray-600 hover:text-gray-900 p-2 rounded-full"
+                      title="Mais ações"
+                    >
+                      <FaEllipsisV />
+                    </button>
+
+                    {menuAbertoId === c.conversa_id && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-20"
+                      >
+                        <button
+                          onClick={() => excluirConversa(c.conversa_id)}
+                          className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          Excluir conversa
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            {conversas.length === 0 && <p className="text-gray-500">Nenhuma conversa iniciada.</p>}
+              </div>
+            ))}
+
+            {conversasFiltradas.length === 0 && (
+              <p className="text-gray-500">Nenhuma conversa encontrada.</p>
+            )}
           </div>
         ) : null}
 
+        {/* Área da conversa */}
         <div className="flex-1 flex flex-col bg-white h-screen md:h-auto overflow-hidden">
-          {destinatario && (
+          {conversaAtiva && (
             <div className="flex items-center justify-between px-4 py-3 border-b bg-white">
               <button
-                onClick={() => setDestinatario(null)}
+                onClick={() => setConversaAtiva(null)}
                 className="text-green-600 text-sm hover:underline"
               >
                 ← Voltar
               </button>
               <h3 className="font-semibold text-base text-gray-800 truncate">
-                {destinatario?.nome}
+                {conversaAtiva?.nome}
               </h3>
             </div>
           )}
 
-          {destinatario ? (
+          {conversaAtiva ? (
             <>
               <div className="flex-grow overflow-y-auto p-4 mb-24" ref={mensagensRef}>
-                {mensagens.map((msg, index) => {
+                {mensagens.map((msg, idx) => {
                   const atual = new Date(msg.data_envio);
-                  const anterior =
-                    index > 0 ? new Date(mensagens[index - 1].data_envio) : null;
-                  const mudouData =
-                    !anterior || atual.toDateString() !== anterior.toDateString();
+                  const anterior = idx > 0 ? new Date(mensagens[idx - 1].data_envio) : null;
+                  const mudouDia = !anterior || atual.toDateString() !== anterior.toDateString();
+
+                  const minha = Number(msg.autor_id) === Number(meId);
 
                   return (
                     <React.Fragment key={msg.id}>
-                      {mudouData && (
+                      {mudouDia && (
                         <div className="text-center text-sm text-gray-400 my-2">
                           {formatarDataMensagem(msg.data_envio)}
                         </div>
                       )}
                       <div
                         className={`mb-3 px-4 py-3 rounded-2xl shadow max-w-xs sm:max-w-sm ${
-                          msg.autor_id === usuario.id
+                          minha
                             ? "bg-green-500 text-white ml-auto rounded-br-none"
                             : "bg-gray-100 text-gray-800 rounded-bl-none"
                         }`}
                       >
-                        <div className="flex justify-between items-center">
-                          <span className="break-words max-w-[220px]">{msg.mensagem}</span>
-                          {msg.autor_id === usuario.id && (
-                            <div className="relative ml-2">
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="break-words">{msg.mensagem}</span>
+
+                          {minha && (
+                            <div className="relative shrink-0">
                               <FaEllipsisV
                                 className="cursor-pointer text-white/80 hover:text-white"
                                 onClick={() =>
@@ -343,11 +449,10 @@ export default function Chat() {
                             </div>
                           )}
                         </div>
-                        <div className="text-xs mt-1 text-right">
+
+                        <div className={`text-xs mt-1 ${minha ? "text-white/80" : "text-gray-500"} text-right`}>
                           {formatarHora(msg.data_envio)}
-                          {msg.autor_id === usuario.id && msg.lida && (
-                            <span className="text-green-200 ml-2">✓ Visto</span>
-                          )}
+                          {minha && msg.lida && <span className="ml-2">✓ Visto</span>}
                         </div>
                       </div>
                     </React.Fragment>
@@ -360,6 +465,7 @@ export default function Chat() {
                   type="text"
                   value={novaMensagem}
                   onChange={(e) => setNovaMensagem(e.target.value)}
+                  onKeyDown={onKeyDown}
                   placeholder="Digite sua mensagem..."
                   className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                 />
