@@ -82,7 +82,7 @@ app.use("/api/notificacoes", require("./routes/notificacoes"));
 app.use("/api/fotos-perfil", require("./routes/fotosPerfil"));
 app.use("/api/usuarios", require("./routes/usuarios"));
 app.use("/api/auth", require("./routes/auth"));
-
+app.use("/api/conversas", require("./routes/conversas"));
 // 404
 app.use((req, res, next) => {
   if (
