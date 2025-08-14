@@ -18,11 +18,7 @@ export default function LocadorLayout({ title, breadcrumb, actions, children }) 
         <div className="sticky top-0 z-30 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b">
           <div className="mx-auto max-w-[1400px] px-4 py-3">
             {/* Breadcrumb */}
-            <div className="text-xs text-gray-500 flex items-center gap-2">
-              <Link to="/home-locador" className="hover:underline">Início</Link>
-              {breadcrumb ? <span>/</span> : null}
-              {breadcrumb && <span className="text-blue-600 font-medium">{breadcrumb}</span>}
-            </div>
+            
             {/* Título + Ações */}
             <div className="mt-2 flex items-center justify-between gap-4">
               <h1 className="text-2xl font-bold text-green-700">{title}</h1>
