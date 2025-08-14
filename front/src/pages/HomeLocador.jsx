@@ -6,7 +6,7 @@ import { FaPlus, FaTrash } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import { api, fileURL } from "../services/api";
 
-// Lê usuário do localStorage (o RequireAuth já garante token + usuario)
+// Lê usuário salvo no storage
 function getUsuarioLocal() {
   try {
     const raw = localStorage.getItem("usuario");
@@ -15,7 +15,6 @@ function getUsuarioLocal() {
     const tipo = (u?.tipo || u?.tipo_usuario || "").toLowerCase() || null;
     if (id) return { id: Number(id), tipo };
   } catch {}
-  // fallback: alguns projetos guardam separadamente
   const uidStr = localStorage.getItem("usuario_id");
   if (uidStr && /^\d+$/.test(uidStr)) return { id: Number(uidStr), tipo: null };
   return { id: null, tipo: null };
@@ -29,14 +28,14 @@ function formatPreco(v) {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-// ✅ Resolve imagem em TODOS os formatos comuns e usa fallback que existe
+// ✅ Resolve imagem em vários formatos (array, string, JSON, /uploads, http, \Windows)
 function resolveImagem(quadra) {
   const candidates = [];
 
-  // 1) Pode vir como array
+  // 1) Array
   if (Array.isArray(quadra?.imagens)) candidates.push(...quadra.imagens);
 
-  // 2) Pode vir como string ou string JSON
+  // 2) String (ou JSON serializado)
   if (typeof quadra?.imagens === "string") {
     try {
       const arr = JSON.parse(quadra.imagens);
@@ -47,27 +46,22 @@ function resolveImagem(quadra) {
     }
   }
 
-  // 3) Campos únicos "legados"
-  if (quadra?.imagem_url) candidates.push(quadra.imagem_url);
-  if (quadra?.imagem) candidates.push(quadra.imagem);
+  // 3) Outras possibilidades
+  candidates.push(quadra?.imagem_url, quadra?.imagem);
 
-  // 4) Normaliza e decide a URL final
+  // 4) Normaliza e retorna a primeira válida
   for (let c of candidates) {
     if (!c) continue;
-    const s = String(c).trim().replace(/\\/g, "/"); // Windows -> /
+    const s = String(c).trim().replace(/\\/g, "/");
     if (!s) continue;
 
-    // URL absoluta já pronta
-    if (/^https?:\/\//i.test(s)) return s;
-
-    // Caminhos servidos pelo back
-    if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
-
-    // Imagem local em /public/quadras
-    return `/quadras/${s}`;
+    if (/^https?:\/\//i.test(s)) return s;              // URL absoluta
+    if (s.includes("/uploads/")) return fileURL(s);      // caminho de upload, com ou sem "/" no começo
+    if (s.startsWith("/")) return fileURL(s);            // outros caminhos absolutos do back
+    return `/quadras/${s}`;                              // imagem local (pasta public/quadras)
   }
 
-  // 5) Fallback REAL do projeto
+  // 5) Fallback que existe no projeto
   return "/quadras/quadra1.png";
 }
 
@@ -96,19 +90,22 @@ function QuadraCard({ quadra, onExcluir }) {
           src={imagemUrl}
           alt={quadra.nome}
           loading="lazy"
-          onError={(e) => (e.currentTarget.src = "/quadras/quadra1.png")} // ✅ fallback existe
+          onError={(e) => (e.currentTarget.src = "/quadras/quadra1.png")} // ✅ fallback real
           className="w-full h-44 object-cover"
         />
         <div className="absolute top-3 left-3">
           <StatusPill active={ativa} />
         </div>
       </div>
+
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-base font-semibold text-gray-900 line-clamp-1">{quadra.nome}</h2>
           <span className="text-yellow-500 text-sm shrink-0">⭐ {quadra.nota || "4.5"}</span>
         </div>
+
         <p className="text-sm text-gray-600 mt-1 line-clamp-1">{quadra.local}</p>
+
         <div className="mt-3 flex items-center justify-between">
           <span className="text-green-700 font-bold">{formatPreco(quadra.preco)}</span>
           <div className="flex items-center gap-3 text-sm">
@@ -148,8 +145,7 @@ export default function HomeLocador() {
 
   useEffect(() => {
     let cancelado = false;
-    async function carregar() {
-      // RequireAuth já barrou quem não é locador, aqui só pegamos o id
+    (async () => {
       const { id } = getUsuarioLocal();
       if (!id) {
         toast.error("Sessão expirada. Faça login novamente.");
@@ -158,21 +154,18 @@ export default function HomeLocador() {
       }
       try {
         setCarregando(true);
-        // ✅ mantém sua rota atual
+        // ✅ mantém a tua rota: busca as quadras do dono
         const { data } = await api.get("/quadras", { params: { dono_id: id } });
         if (!cancelado) setQuadras(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Erro ao carregar quadras:", err?.response?.data || err?.message);
-        toast.error("Erro ao carregar suas quadras.");
         if (!cancelado) setQuadras([]);
+        toast.error("Erro ao carregar suas quadras.");
       } finally {
         if (!cancelado) setCarregando(false);
       }
-    }
-    carregar();
-    return () => {
-      cancelado = true;
-    };
+    })();
+    return () => { cancelado = true; };
   }, [navigate]);
 
   const handleNovaQuadra = () => navigate("/cadastrarquadra");
@@ -222,9 +215,7 @@ export default function HomeLocador() {
       {/* Lista */}
       {carregando ? (
         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <CardSkeleton key={i} />
-          ))}
+          {Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)}
         </div>
       ) : quadras.length === 0 ? (
         <div className="bg-white border rounded-2xl p-10 text-center">
