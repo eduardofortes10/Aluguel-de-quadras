@@ -1,5 +1,5 @@
 // src/pages/DetalheQuadraLocador.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
@@ -9,15 +9,13 @@ import { api, fileURL } from "../services/api";
 
 export default function DetalheQuadraLocador() {
   const { id } = useParams();
-
   const [quadra, setQuadra] = useState(null);
   const [imagens, setImagens] = useState([]);
   const [imagemSelecionada, setImagemSelecionada] = useState(null);
 
-  // Responsivo: 1 no mobile, 3 no desktop
-  const initialPerView =
-    typeof window !== "undefined" && window.innerWidth < 640 ? 1 : 3;
-  const [perView, setPerView] = useState(initialPerView);
+  const [perView, setPerView] = useState(
+    typeof window !== "undefined" && window.innerWidth < 640 ? 1 : 3
+  );
   const isMobile = perView === 1;
 
   const [sliderRef, instanceRef] = useKeenSlider({
@@ -25,15 +23,12 @@ export default function DetalheQuadraLocador() {
     slides: { perView, spacing: 15 },
   });
 
-  // Atualiza quantidade de slides por viewport ao redimensionar
   useEffect(() => {
-    const onResize = () =>
-      setPerView(window.innerWidth < 640 ? 1 : 3);
+    const onResize = () => setPerView(window.innerWidth < 640 ? 1 : 3);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // Quando perView/imagens mudarem, atualize o slider
   useEffect(() => {
     if (instanceRef.current) {
       instanceRef.current.update({
@@ -43,7 +38,7 @@ export default function DetalheQuadraLocador() {
     }
   }, [perView, imagens.length, instanceRef]);
 
-  // Carregar detalhes da quadra
+  // ✅ Mantém tua rota atual
   useEffect(() => {
     (async () => {
       try {
@@ -57,7 +52,6 @@ export default function DetalheQuadraLocador() {
     })();
   }, [id]);
 
-  // Normaliza o objeto vindo do backend para evitar campos faltando
   function normalizeQuadra(raw = {}) {
     const id = raw.id || raw.quadra_id || raw.imagem_id || raw.ID;
     const nome = raw.nome || raw.titulo || "Quadra";
@@ -77,7 +71,7 @@ export default function DetalheQuadraLocador() {
       ...raw,
       _id: id,
       _nome: nome,
-      _preco: preco,
+      _preco: isNaN(Number(preco)) ? 0 : Number(preco),
       _local: local,
       _descricao: descricao,
       _avaliacao: isNaN(avaliacao) ? 0 : avaliacao,
@@ -85,46 +79,35 @@ export default function DetalheQuadraLocador() {
     };
   }
 
-  // Aceita: array, string, JSON string, caminhos absolutos ou /uploads
+  // ✅ Aceita array, string, JSON string, /uploads e URLs absolutas
   function resolveImagens(quadra) {
+    const out = [];
     const candidates = [];
 
-    // 1) Array direto
-    if (Array.isArray(quadra?.imagens)) {
-      candidates.push(...quadra.imagens);
-    }
-    // 2) String ou JSON serializado
-    else if (typeof quadra?.imagens === "string") {
+    if (Array.isArray(quadra?.imagens)) candidates.push(...quadra.imagens);
+    if (typeof quadra?.imagens === "string") {
       try {
-        const maybe = JSON.parse(quadra.imagens);
-        if (Array.isArray(maybe)) candidates.push(...maybe);
+        const arr = JSON.parse(quadra.imagens);
+        if (Array.isArray(arr)) candidates.push(...arr);
         else candidates.push(quadra.imagens);
       } catch {
         candidates.push(quadra.imagens);
       }
     }
+    if (quadra?.imagem_url) candidates.push(quadra.imagem_url);
+    if (quadra?.imagem) candidates.push(quadra.imagem);
 
-    // 3) Legados/comuns
-    candidates.push(quadra?.imagem_url, quadra?.imagem);
-
-    // 4) Limpeza + mapeamento para URL final
-    const out = [];
     for (let c of candidates) {
       if (!c) continue;
       const s = String(c).trim().replace(/\\/g, "/");
       if (!s) continue;
 
-      if (/^https?:\/\//i.test(s)) {
-        out.push(s);
-      } else if (s.includes("/uploads/") || s.startsWith("/")) {
-        out.push(fileURL(s));
-      } else {
-        out.push(`/quadras/${s}`);
-      }
+      if (/^https?:\/\//i.test(s)) out.push(s);
+      else if (s.includes("/uploads/") || s.startsWith("/")) out.push(fileURL(s));
+      else out.push(`/quadras/${s}`);
     }
 
-    // 5) Fallback real do projeto
-    if (out.length === 0) out.push("/quadras/quadra1.png");
+    if (out.length === 0) out.push("/quadras/quadra1.png"); // fallback real
     return out;
   }
 
@@ -167,8 +150,7 @@ export default function DetalheQuadraLocador() {
             className="keen-slider flex justify-center items-center overflow-visible min-h-[220px]"
           >
             {imagens.map((src, index) => {
-              const slide =
-                instanceRef.current?.track?.details?.slides?.[index];
+              const slide = instanceRef.current?.track?.details?.slides?.[index];
               const isCenter = slide?.portion > 0.5;
 
               return (
@@ -224,9 +206,7 @@ export default function DetalheQuadraLocador() {
           {/* Informações da quadra */}
           <div className="p-6 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <h1 className="text-2xl font-bold text-gray-800">
-                {quadra._nome}
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-800">{quadra._nome}</h1>
               <div className="text-yellow-500 font-semibold">
                 ⭐ {Number(quadra._avaliacao || 0).toFixed(1)}
               </div>
