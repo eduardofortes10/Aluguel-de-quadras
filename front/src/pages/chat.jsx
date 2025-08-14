@@ -88,17 +88,21 @@ export default function Chat() {
 
   // Buscar mensagens da conversa ativa
   const carregarMensagens = async (conversaId) => {
-    if (!conversaId || carregandoMensagensRef.current) return;
-    try {
-      carregandoMensagensRef.current = true;
-      const { data } = await api.get(`/conversas/mensagens/${conversaId}`);
-      setMensagens(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Erro ao carregar mensagens:", err);
-    } finally {
-      carregandoMensagensRef.current = false;
-    }
-  };
+  if (!conversaId || carregandoMensagensRef.current) return;
+  try {
+    carregandoMensagensRef.current = true;
+    const { data } = await api.get(`/conversas/mensagens/${conversaId}`);
+    setMensagens(Array.isArray(data) ? data : []);
+
+    // ⬇️ AQUI: assim que carregar, marca como lidas para o usuário atual
+    await marcarComoLidas(conversaId);
+  } catch (err) {
+    console.error("Erro ao carregar mensagens:", err);
+  } finally {
+    carregandoMensagensRef.current = false;
+  }
+};
+
 
   // Inicia/garante uma conversa com o alvo (?id=) sem duplicar
   const garantirConversaComAlvo = async (alvo) => {
@@ -147,6 +151,15 @@ export default function Chat() {
       await carregarMensagens(conv.conversa_id);
     }
   };
+// Marca como lidas as mensagens da conversa (para o usuário logado)
+const marcarComoLidas = async (conversaId) => {
+  if (!meId || !conversaId) return;
+  try {
+    await api.patch(`/conversas/mensagens/ler/${conversaId}`, { usuario_id: meId });
+  } catch (err) {
+    console.warn("Não foi possível marcar mensagens como lidas:", err?.response?.data || err?.message);
+  }
+};
 
   // Carrega conversas ao abrir
   useEffect(() => {

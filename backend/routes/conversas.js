@@ -4,48 +4,69 @@ const router = express.Router();
 const db = require("../db");
 
 /**
- * POST /api/conversas
- * Cria (se necessário) e envia uma mensagem.
- * Body: { cliente_id, locador_id, autor_id, mensagem }
+ * Helper: encontra ou cria uma conversa entre cliente_id e locador_id.
+ * Retorna { id, wasCreated }
  */
-router.post("/", async (req, res) => {
-  const { cliente_id, locador_id, autor_id, mensagem } = req.body || {};
+async function getOrCreateConversa(cliente_id, locador_id) {
+  // procura conversa existente (garantindo a ordem cliente/locador)
+  const [rows] = await db.query(
+    "SELECT id FROM conversas WHERE cliente_id = ? AND locador_id = ? LIMIT 1",
+    [cliente_id, locador_id]
+  );
 
-  if (!cliente_id || !locador_id || !autor_id || !mensagem) {
-    return res.status(400).json({ erro: "Campos obrigatórios: cliente_id, locador_id, autor_id, mensagem." });
+  if (rows.length) {
+    return { id: rows[0].id, wasCreated: false };
   }
 
+  // cria se não existir
+  const [ins] = await db.query(
+    "INSERT INTO conversas (cliente_id, locador_id, data_inicio) VALUES (?, ?, NOW())",
+    [cliente_id, locador_id]
+  );
+  return { id: ins.insertId, wasCreated: true };
+}
+
+/**
+ * POST /api/conversas
+ * Cria (se necessário) a conversa e grava uma mensagem.
+ * body: { cliente_id, locador_id, autor_id, mensagem? }
+ * - Se a conversa for nova e 'mensagem' vier vazia, enviamos uma mensagem automática.
+ */
+router.post("/", async (req, res) => {
   try {
-    // Verifica se já existe conversa entre as duas pessoas
-    const [exist] = await db.query(
-      "SELECT id FROM conversas WHERE cliente_id = ? AND locador_id = ? LIMIT 1",
-      [cliente_id, locador_id]
-    );
+    let { cliente_id, locador_id, autor_id, mensagem } = req.body || {};
 
-    let conversaId = exist?.[0]?.id || null;
+    // validação simples
+    cliente_id = Number(cliente_id);
+    locador_id = Number(locador_id);
+    autor_id = Number(autor_id);
 
-    if (!conversaId) {
-      const [ins] = await db.query(
-        "INSERT INTO conversas (cliente_id, locador_id, data_inicio) VALUES (?, ?, NOW())",
-        [cliente_id, locador_id]
-      );
-      conversaId = ins.insertId;
+    if (!cliente_id || !locador_id || !autor_id) {
+      return res.status(400).json({ erro: "cliente_id, locador_id e autor_id são obrigatórios." });
     }
 
-    // Insere mensagem
-    await db.query(
-      "INSERT INTO mensagens (conversa_id, autor_id, mensagem, data_envio) VALUES (?, ?, ?, NOW())",
-      [conversaId, autor_id, mensagem]
-    );
+    const { id: conversaId, wasCreated } = await getOrCreateConversa(cliente_id, locador_id);
 
-    // Notificação para o outro participante
-    const destinatario_id = autor_id === Number(cliente_id) ? Number(locador_id) : Number(cliente_id);
-    await db.query(
-      "INSERT INTO notificacoes (usuario_id, tipo, mensagem) VALUES (?, ?, ?)",
-      [destinatario_id, "mensagem", "Você recebeu uma nova mensagem."]
-    );
+    // mensagem automática se conversa acabou de ser criada e não veio texto
+    if (!mensagem || !String(mensagem).trim()) {
+      mensagem = wasCreated ? "Olá, gostaria de saber mais sobre o aluguel." : "";
+    }
 
-    res.status(201).json({ sucesso: true, conversa_id: conversaId });
+    if (mensagem) {
+      await db.query(
+        "INSERT INTO mensagens (conversa_id, autor_id, mensagem, data_envio, lida) VALUES (?, ?, ?, NOW(), 0)",
+        [conversaId, autor_id, String(mensagem).trim()]
+      );
+
+      // notifica o destinatário
+      const destinatario_id = autor_id === cliente_id ? locador_id : cliente_id;
+      await db.query(
+        "INSERT INTO notificacoes (usuario_id, tipo, mensagem) VALUES (?, ?, ?)",
+        [destinatario_id, "mensagem", "Você recebeu uma nova mensagem."]
+      );
+    }
+
+    res.status(201).json({ sucesso: true, conversa_id: conversaId, nova: wasCreated });
   } catch (err) {
     console.error("POST /conversas erro:", err);
     res.status(500).json({ erro: "Erro ao criar conversa ou mensagem." });
@@ -54,16 +75,16 @@ router.post("/", async (req, res) => {
 
 /**
  * GET /api/conversas/mensagens/:conversa_id
- * Lista mensagens de uma conversa
+ * Lista mensagens (inclui 'lida')
  */
 router.get("/mensagens/:conversa_id", async (req, res) => {
   const { conversa_id } = req.params;
   try {
-    const [msgs] = await db.query(
-      "SELECT id, conversa_id, autor_id, mensagem, data_envio, lida FROM mensagens WHERE conversa_id = ? ORDER BY data_envio ASC",
+    const [mensagens] = await db.query(
+      "SELECT id, conversa_id, autor_id, mensagem, data_envio, lida FROM mensagensWHERE conversa_id = ? ORDER BY data_envio ASC",
       [conversa_id]
     );
-    res.json(msgs);
+    res.json(mensagens);
   } catch (err) {
     console.error("GET /conversas/mensagens erro:", err);
     res.status(500).json({ erro: "Erro ao buscar mensagens." });
@@ -71,42 +92,66 @@ router.get("/mensagens/:conversa_id", async (req, res) => {
 });
 
 /**
+ * PATCH /api/conversas/mensagens/ler/:conversa_id
+ * Marca como lidas as mensagens da conversa para o usuário que abriu.
+ * body: { usuario_id }
+ */
+router.patch("/mensagens/ler/:conversa_id", async (req, res) => {
+  const { conversa_id } = req.params;
+  const usuario_id = Number(req.body?.usuario_id);
+  if (!usuario_id) return res.status(400).json({ erro: "usuario_id é obrigatório." });
+
+  try {
+    await db.query(
+      "UPDATE mensagens SET lida = 1 WHERE conversa_id = ? AND autor_id <> ? AND lida = 0",
+      [conversa_id, usuario_id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("PATCH /conversas/mensagens/ler erro:", err);
+    res.status(500).json({ erro: "Erro ao marcar mensagens como lidas." });
+  }
+});
+
+/**
  * GET /api/conversas/ultimas/:usuario_id
- * Lista as conversas do usuário com o nome do outro participante e última mensagem
+ * Lista as conversas do usuário com a última mensagem e o nome do outro participante.
  */
 router.get("/ultimas/:usuario_id", async (req, res) => {
   const { usuario_id } = req.params;
 
   try {
-    const sql = `
-      SELECT
+    const [conversas] = await db.query(
+      `
+      SELECT 
         c.id AS conversa_id,
         c.cliente_id,
         c.locador_id,
-        CASE 
-          WHEN c.cliente_id = ? THEN u2.nome
-          ELSE u1.nome
-        END AS nome,
-        lm.mensagem AS ultima_mensagem,
-        lm.data_envio AS ultima_data
+        u.nome,
+        (
+          SELECT m.mensagem 
+          FROM mensagens m 
+          WHERE m.conversa_id = c.id 
+          ORDER BY m.data_envio DESC 
+          LIMIT 1
+        ) AS ultima_mensagem,
+        (
+          SELECT m.data_envio 
+          FROM mensagens m 
+          WHERE m.conversa_id = c.id 
+          ORDER BY m.data_envio DESC 
+          LIMIT 1
+        ) AS data_envio
       FROM conversas c
-      LEFT JOIN usuarios u1 ON u1.id = c.cliente_id
-      LEFT JOIN usuarios u2 ON u2.id = c.locador_id
-      LEFT JOIN (
-        SELECT m.*
-        FROM mensagens m
-        INNER JOIN (
-          SELECT conversa_id, MAX(data_envio) AS max_data
-          FROM mensagens
-          GROUP BY conversa_id
-        ) ult ON ult.conversa_id = m.conversa_id AND ult.max_data = m.data_envio
-      ) lm ON lm.conversa_id = c.id
+      JOIN usuarios u 
+        ON u.id = IF(c.cliente_id = ?, c.locador_id, c.cliente_id)
       WHERE c.cliente_id = ? OR c.locador_id = ?
-      ORDER BY COALESCE(lm.data_envio, c.data_inicio) DESC
-    `;
-    const [rows] = await db.query(sql, [usuario_id, usuario_id, usuario_id]);
+      ORDER BY data_envio DESC
+      `,
+      [usuario_id, usuario_id, usuario_id]
+    );
 
-    res.json(rows);
+    res.json(conversas);
   } catch (err) {
     console.error("GET /conversas/ultimas erro:", err);
     res.status(500).json({ erro: "Erro ao buscar conversas." });
@@ -115,7 +160,7 @@ router.get("/ultimas/:usuario_id", async (req, res) => {
 
 /**
  * DELETE /api/conversas/mensagens/:id
- * Exclui uma mensagem
+ * Exclui uma única mensagem.
  */
 router.delete("/mensagens/:id", async (req, res) => {
   const { id } = req.params;
@@ -130,11 +175,12 @@ router.delete("/mensagens/:id", async (req, res) => {
 
 /**
  * DELETE /api/conversas/:id
- * Exclui a conversa (e, por FK, apaga as mensagens)
+ * Exclui a conversa e TODAS as mensagens dela.
  */
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
+    await db.query("DELETE FROM mensagens WHERE conversa_id = ?", [id]);
     await db.query("DELETE FROM conversas WHERE id = ?", [id]);
     res.sendStatus(204);
   } catch (err) {
