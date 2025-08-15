@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
- import { api } from "../services/api";
+import { api } from "../services/api";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -38,37 +38,64 @@ export default function Register() {
     img.src = IMAGES[next];
   }, [idx, IMAGES]);
 
-  const RAW_BASE = import.meta?.env?.VITE_API_URL || "";
-  const API_BASE = RAW_BASE.trim().replace(/\s+/g, "").replace(/\/?api\/?$/i, "").replace(/\/$/, "");
-  const REGISTER_URL = API_BASE ? `${API_BASE}/api/auth/register` : "/api/auth/register";
-  const LOGIN_URL = API_BASE ? `${API_BASE}/api/auth/login` : "/api/auth/login";
-
-  const nextPathFor = (u) => (u?.tipo_usuario === "locador" ? "/home-locador" : "/home");
+  const nextPathFor = (u) =>
+    (u?.tipo || u?.tipo_usuario) === "locador" ? "/home-locador" : "/home";
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    if (!nome || !email || !senha) return setError("Preencha nome, e-mail e senha.");
-    if (senha.length < 6) return setError("A senha precisa ter pelo menos 6 caracteres.");
-    if (senha !== confirmSenha) return setError("As senhas não coincidem.");
+
+    if (!nome || !email || !senha) {
+      setError("Preencha nome, e-mail e senha.");
+      return;
+    }
+    if (senha.length < 6) {
+      setError("A senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (senha !== confirmSenha) {
+      setError("As senhas não coincidem.");
+      return;
+    }
+
+    // monta payload do registro (normalizado)
+    const dados = {
+      nome: String(nome).trim(),
+      email: String(email).trim().toLowerCase(),
+      senha, // backend deve hashear
+      tipo: (tipo || "cliente").toLowerCase(), // "cliente" | "locador"
+      telefone: String(telefone || "").trim() || null,
+      data_nascimento: dataNascimento || null, // ajuste se seu backend usa outro nome
+    };
 
     setLoading(true);
     try {
-      await api.post("/auth/register", { ...dados });
+      // cria conta
+      await api.post("/auth/register", dados);
 
-      const res = await api.post("/auth/login", { email, senha });
+      // login automático
+      const res = await api.post("/auth/login", {
+        email: dados.email,
+        senha,
+      });
+
       const { usuario, token } = res.data || {};
       if (usuario) localStorage.setItem("usuario", JSON.stringify(usuario));
       if (token) localStorage.setItem("token", token);
-      navigate(nextPathFor(usuario));
+
+      navigate(nextPathFor(usuario), { replace: true });
     } catch (err) {
       const status = err?.response?.status;
+      const payload = err?.response?.data || {};
       let msg =
-        err?.response?.data?.message ||
+        payload?.erro ||
+        payload?.message ||
         "Não foi possível cadastrar. Verifique os dados e tente novamente.";
+
       if (status === 409) msg = "E-mail já cadastrado.";
       if (status === 405) msg = "405: verifique se /api/auth/register aceita POST.";
       if (status === 404) msg = "Rota /api/auth/register não encontrada.";
+
       setError(msg);
       console.error("[REGISTER ERRO]", err);
     } finally {
@@ -80,22 +107,34 @@ export default function Register() {
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
       {/* Glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-             style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-             style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
+        <div
+          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
+        />
+        <div
+          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
+        />
       </div>
 
-      {/* Grid de “quadra” */}
-      <div aria-hidden className="absolute inset-0 opacity-15" style={{
-        backgroundImage:
-          "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
-        backgroundSize: "24px 24px, 24px 24px",
-      }} />
-      <div aria-hidden className="absolute inset-0 opacity-10" style={{
-        backgroundImage:
-          "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
-      }} />
+      {/* Grid */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-15"
+        style={{
+          backgroundImage:
+            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+          backgroundSize: "24px 24px, 24px 24px",
+        }}
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-10"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+        }}
+      />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
         {/* HERO slideshow */}
@@ -106,13 +145,13 @@ export default function Register() {
                 key={src}
                 src={src}
                 alt="Quadra"
-                className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ease-out
-                  ${i === idx ? "opacity-100 scale-100" : "opacity-0 scale-105"}`}
+                className={`absolute inset-0 h-full w-full object-cover transition-all duration-700 ease-out ${
+                  i === idx ? "opacity-100 scale-100" : "opacity-0 scale-105"
+                }`}
                 loading={i === 0 ? "eager" : "lazy"}
               />
             ))}
             <div className="absolute inset-0 bg-gradient-to-tr from-[#0A1611] via-transparent to-transparent" />
-            {/* CARD dentro da imagem */}
             <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -132,7 +171,6 @@ export default function Register() {
         <div className="flex items-center justify-center p-6 sm:p-10">
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
-              {/* LOGO real — sem corte + cantos arredondados */}
               <img
                 src="/quadras/logo-quadraflex.png"
                 alt="QuadraFlex"
@@ -140,7 +178,9 @@ export default function Register() {
                 draggable="false"
               />
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Criar conta</h1>
-              <p className="mt-1 text-white/70">Em poucos passos você já pode reservar e gerenciar quadras</p>
+              <p className="mt-1 text-white/70">
+                Em poucos passos você já pode reservar e gerenciar quadras
+              </p>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl">
@@ -153,7 +193,9 @@ export default function Register() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label htmlFor="nome" className="mb-1 block text-sm text-white/80">Nome</label>
+                    <label htmlFor="nome" className="mb-1 block text-sm text-white/80">
+                      Nome
+                    </label>
                     <input
                       id="nome"
                       type="text"
@@ -166,7 +208,9 @@ export default function Register() {
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="mb-1 block text-sm text-white/80">E-mail</label>
+                    <label htmlFor="email" className="mb-1 block text-sm text-white/80">
+                      E-mail
+                    </label>
                     <input
                       id="email"
                       type="email"
@@ -181,7 +225,9 @@ export default function Register() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="senha" className="mb-1 block text-sm text-white/80">Senha</label>
+                      <label htmlFor="senha" className="mb-1 block text-sm text-white/80">
+                        Senha
+                      </label>
                       <div className="relative">
                         <input
                           id="senha"
@@ -202,7 +248,9 @@ export default function Register() {
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="confirm" className="mb-1 block text-sm text-white/80">Confirmar senha</label>
+                      <label htmlFor="confirm" className="mb-1 block text-sm text-white/80">
+                        Confirmar senha
+                      </label>
                       <input
                         id="confirm"
                         type={showPassword ? "text" : "password"}
@@ -238,7 +286,9 @@ export default function Register() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="tel" className="mb-1 block text-sm text-white/80">Telefone</label>
+                      <label htmlFor="tel" className="mb-1 block text-sm text-white/80">
+                        Telefone
+                      </label>
                       <input
                         id="tel"
                         type="tel"
@@ -249,7 +299,9 @@ export default function Register() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="nasc" className="mb-1 block text-sm text-white/80">Data de nascimento</label>
+                      <label htmlFor="nasc" className="mb-1 block text-sm text-white/80">
+                        Data de nascimento
+                      </label>
                       <input
                         id="nasc"
                         type="date"
@@ -277,7 +329,10 @@ export default function Register() {
 
                   <p className="mt-4 text-center text-sm text-white/70">
                     Já tem conta?{" "}
-                    <Link to="/login" className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
+                    <Link
+                      to="/login"
+                      className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
+                    >
                       Entrar
                     </Link>
                   </p>
