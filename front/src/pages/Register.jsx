@@ -9,7 +9,7 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmSenha, setConfirmSenha] = useState("");
-  const [tipo, setTipo] = useState("cliente");
+  const [tipo, setTipo] = useState("cliente"); // cliente | locador
   const [telefone, setTelefone] = useState("");
   const [dataNascimento, setDataNascimento] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -17,12 +17,7 @@ export default function Register() {
   const [error, setError] = useState("");
 
   const IMAGES = useMemo(
-    () => [
-      "/quadras/quadra4.png",
-      "/quadras/quadra2.png",
-      "/quadras/quadra6.png",
-      "/quadras/quadra5.png",
-    ],
+    () => ["/quadras/quadra4.png", "/quadras/quadra2.png", "/quadras/quadra6.png", "/quadras/quadra5.png"],
     []
   );
   const [idx, setIdx] = useState(0);
@@ -39,7 +34,7 @@ export default function Register() {
   }, [idx, IMAGES]);
 
   const nextPathFor = (u) =>
-    (u?.tipo || u?.tipo_usuario) === "locador" ? "/home-locador" : "/home";
+    (u?.tipo_usuario || u?.tipo) === "locador" ? "/home-locador" : "/home";
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -58,22 +53,20 @@ export default function Register() {
       return;
     }
 
-    // monta payload do registro (normalizado)
+    // 🔑 O backend espera 'tipo_usuario'
     const dados = {
       nome: String(nome).trim(),
       email: String(email).trim().toLowerCase(),
-      senha, // backend deve hashear
-      tipo: (tipo || "cliente").toLowerCase(), // "cliente" | "locador"
-      telefone: String(telefone || "").trim() || null,
-      data_nascimento: dataNascimento || null, // ajuste se seu backend usa outro nome
+      senha,
+      tipo_usuario: (tipo || "cliente").toLowerCase(), // <- campo correto
+      telefone: (telefone || "").trim() || null,
+      data_nascimento: dataNascimento || null,         // ajuste se seu back usa outro nome
     };
 
     setLoading(true);
     try {
-      // cria conta
       await api.post("/auth/register", dados);
 
-      // login automático
       const res = await api.post("/auth/login", {
         email: dados.email,
         senha,
@@ -107,34 +100,22 @@ export default function Register() {
     <div className="min-h-screen relative overflow-hidden bg-[#0A1611] text-white">
       {/* Glows */}
       <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
-          style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }}
-        />
-        <div
-          className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
-          style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }}
-        />
+        <div className="absolute -top-40 -left-40 h-80 w-80 rounded-full blur-3xl opacity-30"
+             style={{ background: "radial-gradient(closest-side, #34d399, transparent)" }} />
+        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full blur-3xl opacity-25"
+             style={{ background: "radial-gradient(closest-side, #10b981, transparent)" }} />
       </div>
 
       {/* Grid */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-15"
-        style={{
-          backgroundImage:
-            "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
-          backgroundSize: "24px 24px, 24px 24px",
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
-        }}
-      />
+      <div aria-hidden className="absolute inset-0 opacity-15" style={{
+        backgroundImage:
+          "linear-gradient(transparent 23px, rgba(255,255,255,0.08) 24px), linear-gradient(90deg, transparent 23px, rgba(255,255,255,0.08) 24px)",
+        backgroundSize: "24px 24px, 24px 24px",
+      }} />
+      <div aria-hidden className="absolute inset-0 opacity-10" style={{
+        backgroundImage:
+          "repeating-linear-gradient(0deg, transparent, transparent 44px, rgba(16,185,129,0.35) 44px, rgba(16,185,129,0.35) 46px)",
+      }} />
 
       <div className="relative z-10 grid min-h-screen grid-cols-1 md:grid-cols-2">
         {/* HERO slideshow */}
@@ -178,9 +159,7 @@ export default function Register() {
                 draggable="false"
               />
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Criar conta</h1>
-              <p className="mt-1 text-white/70">
-                Em poucos passos você já pode reservar e gerenciar quadras
-              </p>
+              <p className="mt-1 text-white/70">Em poucos passos você já pode reservar e gerenciar quadras</p>
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-xl">
@@ -193,9 +172,7 @@ export default function Register() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label htmlFor="nome" className="mb-1 block text-sm text-white/80">
-                      Nome
-                    </label>
+                    <label htmlFor="nome" className="mb-1 block text-sm text-white/80">Nome</label>
                     <input
                       id="nome"
                       type="text"
@@ -208,9 +185,7 @@ export default function Register() {
                   </div>
 
                   <div>
-                    <label htmlFor="email" className="mb-1 block text-sm text-white/80">
-                      E-mail
-                    </label>
+                    <label htmlFor="email" className="mb-1 block text-sm text-white/80">E-mail</label>
                     <input
                       id="email"
                       type="email"
@@ -225,9 +200,7 @@ export default function Register() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="senha" className="mb-1 block text-sm text-white/80">
-                        Senha
-                      </label>
+                      <label htmlFor="senha" className="mb-1 block text-sm text-white/80">Senha</label>
                       <div className="relative">
                         <input
                           id="senha"
@@ -248,9 +221,7 @@ export default function Register() {
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="confirm" className="mb-1 block text-sm text-white/80">
-                        Confirmar senha
-                      </label>
+                      <label htmlFor="confirm" className="mb-1 block text-sm text-white/80">Confirmar senha</label>
                       <input
                         id="confirm"
                         type={showPassword ? "text" : "password"}
@@ -286,9 +257,7 @@ export default function Register() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label htmlFor="tel" className="mb-1 block text-sm text-white/80">
-                        Telefone
-                      </label>
+                      <label htmlFor="tel" className="mb-1 block text-sm text-white/80">Telefone</label>
                       <input
                         id="tel"
                         type="tel"
@@ -299,9 +268,7 @@ export default function Register() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="nasc" className="mb-1 block text-sm text-white/80">
-                        Data de nascimento
-                      </label>
+                      <label htmlFor="nasc" className="mb-1 block text-sm text-white/80">Data de nascimento</label>
                       <input
                         id="nasc"
                         type="date"
@@ -329,10 +296,7 @@ export default function Register() {
 
                   <p className="mt-4 text-center text-sm text-white/70">
                     Já tem conta?{" "}
-                    <Link
-                      to="/login"
-                      className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline"
-                    >
+                    <Link to="/login" className="text-emerald-300 hover:text-emerald-200 underline-offset-4 hover:underline">
                       Entrar
                     </Link>
                   </p>
