@@ -8,6 +8,7 @@ import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
 import Sidebar from "../components/Sidebar";
 import { api } from "../services/api";
+import CourtCard from "../components/CourtCard"; // ⬅️ NOVO
 
 // Helper que resolve o nome do usuário a partir de múltiplas fontes
 async function resolverNomeUsuario() {
@@ -141,7 +142,6 @@ export default function Home() {
       <div className="flex-1 bg-white text-black transition-colors px-4 pl-16 overflow-hidden">
         <div className="relative bg-gradient-to-b from-[#1E8449] to-[#14532d] text-white p-6 pb-10 rounded-b-3xl shadow-md z-10">
           {/* Sino / Notificações */}
-          {/* 🔁 Corrigido: rota certa é /notificacao (singular) */}
           <Link to="/notificacao" className="absolute top-6 left-4 sm:left-16">
             <div className="relative group">
               <div className="bg-white rounded-full w-10 h-10 shadow flex items-center justify-center group-hover:scale-105 transition">
@@ -223,18 +223,17 @@ export default function Home() {
         <div className="mt-10">
           <h2 className="text-xl font-semibold mb-4">Para você</h2>
           <div ref={sliderRef} className="keen-slider">
-            {quadrasCarrossel.map((quadra) => (
-              <div
-                key={quadra.id}
-                className="keen-slider__slide bg-white rounded-lg shadow-md p-2 cursor-pointer"
-                onClick={() => navigate(`/quadra/${quadra.id}`, { state: { quadra } })}
-              >
-                <img src={quadra.imagem} alt={quadra.nome} className="rounded-md w-full h-32 object-cover" />
-                <div className="mt-2">
-                  <h3 className="font-medium text-sm">{quadra.nome}</h3>
-                  <p className="text-green-700 font-bold text-sm">{quadra.preco}</p>
-                  <p className="text-xs text-gray-500">{quadra.local}</p>
-                </div>
+            {quadrasCarrossel.map((q) => (
+              <div key={q.id} className="keen-slider__slide px-2 md:px-3">
+                <CourtCard
+                  quadra={q}
+                  variant="compact"                       // ⬅️ visual para carrossel
+                  onClick={() => handleQuadraClick(q)}     // ⬅️ mantém seu fluxo com state
+                  onFavorite={(quadra, fav) => {
+                    // Integração futura de favoritos: api.post/delete
+                    // console.log("Fav carrossel:", quadra.id, fav);
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -245,25 +244,16 @@ export default function Home() {
           <h2 className="text-xl font-semibold mb-4 text-green-700">Quadras em destaque</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {quadras.map((q) => (
-              <div
+              <CourtCard
                 key={q.id}
-                onClick={() => handleQuadraClick(q)}
-                className="cursor-pointer bg-white rounded-xl shadow-md hover:shadow-xl hover:scale-[1.015] transition-transform duration-300 p-4 flex gap-4"
-              >
-                <img
-                  src={q.imagem}
-                  alt={q.nome}
-                  className="w-24 h-24 object-cover rounded-lg border border-gray-200"
-                />
-                <div className="flex flex-col justify-between">
-                  <h3 className="font-semibold text-lg text-gray-900">{q.nome}</h3>
-                  <p className="text-sm text-gray-600">{q.local}</p>
-                  <p className="text-green-700 font-bold text-sm">{q.preco}</p>
-                  <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded w-max">
-                    ★ {q.avaliacao}
-                  </span>
-                </div>
-              </div>
+                quadra={q}
+                variant="default"
+                onClick={() => handleQuadraClick(q)}       // ⬅️ navegação + imagem_url
+                onFavorite={(quadra, fav) => {
+                  // Integração futura de favoritos: api.post/delete
+                  // console.log("Fav destaque:", quadra.id, fav);
+                }}
+              />
             ))}
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import { quadras, quadrasCarrossel } from "../data/quadras";
+import CourtCard from "../components/CourtCard"; // ⬅️ NOVO
 
 function normalizarTipo(v) {
   if (!v) return "";
@@ -100,7 +101,7 @@ export default function Resultados() {
   }, [catalogo, filtrosNorm]);
 
   const handleCliqueQuadra = (q) => {
-    // manda os dados estáticos via state para o detalhe (caso ele queira usar)
+    // mantém sua navegação atual e dados via state
     navigate(`/quadra/${q.id}`, { state: { fromStatic: true, quadra: q } });
   };
 
@@ -135,7 +136,7 @@ export default function Resultados() {
 
         <h1 className="text-2xl font-bold text-green-800 mb-4">Resultados da Busca</h1>
 
-        {/* Resumo dos filtros */}
+        {/* Resumo dos filtros (mantive seu texto) */}
         <div className="text-sm text-gray-600 mb-6">
           {filtrosNorm.tipos.length > 0 && (
             <span className="mr-4">
@@ -162,39 +163,22 @@ export default function Resultados() {
           )}
         </div>
 
-        {/* Lista */}
+        {/* Lista com CourtCard */}
         {!resultados.length ? (
           <p className="text-gray-600">Nenhuma quadra encontrada com os filtros selecionados.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {resultados.map((q) => (
-              <div
+              <CourtCard
                 key={q.id}
+                quadra={q}
+                variant="default"
                 onClick={() => handleCliqueQuadra(q)}
-                className="cursor-pointer bg-white rounded-xl shadow-md hover:shadow-xl hover:scale-[1.02] transition-transform duration-300 overflow-hidden border"
-              >
-                <img
-                  src={q.imagem || "/quadras/quadra1.png"}
-                  alt={q.nome}
-                  className="w-full h-44 object-cover"
-                  onError={(e) => (e.currentTarget.src = "/quadras/quadra1.png")}
-                  loading="lazy"
-                />
-
-                <div className="p-4 space-y-1">
-                  <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">{q.nome}</h3>
-                  <p className="text-sm text-gray-600 line-clamp-1">{q.local}</p>
-
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-green-700 font-bold">
-                      {q.preco || q.precoNumber?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </span>
-                    <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">
-                      ★ {Number(q.avaliacaoNumber || q.avaliacao || q.nota || 0).toFixed(1)}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                onFavorite={(quadra, fav) => {
+                  // Integração futura de favoritos: api.post/delete
+                  // console.log("Fav resultados:", quadra.id, fav);
+                }}
+              />
             ))}
           </div>
         )}
