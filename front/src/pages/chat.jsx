@@ -6,7 +6,7 @@ import MobileNav from "../components/MobileNav";
 import { FaEllipsisV, FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
-import MessageBubble from "../components/chat/MessageBubble"; // ⬅️ NOVO
+import MessageBubble from "../components/MessageBubble"; // ⬅️ NOVO
 
 function getUsuarioLocal() {
   try {
