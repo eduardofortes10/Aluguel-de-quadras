@@ -1,5 +1,5 @@
 // src/pages/Home.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import { useNavigate, Link } from "react-router-dom";
@@ -8,24 +8,100 @@ import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
 import Sidebar from "../components/Sidebar";
 import { api } from "../services/api";
-import CourtCard from "../components/CourtCard"; // ⬅️ NOVO
+import CourtCard from "../components/CourtCard";
+import { toast } from "react-hot-toast";
+import { enviarNotificacao } from "../services/notificacoes";
+
+// ===== Helpers (reaproveitados do Favoritos / QuadraDetalhe) =====
+async function getUsuarioIdSeguro() {
+  try {
+    const raw = localStorage.getItem("usuario");
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.id) return Number(u.id);
+      if (u?.usuario_id) return Number(u.usuario_id);
+    }
+    const uidStr = localStorage.getItem("usuario_id");
+    if (uidStr && /^\d+$/.test(uidStr)) return Number(uidStr);
+    try {
+      const { data } = await api.get("/auth/me");
+      if (data?.id) return Number(data.id);
+      if (data?.usuario_id) return Number(data.usuario_id);
+    } catch {}
+  } catch {}
+  return null;
+}
+
+// Normaliza qualquer formato de favorito vindo do backend
+function normalizarFavorito(f) {
+  const hasNestedQuadra = f?.quadra && typeof f.quadra === "object";
+
+  const favoritoId =
+    f.favorito_id ??
+    (hasNestedQuadra ? f.id : undefined) ??
+    (f.quadra_id ? f.id : undefined) ??
+    f.id;
+
+  const quadraId =
+    f.quadra_id ??
+    (hasNestedQuadra ? f.quadra.id : undefined) ??
+    f.id_quadra ??
+    f.quadraId ??
+    f.id;
+
+  const nome = f.nome ?? (hasNestedQuadra ? f.quadra.nome : undefined) ?? "Quadra";
+  const preco = f.preco ?? (hasNestedQuadra ? f.quadra.preco : undefined) ?? 0;
+  const local = f.local ?? (hasNestedQuadra ? f.quadra.local : undefined) ?? "";
+  const tipo = f.tipo ?? (hasNestedQuadra ? f.quadra.tipo : undefined) ?? "Quadra esportiva";
+  const nota =
+    f.nota ??
+    f.avaliacao ??
+    (hasNestedQuadra ? f.quadra.nota ?? f.quadra.avaliacao : undefined) ??
+    4.5;
+
+  const imagem_url =
+    f.imagem_url ??
+    (hasNestedQuadra ? f.quadra.imagem_url ?? f.quadra.imagem : undefined) ??
+    "sem-imagem.png";
+
+  return { favoritoId, quadraId, nome, preco, local, tipo, nota, imagem_url, _raw: f };
+}
+
+// extrai número do preço (aceita "R$ 120", "120", "120,00 /hora" etc.)
+function precoToNumber(v) {
+  if (typeof v === "number") return v;
+  const limpo = String(v || "")
+    .replace(/[R$\s]/g, "")
+    .replace("/hora", "")
+    .replace(/\./g, "")
+    .replace(",", ".")
+    .trim();
+  const n = parseFloat(limpo);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getImagemNome(quadra) {
+  const s =
+    quadra?.imagem_url ||
+    quadra?.imagem ||
+    "";
+  const part = String(s).split("/").pop();
+  return part || "sem-imagem.png";
+}
+// ================================================================
 
 // Helper que resolve o nome do usuário a partir de múltiplas fontes
 async function resolverNomeUsuario() {
   try {
-    // 1) usuário salvo como objeto
     const raw = localStorage.getItem("usuario");
     if (raw) {
       const u = JSON.parse(raw);
       if (u?.nome) return u.nome;
       if (u?.name) return u.name;
     }
-
-    // 2) nome salvo isolado
     const nomeisolado = localStorage.getItem("nomeUsuario");
     if (nomeisolado) return nomeisolado;
 
-    // 3) tentar via backend (se tiver token aplicado no axios)
     try {
       const { data } = await api.get("/auth/me");
       if (data?.nome) return data.nome;
@@ -52,12 +128,100 @@ export default function Home() {
   const [tipoSelecionado, setTipoSelecionado] = useState("Todos");
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
 
+  // ===== Estado de favoritos =====
+  const [uid, setUid] = useState(null);
+  const [favSet, setFavSet] = useState(() => new Set());           // quadraId -> favoritado?
+  const [favIdByQuadra, setFavIdByQuadra] = useState(() => new Map()); // quadraId -> favoritoId
+
+  // Carregar usuário + favoritos
+  useEffect(() => {
+    let cancel = false;
+    (async () => {
+      const id = await getUsuarioIdSeguro();
+      if (!cancel) setUid(id);
+      if (!id) return; // usuário não logado: deixa set vazio
+      await sincronizarFavoritos(id);
+    })();
+    return () => { cancel = true; };
+  }, []);
+
+  async function sincronizarFavoritos(userId = uid) {
+    if (!userId) return;
+    try {
+      const { data } = await api.get(`/favoritos/${userId}`);
+      const arr = Array.isArray(data) ? data : [];
+      const normalizados = arr.map(normalizarFavorito);
+      // monta estruturas
+      const novoSet = new Set(normalizados.map((x) => Number(x.quadraId)));
+      const novoMap = new Map();
+      for (const it of normalizados) {
+        if (it.quadraId != null && it.favoritoId != null) {
+          novoMap.set(Number(it.quadraId), Number(it.favoritoId));
+        }
+      }
+      setFavSet(novoSet);
+      setFavIdByQuadra(novoMap);
+    } catch (err) {
+      console.error("Erro ao sincronizar favoritos:", err?.response?.data || err?.message);
+    }
+  }
+
+  // Handler do coração (add/remove)
+  const handleFavorite = async (quadra, isNowFav) => {
+    const userId = uid ?? (await getUsuarioIdSeguro());
+    if (!userId) {
+      toast.error("Faça login para favoritar.");
+      return;
+    }
+
+    try {
+      if (isNowFav) {
+        // ADD
+        const dadosFavorito = {
+          usuario_id: userId,
+          quadra_id: quadra?.id || quadra?.quadra_id || 0,
+          nome: quadra?.nome,
+          preco: precoToNumber(quadra?.preco),
+          local: quadra?.local,
+          imagem_url: getImagemNome(quadra),
+          nota: quadra?.avaliacao || quadra?.nota || 4.5,
+        };
+        await api.post("/favoritos", dadosFavorito);
+        toast.success("Adicionada aos favoritos!");
+        // notificação opcional (mesma usada no detalhe)
+        try {
+          await enviarNotificacao({
+            usuario_id: userId,
+            tipo: "favorito",
+            mensagem: `Você favoritou a quadra ${quadra?.nome}`,
+          });
+        } catch {}
+      } else {
+        // REMOVE
+        const favId = favIdByQuadra.get(Number(quadra.id));
+        if (favId) {
+          await api.delete(`/favoritos/${favId}`);
+        } else {
+          // rota fallback (se existir no seu back)
+          await api.delete(`/favoritos/usuario/${userId}/quadra/${quadra.id}`);
+        }
+        toast("Removida dos favoritos.", { icon: "🗑️" });
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar favorito:", err?.response?.data || err?.message);
+      toast.error(err?.response?.data?.erro || "Não foi possível atualizar favorito.");
+    } finally {
+      // ressincroniza estado com o backend
+      await sincronizarFavoritos(userId);
+    }
+  };
+
+  // ===== Keen slider =====
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
     slides: { perView: 5, spacing: 16 },
   });
 
-  // Autoplay do carrossel sem vazar setInterval
   useEffect(() => {
     if (!instanceRef.current) return;
     const id = setInterval(() => {
@@ -66,7 +230,7 @@ export default function Home() {
     return () => clearInterval(id);
   }, [instanceRef]);
 
-  // Buscar notificações periodicamente (usando /api)
+  // Notificações
   useEffect(() => {
     const usuario = JSON.parse(localStorage.getItem("usuario"));
     if (!usuario?.id) return;
@@ -86,6 +250,7 @@ export default function Home() {
     return () => clearInterval(intervalo);
   }, []);
 
+  // Navegação detalhe (mantendo seu state de imagem)
   const handleQuadraClick = (quadra) => {
     const imagem_nome = quadra.imagem?.split("/").pop();
     navigate(`/quadra/${quadra.id}`, {
@@ -99,7 +264,7 @@ export default function Home() {
     });
   };
 
-  // Carregar nome do usuário de forma robusta + reagir a mudanças do localStorage
+  // Nome do usuário
   useEffect(() => {
     let cancelado = false;
 
@@ -113,6 +278,15 @@ export default function Home() {
     function onStorage(e) {
       if (e.key === "usuario" || e.key === "nomeUsuario" || e.key === "usuario_id") {
         carregarNome();
+        // também podemos ressincronizar favoritos ao trocar de usuário
+        getUsuarioIdSeguro().then((id) => {
+          setUid(id);
+          if (id) sincronizarFavoritos(id);
+          else {
+            setFavSet(new Set());
+            setFavIdByQuadra(new Map());
+          }
+        });
       }
     }
     window.addEventListener("storage", onStorage);
@@ -200,12 +374,7 @@ export default function Home() {
                 key={nome}
                 onClick={() =>
                   navigate("/resultados", {
-                    state: {
-                      tipo: [nome],
-                      precoMaximo: "",
-                      avaliacaoMinima: "",
-                      local: "",
-                    },
+                    state: { tipo: [nome], precoMaximo: "", avaliacaoMinima: "", local: "" },
                   })
                 }
                 className="flex flex-col items-center cursor-pointer"
@@ -223,19 +392,21 @@ export default function Home() {
         <div className="mt-10">
           <h2 className="text-xl font-semibold mb-4">Para você</h2>
           <div ref={sliderRef} className="keen-slider">
-            {quadrasCarrossel.map((q) => (
-              <div key={q.id} className="keen-slider__slide px-2 md:px-3">
-                <CourtCard
-                  quadra={q}
-                  variant="compact"                       // ⬅️ visual para carrossel
-                  onClick={() => handleQuadraClick(q)}     // ⬅️ mantém seu fluxo com state
-                  onFavorite={(quadra, fav) => {
-                    // Integração futura de favoritos: api.post/delete
-                    // console.log("Fav carrossel:", quadra.id, fav);
-                  }}
-                />
-              </div>
-            ))}
+            {quadrasCarrossel.map((q) => {
+              const isFav = favSet.has(Number(q.id));
+              return (
+                <div key={q.id} className="keen-slider__slide px-2 md:px-3">
+                  <CourtCard
+                    key={`${q.id}-${isFav ? 1 : 0}`} // re-monta se o estado mudar (só por garantia)
+                    quadra={q}
+                    variant="compact"
+                    isFavorited={isFav}
+                    onClick={() => handleQuadraClick(q)}
+                    onFavorite={handleFavorite}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -243,18 +414,19 @@ export default function Home() {
         <div className="mt-10">
           <h2 className="text-xl font-semibold mb-4 text-green-700">Quadras em destaque</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {quadras.map((q) => (
-              <CourtCard
-                key={q.id}
-                quadra={q}
-                variant="default"
-                onClick={() => handleQuadraClick(q)}       // ⬅️ navegação + imagem_url
-                onFavorite={(quadra, fav) => {
-                  // Integração futura de favoritos: api.post/delete
-                  // console.log("Fav destaque:", quadra.id, fav);
-                }}
-              />
-            ))}
+            {quadras.map((q) => {
+              const isFav = favSet.has(Number(q.id));
+              return (
+                <CourtCard
+                  key={`${q.id}-${isFav ? 1 : 0}`} // idem
+                  quadra={q}
+                  variant="default"
+                  isFavorited={isFav}
+                  onClick={() => handleQuadraClick(q)}
+                  onFavorite={handleFavorite}
+                />
+              );
+            })}
           </div>
         </div>
 
@@ -305,42 +477,18 @@ export default function Home() {
             <div>
               <h3 className="text-lg font-bold mb-2">Navegação</h3>
               <ul className="space-y-1">
-                <li>
-                  <a href="#" className="hover:underline">
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Quadras
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Contato
-                  </a>
-                </li>
+                <li><a href="#" className="hover:underline">Home</a></li>
+                <li><a href="#" className="hover:underline">Quadras</a></li>
+                <li><a href="#" className="hover:underline">Contato</a></li>
               </ul>
             </div>
 
             <div>
               <h3 className="text-lg font-bold mb-2">Redes sociais</h3>
               <ul className="space-y-1">
-                <li>
-                  <a href="#" className="hover:underline">
-                    Instagram
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Facebook
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Twitter
-                  </a>
-                </li>
+                <li><a href="#" className="hover:underline">Instagram</a></li>
+                <li><a href="#" className="hover:underline">Facebook</a></li>
+                <li><a href="#" className="hover:underline">Twitter</a></li>
               </ul>
             </div>
 
