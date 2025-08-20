@@ -6,6 +6,7 @@ import MobileNav from "../components/MobileNav";
 import { FaEllipsisV, FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
+import MessageBubble from "../components/chat/MessageBubble"; // ⬅️ NOVO
 
 function getUsuarioLocal() {
   try {
@@ -86,34 +87,39 @@ export default function Chat() {
     }
   };
 
+  // Marca como lidas as mensagens da conversa (para o usuário logado)
+  const marcarComoLidas = async (conversaId) => {
+    if (!meId || !conversaId) return;
+    try {
+      await api.patch(`/conversas/mensagens/ler/${conversaId}`, { usuario_id: meId });
+    } catch (err) {
+      console.warn("Não foi possível marcar mensagens como lidas:", err?.response?.data || err?.message);
+    }
+  };
+
   // Buscar mensagens da conversa ativa
   const carregarMensagens = async (conversaId) => {
-  if (!conversaId || carregandoMensagensRef.current) return;
-  try {
-    carregandoMensagensRef.current = true;
-    const { data } = await api.get(`/conversas/mensagens/${conversaId}`);
-    setMensagens(Array.isArray(data) ? data : []);
-
-    // ⬇️ AQUI: assim que carregar, marca como lidas para o usuário atual
-    await marcarComoLidas(conversaId);
-  } catch (err) {
-    console.error("Erro ao carregar mensagens:", err);
-  } finally {
-    carregandoMensagensRef.current = false;
-  }
-};
-
+    if (!conversaId || carregandoMensagensRef.current) return;
+    try {
+      carregandoMensagensRef.current = true;
+      const { data } = await api.get(`/conversas/mensagens/${conversaId}`);
+      setMensagens(Array.isArray(data) ? data : []);
+      await marcarComoLidas(conversaId);
+    } catch (err) {
+      console.error("Erro ao carregar mensagens:", err);
+    } finally {
+      carregandoMensagensRef.current = false;
+    }
+  };
 
   // Inicia/garante uma conversa com o alvo (?id=) sem duplicar
   const garantirConversaComAlvo = async (alvo) => {
     if (!meId || !alvo) return;
 
-    // Descobre quem é cliente e quem é locador de acordo com o tipo do usuário
     const euSouLocador = (meTipo || "").toLowerCase() === "locador";
     const cliente_id = euSouLocador ? alvo : meId;
     const locador_id = euSouLocador ? meId : alvo;
 
-    // Procura conversa existente
     const { data: lista } = await api.get(`/conversas/ultimas/${meId}`);
     const existente =
       (lista || []).find(
@@ -124,7 +130,6 @@ export default function Chat() {
             Number(c.locador_id) === Number(cliente_id))
       ) || null;
 
-    // Se não existir, cria com 1ª mensagem "olá..."
     if (!existente) {
       await api.post("/conversas", {
         cliente_id,
@@ -134,7 +139,6 @@ export default function Chat() {
       });
     }
 
-    // Recarrega lista e seleciona conversa
     await carregarConversas();
     const { data: lista2 } = await api.get(`/conversas/ultimas/${meId}`);
     const conv =
@@ -151,15 +155,6 @@ export default function Chat() {
       await carregarMensagens(conv.conversa_id);
     }
   };
-// Marca como lidas as mensagens da conversa (para o usuário logado)
-const marcarComoLidas = async (conversaId) => {
-  if (!meId || !conversaId) return;
-  try {
-    await api.patch(`/conversas/mensagens/ler/${conversaId}`, { usuario_id: meId });
-  } catch (err) {
-    console.warn("Não foi possível marcar mensagens como lidas:", err?.response?.data || err?.message);
-  }
-};
 
   // Carrega conversas ao abrir
   useEffect(() => {
@@ -181,14 +176,14 @@ const marcarComoLidas = async (conversaId) => {
     }
   }, [conversaAtiva]);
 
-  // Polling leve (atualiza mensagens da conversa ativa e a lista)
+  // Polling leve
   useEffect(() => {
     if (!conversaAtiva?.conversa_id) return;
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       await carregarMensagens(conversaAtiva.conversa_id);
       await carregarConversas();
-    }, 6000); // a cada 6s
+    }, 6000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
@@ -200,7 +195,6 @@ const marcarComoLidas = async (conversaId) => {
     const texto = (novaMensagem || "").trim();
     if (!texto || !conversaAtiva) return;
 
-    // Garante papéis corretos
     const euSouLocador = (meTipo || "").toLowerCase() === "locador";
     const cliente_id = euSouLocador ? conversaAtiva.cliente_id : meId;
     const locador_id = euSouLocador ? meId : conversaAtiva.locador_id;
@@ -310,6 +304,15 @@ const marcarComoLidas = async (conversaId) => {
     return conversas.filter((c) => (c?.nome || "").toLowerCase().includes(f));
   }, [conversas, filtro]);
 
+  // ⬇️ NOVO: descobrir a última mensagem enviada por mim (para mostrar "visto")
+  const lastOwnMsgId = useMemo(() => {
+    if (!Array.isArray(mensagens) || !meId) return null;
+    for (let i = mensagens.length - 1; i >= 0; i--) {
+      if (Number(mensagens[i]?.autor_id) === Number(meId)) return mensagens[i]?.id;
+    }
+    return null;
+  }, [mensagens, meId]);
+
   if (!meId) return null;
 
   return (
@@ -324,9 +327,9 @@ const marcarComoLidas = async (conversaId) => {
       </div>
 
       <div className="flex-1 md:ml-64 flex flex-col md:flex-row">
-        {/* Lista de conversas (esconde no mobile quando há conversa ativa) */}
+        {/* Lista de conversas */}
         {!conversaAtiva || !isMobile ? (
-          <div className="w-full md:w-1/3 border-r bg-white p-4 overflow-y-auto max-h-[calc(100dvh-80px)]">
+          <div className="w-full md:w-1/3 border-r bg-white p-4 overflow-y-auto max-h[calc(100dvh-80px)]">
             <h2 className="text-lg font-semibold mb-4">Conversas</h2>
 
             <input
@@ -416,41 +419,58 @@ const marcarComoLidas = async (conversaId) => {
 
           {conversaAtiva ? (
             <>
+              {/* LISTA DE MENSAGENS: agora com MessageBubble */}
               <div className="flex-grow overflow-y-auto p-4 mb-24" ref={mensagensRef}>
                 {mensagens.map((msg, idx) => {
                   const atual = new Date(msg.data_envio);
                   const anterior = idx > 0 ? new Date(mensagens[idx - 1].data_envio) : null;
                   const mudouDia = !anterior || atual.toDateString() !== anterior.toDateString();
 
-                  const minha = Number(msg.autor_id) === Number(meId);
+                  const isOwn = Number(msg.autor_id) === Number(meId);
+                  const isLastOwn = isOwn && msg.id === lastOwnMsgId;
+
+                  // aceita backend com 'visto', 'lida', 'lido' em formatos boolean/number/string
+                  const vistoBackend = msg?.visto ?? msg?.lida ?? msg?.lido ?? false;
+                  const seen =
+                    isLastOwn &&
+                    (vistoBackend === true ||
+                      vistoBackend === 1 ||
+                      vistoBackend === "1" ||
+                      vistoBackend === "true");
 
                   return (
-                    <React.Fragment key={msg.id}>
+                    <React.Fragment key={msg.id ?? `${msg.autor_id}-${msg.data_envio}-${idx}`}>
                       {mudouDia && (
-                        <div className="text-center text-sm text-gray-400 my-2">
+                        <div className="text-center text-xs text-zinc-500 my-2">
                           {formatarDataMensagem(msg.data_envio)}
                         </div>
                       )}
-                      <div
-                        className={`mb-3 px-4 py-3 rounded-2xl shadow max-w-xs sm:max-w-sm ${
-                          minha
-                            ? "bg-green-500 text-white ml-auto rounded-br-none"
-                            : "bg-gray-100 text-gray-800 rounded-bl-none"
-                        }`}
-                      >
-                        <div className="flex justify-between items-start gap-2">
-                          <span className="break-words">{msg.mensagem}</span>
 
-                          {minha && (
-                            <div className="relative shrink-0">
-                              <FaEllipsisV
-                                className="cursor-pointer text-white/80 hover:text-white"
+                      {/* Wrapper para posicionar menu de mensagem sem quebrar o layout da bolha */}
+                      <div className={isOwn ? "flex justify-end" : "flex justify-start"}>
+                        <div className="relative w-full max-w-[78%] sm:max-w-[65%]">
+                          <MessageBubble
+                            text={msg.mensagem || ""}
+                            timestamp={msg.data_envio || msg.created_at || Date.now()}
+                            isOwn={isOwn}
+                            seen={seen} // ⬅️ "visto" discreto apenas na última msg própria
+                          />
+
+                          {/* Menu de ações da mensagem (somente suas mensagens) */}
+                          {isOwn && (
+                            <div className="absolute -top-2 -right-2">
+                              <button
+                                className="p-2 rounded-full bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
                                 onClick={() =>
                                   setMenuAbertoId(menuAbertoId === msg.id ? null : msg.id)
                                 }
-                              />
+                                title="Mais ações"
+                              >
+                                <FaEllipsisV />
+                              </button>
+
                               {menuAbertoId === msg.id && (
-                                <div className="absolute right-0 mt-1 bg-white border rounded shadow-md z-10">
+                                <div className="absolute right-0 mt-2 bg-white border rounded shadow-md z-10">
                                   <button
                                     onClick={() => excluirMensagem(msg.id)}
                                     className="flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-100 w-full"
@@ -462,17 +482,13 @@ const marcarComoLidas = async (conversaId) => {
                             </div>
                           )}
                         </div>
-
-                        <div className={`text-xs mt-1 ${minha ? "text-white/80" : "text-gray-500"} text-right`}>
-                          {formatarHora(msg.data_envio)}
-                          {minha && msg.lida && <span className="ml-2">✓ Visto</span>}
-                        </div>
                       </div>
                     </React.Fragment>
                   );
                 })}
               </div>
 
+              {/* Input */}
               <div className="p-4 border-t flex bg-white w-full md:static md:w-auto z-10">
                 <input
                   type="text"
@@ -480,6 +496,7 @@ const marcarComoLidas = async (conversaId) => {
                   onChange={(e) => setNovaMensagem(e.target.value)}
                   onKeyDown={onKeyDown}
                   placeholder="Digite sua mensagem..."
+              
                   className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                 />
                 <button
