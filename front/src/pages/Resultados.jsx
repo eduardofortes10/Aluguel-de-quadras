@@ -4,33 +4,35 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import { quadras, quadrasCarrossel } from "../data/quadras";
-import CourtCard from "../components/CourtCard"; // ⬅️ NOVO
+import CourtCard from "../components/CourtCard";
+import { X, Filter, ChevronLeft } from "lucide-react";
 
 function normalizarTipo(v) {
   if (!v) return "";
   const s = String(v).trim().toLowerCase();
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 }
-
 function toNumberOrNull(v) {
   if (v == null || v === "") return null;
   const n = Number(String(v).replace(",", "."));
   return Number.isFinite(n) ? n : null;
 }
-
 function parsePreco(str) {
   if (str == null) return NaN;
-  // extrai números com , ou . (ex.: "R$ 200 /hora" -> 200)
   const cleaned = String(str).replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".");
   const num = parseFloat(cleaned);
   return Number.isFinite(num) ? num : NaN;
+}
+function formatBRL(n) {
+  if (n == null || !Number.isFinite(Number(n))) return "—";
+  return Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
 
 export default function Resultados() {
   const { state: filtros } = useLocation();
   const navigate = useNavigate();
 
-  // normaliza filtros vindos do Filtro.jsx
+  // Normaliza filtros vindos do Filtro.jsx
   const filtrosNorm = useMemo(() => {
     if (!filtros) return null;
     return {
@@ -41,10 +43,9 @@ export default function Resultados() {
     };
   }, [filtros]);
 
-  // catálogo local (somente data/quadras.js)
+  // Catálogo local (data/quadras.js)
   const catalogo = useMemo(() => {
     const base = [...quadrasCarrossel, ...quadras];
-    // dedup por id, mantendo o primeiro que aparecer
     const seen = new Set();
     const dedup = [];
     for (const q of base) {
@@ -63,7 +64,6 @@ export default function Resultados() {
 
   const resultados = useMemo(() => {
     if (!filtrosNorm) return [];
-
     const tiposSet = filtrosNorm.tipos.length ? new Set(filtrosNorm.tipos) : null;
 
     const filtrado = catalogo.filter((q) => {
@@ -101,15 +101,47 @@ export default function Resultados() {
   }, [catalogo, filtrosNorm]);
 
   const handleCliqueQuadra = (q) => {
-    // mantém sua navegação atual e dados via state
     navigate(`/quadra/${q.id}`, { state: { fromStatic: true, quadra: q } });
   };
 
   if (!filtrosNorm) {
-    // acesso direto à página sem passar pelo Filtro
     navigate("/filtro", { replace: true });
     return null;
   }
+
+  // Helpers para atualizar/remover chips
+  const pushState = (payload) => navigate("/resultados", { state: payload, replace: true });
+  const payloadBase = {
+    tipo: filtrosNorm.tipos,                 // já normalizado
+    precoMaximo: filtrosNorm.precoMaximo,    // number | null
+    avaliacaoMinima: filtrosNorm.avaliacaoMinima, // number | null
+    local: filtrosNorm.local,                // string (lowercase)
+  };
+
+  const removeTipo = (t) => {
+    const novos = filtrosNorm.tipos.filter((x) => x !== t);
+    pushState({ ...payloadBase, tipo: novos });
+  };
+  const removeLocal = () => pushState({ ...payloadBase, local: "" });
+  const removePreco = () => pushState({ ...payloadBase, precoMaximo: null });
+  const removeAvaliacao = () => pushState({ ...payloadBase, avaliacaoMinima: null });
+  const limparTudo = () =>
+    pushState({ tipo: [], precoMaximo: null, avaliacaoMinima: null, local: "" });
+
+  // UI: Chips
+  const Chip = ({ children, onRemove }) => (
+    <span className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-3 py-1.5 rounded-full text-xs">
+      {children}
+      <button
+        aria-label="Remover filtro"
+        onClick={onRemove}
+        className="hover:text-emerald-900"
+        type="button"
+      >
+        <X size={14} />
+      </button>
+    </span>
+  );
 
   return (
     <div className="flex min-h-screen bg-white">
@@ -124,43 +156,73 @@ export default function Resultados() {
       </div>
 
       <div className="flex-1 pt-24 md:pt-12 px-4 md:pl-16">
-        <button
-          onClick={() => navigate("/filtro")}
-          className="mb-6 inline-flex items-center text-green-700 hover:text-green-900 font-medium transition"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-          Voltar para filtros
-        </button>
+        {/* Header/ações */}
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <button
+            onClick={() => navigate("/filtro")}
+            className="inline-flex items-center text-emerald-700 hover:text-emerald-900 font-medium transition"
+          >
+            <ChevronLeft className="mr-2" size={18} />
+            Editar filtros
+          </button>
 
-        <h1 className="text-2xl font-bold text-green-800 mb-4">Resultados da Busca</h1>
-
-        {/* Resumo dos filtros (mantive seu texto) */}
-        <div className="text-sm text-gray-600 mb-6">
-          {filtrosNorm.tipos.length > 0 && (
-            <span className="mr-4">
-              Tipos: <strong>{filtrosNorm.tipos.join(", ")}</strong>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-zinc-600">
+              {resultados.length} resultado{resultados.length !== 1 ? "s" : ""}
             </span>
-          )}
+            <button
+              onClick={limparTudo}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-300 text-zinc-700 hover:bg-zinc-50 text-sm"
+              title="Limpar todos filtros"
+            >
+              <X size={16} />
+              Limpar tudo
+            </button>
+            <button
+              onClick={() => navigate("/filtro")}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 shadow text-sm"
+            >
+              <Filter size={16} />
+              Ajustar
+            </button>
+          </div>
+        </div>
+
+        <h1 className="text-2xl font-bold text-green-800 mb-2">Resultados da Busca</h1>
+
+        {/* Resumo em chips */}
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          {filtrosNorm.tipos.map((t) => (
+            <Chip key={t} onRemove={() => removeTipo(t)}>
+              {t}
+            </Chip>
+          ))}
+
           {filtrosNorm.local && (
-            <span className="mr-4">
-              Local: <strong>{filtrosNorm.local}</strong>
-            </span>
+            <Chip onRemove={removeLocal}>
+              Local: <span className="font-semibold">{filtrosNorm.local}</span>
+            </Chip>
           )}
+
           {filtrosNorm.precoMaximo != null && (
-            <span className="mr-4">
-              Até:{" "}
-              <strong>
-                {filtrosNorm.precoMaximo.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-              </strong>
-            </span>
+            <Chip onRemove={removePreco}>
+              Até <span className="font-semibold">{formatBRL(filtrosNorm.precoMaximo)}</span>
+            </Chip>
           )}
+
           {filtrosNorm.avaliacaoMinima != null && (
-            <span>
-              Nota mínima: <strong>{filtrosNorm.avaliacaoMinima}</strong>
-            </span>
+            <Chip onRemove={removeAvaliacao}>
+              Nota mínima:{" "}
+              <span className="font-semibold">{Number(filtrosNorm.avaliacaoMinima).toFixed(1)}</span>
+            </Chip>
           )}
+
+          {filtrosNorm.tipos.length === 0 &&
+            filtrosNorm.local === "" &&
+            filtrosNorm.precoMaximo == null &&
+            filtrosNorm.avaliacaoMinima == null && (
+              <span className="text-sm text-zinc-500">Sem filtros ativos.</span>
+            )}
         </div>
 
         {/* Lista com CourtCard */}
@@ -175,8 +237,7 @@ export default function Resultados() {
                 variant="default"
                 onClick={() => handleCliqueQuadra(q)}
                 onFavorite={(quadra, fav) => {
-                  // Integração futura de favoritos: api.post/delete
-                  // console.log("Fav resultados:", quadra.id, fav);
+                  // Integração futura de favoritos
                 }}
               />
             ))}
