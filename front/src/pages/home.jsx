@@ -79,6 +79,13 @@ function precoSemSufixoBRL(v) {
   return s; // ← sem /h, para o CourtCard não duplicar
 }
 
+// Número robusto para salvar no backend (aceita "R$ 200", "200,00", etc.)
+function precoToNumberAny(v) {
+  if (typeof v === "number") return v;
+  const n = parseFloat(String(v || "").replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
 function getImagemNome(quadra) {
   const s = quadra?.imagem_url || quadra?.imagem || "";
   const part = String(s).split("/").pop();
@@ -165,11 +172,12 @@ export default function Home() {
     }
     try {
       if (isNowFav) {
+        const precoNumber = precoToNumberAny(quadra?.preco);
         const dadosFavorito = {
           usuario_id: userId,
           quadra_id: quadra?.id || quadra?.quadra_id || 0,
           nome: quadra?.nome,
-          preco: Number.isFinite(+quadra?.preco) ? +quadra?.preco : undefined, // não é obrigatório
+          preco: precoNumber, // número limpo para o backend
           local: quadra?.local,
           imagem_url: getImagemNome(quadra),
           nota: quadra?.avaliacao || quadra?.nota || 4.5,
@@ -230,7 +238,12 @@ export default function Home() {
         const total = Array.isArray(data) ? data.length : 0;
         setNotificacoesNaoLidas(total);
       } catch (err) {
-        console.error("Erro ao buscar notificações:", err?.response?.data || err?.message);
+        if (err?.response?.status === 404) {
+          // Sem notificações no backend
+          setNotificacoesNaoLidas(0);
+        } else {
+          console.error("Erro ao buscar notificações:", err?.response?.data || err?.message);
+        }
       }
     };
     buscarTodasNotificacoes();
@@ -373,8 +386,7 @@ export default function Home() {
           <div ref={sliderRef} className="keen-slider -mx-1 sm:mx-0">
             {quadrasCarrossel.map((q) => {
               const isFav = favSet.has(Number(q.id));
-              // ✅ Sanitiza preco para NÃO duplicar "/h"
-              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
+              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) }; // ✅ sem "/h"
               return (
                 <div key={q.id} className="keen-slider__slide px-1 sm:px-2">
                   <CourtCard
@@ -394,7 +406,7 @@ export default function Home() {
         {/* Quadras em destaque */}
         <section className="mt-8 sm:mt-10">
           <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {quadras.map((q) => {
               const isFav = favSet.has(Number(q.id));
               const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) }; // ✅ idem
