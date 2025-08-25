@@ -307,7 +307,7 @@ export default function Home() {
         {/* HERO novo (gradiente de teste) */}
         <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
-        {/* Categorias rápidas (mantive fora do hero para teste) */}
+        {/* Categorias rápidas (mantidas fora do hero para teste) */}
         <section className="flex gap-4 sm:gap-6 mt-5 sm:mt-6 justify-center flex-wrap">
           {[
             { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
