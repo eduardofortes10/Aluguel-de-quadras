@@ -11,6 +11,7 @@ import { api } from "../services/api";
 import CourtCard from "../components/CourtCard";
 import { toast } from "react-hot-toast";
 import { enviarNotificacao } from "../services/notificacoes";
+import HomeHero from "../components/HomeHero";
 
 // ===== Helpers (reaproveitados do Favoritos / QuadraDetalhe) =====
 async function getUsuarioIdSeguro() {
@@ -177,7 +178,7 @@ export default function Home() {
           usuario_id: userId,
           quadra_id: quadra?.id || quadra?.quadra_id || 0,
           nome: quadra?.nome,
-          preco: precoNumber, // número limpo para o backend
+          preco: precoNumber,
           local: quadra?.local,
           imagem_url: getImagemNome(quadra),
           nota: quadra?.avaliacao || quadra?.nota || 4.5,
@@ -212,7 +213,7 @@ export default function Home() {
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
     mode: "free-snap",
-    slides: { perView: 4, spacing: 16 }, // desktop
+    slides: { perView: 4, spacing: 16 },
     breakpoints: {
       "(max-width: 480px)": { slides: { perView: 1.15, spacing: 8 } },
       "(max-width: 640px)": { slides: { perView: 1.35, spacing: 10 } },
@@ -239,7 +240,6 @@ export default function Home() {
         setNotificacoesNaoLidas(total);
       } catch (err) {
         if (err?.response?.status === 404) {
-          // Sem notificações no backend
           setNotificacoesNaoLidas(0);
         } else {
           console.error("Erro ao buscar notificações:", err?.response?.data || err?.message);
@@ -251,7 +251,7 @@ export default function Home() {
     return () => clearInterval(intervalo);
   }, []);
 
-  // Navegar p/ detalhe (mantém compat)
+  // Navegar p/ detalhe
   const handleQuadraClick = (quadra) => {
     const imagem_nome = quadra.imagem?.split("/").pop();
     navigate(`/quadra/${quadra.id}`, {
@@ -304,80 +304,33 @@ export default function Home() {
       </div>
 
       <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-hidden">
-        {/* Hero */}
-        <section className="relative bg-gradient-to-b from-[#1E8449] to-[#14532d] text-white p-4 sm:p-6 pb-8 sm:pb-10 rounded-b-3xl shadow-md z-10">
-          {/* Sino / Notificações */}
-          <Link to="/notificacao" className="absolute top-4 left-4 sm:left-16">
-            <div className="relative group">
-              <div className="bg-white rounded-full w-10 h-10 shadow flex items-center justify-center group-hover:scale-105 transition">
-                <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 2a6 6 0 00-6 6v2.586l-.707.707A1 1 0 004 13h12a1 1 0 00.707-1.707L16 10.586V8a6 6 0 00-6-6zm0 16a2 2 0 001.995-1.85L12 16H8a2 2 0 001.85 1.995L10 18z" />
-                </svg>
-              </div>
-              {notificacoesNaoLidas > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-semibold px-1.5 py-[1px] rounded-full shadow">
-                  {notificacoesNaoLidas}
-                </span>
-              )}
-            </div>
-          </Link>
+        {/* HERO novo (gradiente de teste) */}
+        <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
-          {/* Dropdown do usuário */}
-          <div className="fixed top-3 right-3 sm:top-4 sm:right-4 z-[9999]">
-            <UserDropdown />
-          </div>
-
-          <h1 className="text-xl sm:text-2xl font-bold text-center">Olá, {nomeUsuario}</h1>
-          <p className="text-xs sm:text-sm mt-1 text-center">Sua quadra, seu jogo!</p>
-
-          {/* Busca + Filtro */}
-          <div className="flex items-center justify-center mt-3 sm:mt-4">
-            <div className="flex items-center bg-white rounded-full px-3 sm:px-4 py-2 shadow-md">
-              <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M5 11a6 6 0 1112 0 6 6 0 01-12 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Procure sua quadra aqui"
-                className="outline-none text-gray-700 w-56 sm:w-64 text-sm"
-              />
-            </div>
-
+        {/* Categorias rápidas (mantive fora do hero para teste) */}
+        <section className="flex gap-4 sm:gap-6 mt-5 sm:mt-6 justify-center flex-wrap">
+          {[
+            { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
+            { nome: "Basquete", img: "/quadras/imagem1logo.png" },
+            { nome: "Vôlei", img: "/quadras/imagem4logo.png" },
+            { nome: "Tênis", img: "/quadras/imagem3logo.png" },
+          ].map(({ nome, img }) => (
             <button
-              className="ml-2 p-2 sm:p-3 bg-white rounded-xl shadow-md hover:bg-green-100"
-              onClick={() => navigate("/filtro")}
+              type="button"
+              key={nome}
+              onClick={() =>
+                navigate("/resultados", {
+                  state: { tipo: [nome], precoMaximo: "", avaliacaoMinima: "", local: "" },
+                })
+              }
+              className="flex flex-col items-center"
             >
-              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 4a1 1 0 011-1h16a1 1 0 01.8 1.6l-6.2 7.9V19a1 1 0 01-1.6.8l-2-1.5a1 1 0 01-.4-.8v-5.8L3.2 5.6A1 1 0 013 4z" />
-              </svg>
+              <div className="bg-white rounded-full p-2 sm:p-3 shadow-md hover:scale-105 transition-transform duration-200">
+                <img src={img} alt={nome} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" />
+              </div>
+              <span className="text-xs sm:text-sm mt-1 capitalize text-black/80">{nome}</span>
             </button>
-          </div>
-
-          {/* Atalhos por tipo */}
-          <div className="flex gap-4 sm:gap-6 mt-5 sm:mt-6 justify-center flex-wrap">
-            {[
-              { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
-              { nome: "Basquete", img: "/quadras/imagem1logo.png" },
-              { nome: "Vôlei", img: "/quadras/imagem4logo.png" },
-              { nome: "Tênis", img: "/quadras/imagem3logo.png" },
-            ].map(({ nome, img }) => (
-              <button
-                type="button"
-                key={nome}
-                onClick={() =>
-                  navigate("/resultados", {
-                    state: { tipo: [nome], precoMaximo: "", avaliacaoMinima: "", local: "" },
-                  })
-                }
-                className="flex flex-col items-center"
-              >
-                <div className="bg-white rounded-full p-2 sm:p-3 shadow-md hover:scale-105 transition-transform duration-200">
-                  <img src={img} alt={nome} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" />
-                </div>
-                <span className="text-xs sm:text-sm mt-1 capitalize text-white drop-shadow">{nome}</span>
-              </button>
-            ))}
-          </div>
+          ))}
         </section>
 
         {/* Carrossel "Para você" */}
@@ -386,7 +339,7 @@ export default function Home() {
           <div ref={sliderRef} className="keen-slider -mx-1 sm:mx-0">
             {quadrasCarrossel.map((q) => {
               const isFav = favSet.has(Number(q.id));
-              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) }; // ✅ sem "/h"
+              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
               return (
                 <div key={q.id} className="keen-slider__slide px-1 sm:px-2">
                   <CourtCard
@@ -409,7 +362,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {quadras.map((q) => {
               const isFav = favSet.has(Number(q.id));
-              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) }; // ✅ idem
+              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
               return (
                 <CourtCard
                   key={`${q.id}-${isFav ? 1 : 0}`}
@@ -458,7 +411,7 @@ export default function Home() {
           </section>
         )}
 
-        {/* RODAPÉ — novo, mais limpo e responsivo */}
+        {/* RODAPÉ */}
         <footer className="bg-[#0f3d26] text-white mt-12">
           <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
