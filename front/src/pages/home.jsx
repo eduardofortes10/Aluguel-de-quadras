@@ -13,6 +13,8 @@ import { toast } from "react-hot-toast";
 import { enviarNotificacao } from "../services/notificacoes";
 import HomeHero from "../components/HomeHero";
 import CarrosselParaVoce from "../components/CarrosselParaVoce";
+import ThemeSwitcher from "../components/ThemeSwitcher";
+
 // ===== Helpers (reaproveitados do Favoritos / QuadraDetalhe) =====
 async function getUsuarioIdSeguro() {
   try {
@@ -77,10 +79,10 @@ function precoSemSufixoBRL(v) {
       s = num.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
     }
   }
-  return s; // ← sem /h, para o CourtCard não duplicar
+  return s;
 }
 
-// Número robusto para salvar no backend (aceita "R$ 200", "200,00", etc.)
+// Número robusto para salvar no backend
 function precoToNumberAny(v) {
   if (typeof v === "number") return v;
   const n = parseFloat(String(v || "").replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
@@ -209,22 +211,21 @@ export default function Home() {
     }
   };
 
-
-// ===== Carrossel (responsivo p/ mobile, desktop igual) =====
-const [sliderRef, instanceRef] = useKeenSlider({
-  loop: true,
-  mode: "free-snap",
-  drag: true,
-  rubberband: true,
-  slides: { perView: 4, spacing: 16 }, // ← DESKTOP permanece igual
-  breakpoints: {
-    "(max-width: 480px)":  { slides: { perView: 1.06, spacing: 10 } }, // peek suave
-    "(max-width: 640px)":  { slides: { perView: 1.2,  spacing: 12 } },
-    "(max-width: 768px)":  { slides: { perView: 1.6,  spacing: 14 } },
-    "(max-width: 1024px)": { slides: { perView: 2.5,  spacing: 14 } },
-    "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
-  },
-});
+  // ===== Carrossel (responsivo p/ mobile, desktop igual) =====
+  const [sliderRef, instanceRef] = useKeenSlider({
+    loop: true,
+    mode: "free-snap",
+    drag: true,
+    rubberband: true,
+    slides: { perView: 4, spacing: 16 }, // DESKTOP
+    breakpoints: {
+      "(max-width: 480px)":  { slides: { perView: 1.06, spacing: 10 } },
+      "(max-width: 640px)":  { slides: { perView: 1.2,  spacing: 12 } },
+      "(max-width: 768px)":  { slides: { perView: 1.6,  spacing: 14 } },
+      "(max-width: 1024px)": { slides: { perView: 2.5,  spacing: 14 } },
+      "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
+    },
+  });
 
   useEffect(() => {
     if (!instanceRef.current) return;
@@ -307,48 +308,54 @@ const [sliderRef, instanceRef] = useKeenSlider({
       </div>
 
       <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-hidden">
-        {/* HERO novo (gradiente de teste) */}
-        <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
+        {/* HERO + ThemeSwitcher */}
+        <div className="relative">
+          <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
-       
+          {/* Desktop: canto superior direito do herói */}
+          <div className="hidden sm:block absolute top-4 right-4 z-20">
+            <ThemeSwitcher />
+          </div>
+
+          {/* Mobile: botão flutuante (sobe se o aviso de cookies estiver aberto) */}
+          <div className={`sm:hidden fixed right-5 z-40 ${mostrarCookies ? "bottom-28" : "bottom-5"}`}>
+            <ThemeSwitcher compact />
+          </div>
+        </div>
 
         {/* Carrossel "Para você" */}
-     <section className="mt-8 sm:mt-10">
-  <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
+        <section className="mt-8 sm:mt-10">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
 
-  <div className="relative">
-    {/* fades laterais só no mobile (melhora a leitura do scroll) */}
-    <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent sm:hidden" />
-    <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:hidden" />
+          <div className="relative">
+            {/* fades laterais só no mobile (melhora a leitura do scroll) */}
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent sm:hidden" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:hidden" />
 
-    <div
-      ref={sliderRef}
-      className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0"
-    >
-      {quadrasCarrossel.map((q) => {
-        const isFav = favSet.has(Number(q.id));
-        const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-        return (
-          <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
-            <CourtCard
-              key={`${q.id}-${isFav ? 1 : 0}`}
-              quadra={qSan}
-              variant="compact"
-              isFavorited={isFav}
-              onClick={() => handleQuadraClick(qSan)}
-              onFavorite={handleFavorite}
-            />
+            <div ref={sliderRef} className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0">
+              {quadrasCarrossel.map((q) => {
+                const isFav = favSet.has(Number(q.id));
+                const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
+                return (
+                  <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
+                    <CourtCard
+                      key={`${q.id}-${isFav ? 1 : 0}`}
+                      quadra={qSan}
+                      variant="compact"
+                      isFavorited={isFav}
+                      onClick={() => handleQuadraClick(qSan)}
+                      onFavorite={handleFavorite}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        );
-      })}
-    </div>
-  </div>
-</section>
-
+        </section>
 
         {/* Quadras em destaque */}
         <section className="mt-8 sm:mt-10">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-brand-strong">Quadras em destaque</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {quadras.map((q) => {
               const isFav = favSet.has(Number(q.id));
@@ -369,7 +376,7 @@ const [sliderRef, instanceRef] = useKeenSlider({
 
         {/* COOKIES */}
         {mostrarCookies && (
-          <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50">
+          <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-brand text-white rounded-xl shadow-xl z-50">
             <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
             <p className="text-sm mb-3">Usamos cookies para melhorar sua experiência e analisar o tráfego do site.</p>
             <div className="flex flex-wrap gap-2">
@@ -378,7 +385,7 @@ const [sliderRef, instanceRef] = useKeenSlider({
                   localStorage.setItem("cookiesAceitos", "true");
                   setMostrarCookies(false);
                 }}
-                className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+                className="bg-white text-brand-strong px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/90 transition"
               >
                 Aceitar todos
               </button>
@@ -387,7 +394,7 @@ const [sliderRef, instanceRef] = useKeenSlider({
                   localStorage.setItem("cookiesAceitos", "true");
                   setMostrarCookies(false);
                 }}
-                className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
+                className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition"
               >
                 Rejeitar
               </button>
@@ -401,8 +408,8 @@ const [sliderRef, instanceRef] = useKeenSlider({
           </section>
         )}
 
-        {/* RODAPÉ */}
-        <footer className="bg-[#0f3d26] text-white mt-12">
+        {/* RODAPÉ (usa a cor final do gradiente do tema) */}
+        <footer className="bg-[var(--grad-to)] text-white mt-12">
           <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
               <div>

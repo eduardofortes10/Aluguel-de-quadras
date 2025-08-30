@@ -83,26 +83,28 @@ export default function HomeHero({ nomeUsuario = "Usuário", notificacoesNaoLida
   };
 
   return (
-    <section
-      ref={heroRef}
-      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800 text-white p-4 sm:p-6 shadow-xl"
-      style={{ "--mx": "50%", "--my": "50%" }}
-    >
+   <section
+  ref={heroRef}
+className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--grad-from)] via-[var(--grad-via)] to-[var(--grad-to)] text-white p-4 sm:p-6 shadow-xl"
+  style={{ "--mx": "50%", "--my": "50%" }}
+>
+
       {/* brilhos de fundo (z-0) */}
       <div ref={glowTR} className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-3xl transition-transform duration-200 will-change-transform z-0" />
       <div ref={glowBL} className="pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl transition-transform duration-200 will-change-transform z-0" />
 
       {/* spotlight do mouse (entre fundo e conteúdo) */}
       <div
-        ref={spotRef}
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-150"
-        style={{
-          backgroundImage:
-            "radial-gradient(820px circle at var(--mx) var(--my), rgba(255,255,255,0.28), rgba(255,255,255,0.14) 38%, transparent 62%)",
-          mixBlendMode: "soft-light", // dá contraste em qualquer gradiente
-        }}
-      />
+  ref={spotRef}
+  aria-hidden
+  className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-150"
+  style={{
+    backgroundImage:
+      "radial-gradient(700px circle at var(--mx) var(--my), rgba(255,255,255,0.36), rgba(255,255,255,0.18) 35%, transparent 60%)",
+    mixBlendMode: "screen",   // troquei p/ garantir contraste
+  }}
+/>
+
 
       {/* conteúdo (z-10) */}
       <div ref={innerRef} className="relative z-10 will-change-transform transition-transform duration-150">

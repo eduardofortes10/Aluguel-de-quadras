@@ -4,9 +4,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./index.css";
 import { BrowserRouter } from "react-router-dom";
-import ThemeProvider from "./theme/ThemeProvider.jsx"; // 👈 importe o provider
-
-// garante que a configuração global do axios rode sempre
+import ThemeProvider from "./theme/ThemeProvider.jsx";
 import "./services/api";
 
 ReactDOM.createRoot(document.getElementById("root")).render(

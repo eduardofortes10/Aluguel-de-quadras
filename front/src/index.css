@@ -1,6 +1,43 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+:root,
+.theme-emerald {
+  --brand: #059669;
+  --brand-strong: #0f766e;
+  --grad-from: #047857;
+  --grad-via:  #059669;
+  --grad-to:   #065f46;
+}
+
+.theme-indigo {
+  --brand: #4f46e5;
+  --brand-strong: #3730a3;
+  --grad-from: #3730a3;
+  --grad-via:  #4f46e5;
+  --grad-to:   #1e3a8a;
+}
+
+.theme-purple {
+  --brand: #8b5cf6;
+  --brand-strong: #6d28d9;
+  --grad-from: #6d28d9;
+  --grad-via:  #8b5cf6;
+  --grad-to:   #5b21b6;
+}
+
+.theme-orange {
+  --brand: #f59e0b;
+  --brand-strong: #d97706;
+  --grad-from: #c2410c;
+  --grad-via:  #f59e0b;
+  --grad-to:   #b45309;
+}
+
+/* utilitários (opcional) */
+.text-brand { color: var(--brand); }
+.text-brand-strong { color: var(--brand-strong); }
+.bg-brand { background-color: var(--brand); }
 
 @keyframes blob {
   0%, 100% { transform: scale(1) translate(0, 0); }
@@ -63,41 +100,3 @@
     transform: rotate(360deg);
   }
 }
-/* Temas baseados em CSS variables */
-:root,
-.theme-emerald {
-  --brand: #059669;
-  --brand-strong: #0f766e;
-  --grad-from: #047857;
-  --grad-via:  #059669;
-  --grad-to:   #065f46;
-}
-
-.theme-indigo {
-  --brand: #4f46e5;
-  --brand-strong: #3730a3;
-  --grad-from: #3730a3;
-  --grad-via:  #4f46e5;
-  --grad-to:   #1e3a8a;
-}
-
-.theme-purple {
-  --brand: #8b5cf6;
-  --brand-strong: #6d28d9;
-  --grad-from: #6d28d9;
-  --grad-via:  #8b5cf6;
-  --grad-to:   #5b21b6;
-}
-
-.theme-orange {
-  --brand: #f59e0b;
-  --brand-strong: #d97706;
-  --grad-from: #c2410c;
-  --grad-via:  #f59e0b;
-  --grad-to:   #b45309;
-}
-
-/* utilitários simples (opcional) */
-.text-brand    { color: var(--brand); }
-.text-brand-strong { color: var(--brand-strong); }
-.bg-brand      { background-color: var(--brand); }
