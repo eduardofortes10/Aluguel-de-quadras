@@ -119,16 +119,18 @@ export default function HomeHero({
                 style={{ WebkitTapHighlightColor: "transparent" }}
               >
                 {/* bolinha com CROP + ZOOM */}
-                <span className="relative shrink-0 w-10 h-10 rounded-full overflow-hidden bg-white/0">
-                  <img
-                    src={img}
-                    alt={nome}
-                    className="absolute inset-0 w-full h-full object-cover
-                               scale-[1.6] md:scale-[1.4]"  // ↑ ajuste o fator de zoom aqui
-                    loading="eager"
-                    draggable={false}
-                  />
-                </span>
+                {/* bolinha com CROP + ZOOM (menor) */}
+<span className="relative shrink-0 w-9 h-9 rounded-full overflow-hidden bg-white/0">
+  <img
+    src={img}
+    alt={nome}
+    className="absolute inset-0 w-full h-full object-cover
+               scale-[1.35] md:scale-[1.25]"  // antes era 1.6 / 1.4
+    loading="eager"
+    draggable={false}
+  />
+</span>
+
                 <span className="text-sm font-medium">{nome}</span>
               </button>
             </li>
