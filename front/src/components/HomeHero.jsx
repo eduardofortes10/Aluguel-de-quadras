@@ -10,7 +10,6 @@ export default function HomeHero({
   const navigate = useNavigate();
   const inputRef = useRef(null);
 
-  // use as mesmas imagens que você já tem em /public/quadras
   const categorias = [
     { nome: "Futebol",  img: "/quadras/Imagem2logo.png" },
     { nome: "Basquete", img: "/quadras/imagem1logo.png" },
@@ -35,7 +34,7 @@ export default function HomeHero({
                  bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800
                  text-white p-4 sm:p-6 shadow-xl"
     >
-      {/* brilhos suaves */}
+      {/* brilhos suaves atrás de tudo */}
       <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
 
@@ -66,7 +65,6 @@ export default function HomeHero({
             )}
           </Link>
 
-          {/* pílula compacta do usuário */}
           <div className="rounded-full bg-white/10 px-2 py-1 backdrop-blur-md ring-1 ring-white/20 max-w-[150px] overflow-hidden">
             <UserDropdown />
           </div>
@@ -108,17 +106,18 @@ export default function HomeHero({
         </div>
       </div>
 
-      {/* categorias rápidas — sem ring, com border e ícones padronizados */}
-      <div className="mt-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* categorias rápidas — outline interno + ícones padronizados */}
+      <div className="relative z-10 isolate mt-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <ul className="flex gap-3 min-w-max">
           {categorias.map(({ nome, img }) => (
-            <li key={nome}>
+            <li key={nome} className="ring-0 shadow-none">
               <button
                 onClick={() => irParaCategoria(nome)}
                 className="
                   inline-flex items-center gap-2 h-11 px-3 pr-4 rounded-full
-                  border border-white/25 bg-white/10 hover:bg-white/15
-                  ring-0 focus:ring-0 focus:outline-none shadow-none backdrop-blur-0
+                  outline outline-1 outline-white/25 -outline-offset-1
+                  bg-white/10 hover:bg-white/15
+                  ring-0 focus:ring-0 focus:outline-white/30 shadow-none
                   transition
                 "
                 style={{ WebkitTapHighlightColor: "transparent" }}
