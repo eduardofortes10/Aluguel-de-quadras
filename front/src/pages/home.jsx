@@ -13,7 +13,7 @@ import { toast } from "react-hot-toast";
 import { enviarNotificacao } from "../services/notificacoes";
 import HomeHero from "../components/HomeHero";
 import CarrosselParaVoce from "../components/CarrosselParaVoce";
-import ThemeSwitcher from "../components/ThemeSwitcher";
+
 
 // ===== Helpers (reaproveitados do Favoritos / QuadraDetalhe) =====
 async function getUsuarioIdSeguro() {
