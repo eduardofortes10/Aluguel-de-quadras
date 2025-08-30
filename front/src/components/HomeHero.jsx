@@ -12,10 +12,10 @@ export default function HomeHero({
 
   // use as mesmas imagens que você já tem em /public/quadras
   const categorias = [
-    { nome: "Futebol",   img: "/quadras/Imagem2logo.png" },
-    { nome: "Basquete",  img: "/quadras/imagem1logo.png" },
-    { nome: "Vôlei",     img: "/quadras/imagem4logo.png" },
-    { nome: "Tênis",     img: "/quadras/imagem3logo.png" },
+    { nome: "Futebol",  img: "/quadras/Imagem2logo.png" },
+    { nome: "Basquete", img: "/quadras/imagem1logo.png" },
+    { nome: "Vôlei",    img: "/quadras/imagem4logo.png" },
+    { nome: "Tênis",    img: "/quadras/imagem3logo.png" },
   ];
 
   const buscar = () => {
@@ -30,9 +30,11 @@ export default function HomeHero({
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl 
-      bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800 
-      text-white p-4 sm:p-6 shadow-xl">
+    <section
+      className="relative overflow-hidden rounded-3xl
+                 bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800
+                 text-white p-4 sm:p-6 shadow-xl"
+    >
       {/* brilhos suaves */}
       <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
@@ -50,8 +52,8 @@ export default function HomeHero({
         <div className="shrink-0 flex items-center gap-2">
           <Link
             to="/notificacao"
-            className="relative rounded-full bg-white/10 p-2 hover:bg-white/15 
-              backdrop-blur-md ring-1 ring-white/20 transition"
+            className="relative rounded-full bg-white/10 p-2 hover:bg-white/15
+                       backdrop-blur-md ring-1 ring-white/20 transition"
             aria-label="Notificações"
           >
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -73,8 +75,8 @@ export default function HomeHero({
 
       {/* busca */}
       <div className="relative z-10 mt-4">
-        <div className="flex items-center bg-white/15 hover:bg-white/20 
-            backdrop-blur-md ring-1 ring-white/30 rounded-2xl pl-3 pr-2 h-12 transition">
+        <div className="flex items-center bg-white/15 hover:bg-white/20
+                        backdrop-blur-md ring-1 ring-white/30 rounded-2xl pl-3 pr-2 h-12 transition">
           <svg className="w-5 h-5 mr-2 opacity-90" viewBox="0 0 24 24" fill="currentColor">
             <path d="M10 4a6 6 0 014.472 9.944l4.292 4.292a1 1 0 01-1.414 1.414l-4.292-4.292A6 6 0 1110 4zm0 2a4 4 0 100 8 4 4 0 000-8z" />
           </svg>
@@ -87,15 +89,15 @@ export default function HomeHero({
           />
           <button
             onClick={buscar}
-            className="ml-2 bg-white text-emerald-700 px-3 py-2 rounded-lg 
-              text-sm font-medium hover:shadow-md transition"
+            className="ml-2 bg-white text-emerald-700 px-3 py-2 rounded-lg
+                       text-sm font-medium hover:shadow-md transition"
           >
             Buscar
           </button>
           <button
             onClick={() => navigate("/filtro")}
-            className="ml-2 bg-white/15 hover:bg-white/25 text-white p-2 rounded-lg 
-              ring-1 ring-white/40 transition"
+            className="ml-2 bg-white/15 hover:bg-white/25 text-white p-2 rounded-lg
+                       ring-1 ring-white/40 transition"
             title="Filtros"
             aria-label="Abrir filtros"
           >
@@ -106,38 +108,29 @@ export default function HomeHero({
         </div>
       </div>
 
-     {/* categorias rápidas — substituir o bloco atual por este */}
-<div className="mt-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-  <ul className="flex gap-3 min-w-max">
-    {categorias.map(({ nome, img }) => (
-      <li key={nome}>
-        <button
-          onClick={() =>
-            navigate("/resultados", {
-              state: { tipo: [nome], precoMaximo: "", avaliacaoMinima: "", local: "" },
-            })
-          }
-          className="inline-flex items-center gap-2
-                     rounded-full border border-white/20
-                     bg-white/10 hover:bg-white/15
-                     px-3 pr-4 h-11 transition"
-        >
-          {/* bolinha do ícone (tamanho fixo e padding igual pra todos) */}
-          <span className="shrink-0 flex items-center justify-center
-                           w-9 h-9 rounded-full bg-white">
-            <img
-              src={img}
-              alt={nome}
-              className="w-5 h-5 object-contain"
-              loading="eager"
-            />
-          </span>
-          <span className="text-sm font-medium">{nome}</span>
-        </button>
-      </li>
-    ))}
-  </ul>
-
+      {/* categorias rápidas — sem ring, com border e ícones padronizados */}
+      <div className="mt-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <ul className="flex gap-3 min-w-max">
+          {categorias.map(({ nome, img }) => (
+            <li key={nome}>
+              <button
+                onClick={() => irParaCategoria(nome)}
+                className="
+                  inline-flex items-center gap-2 h-11 px-3 pr-4 rounded-full
+                  border border-white/25 bg-white/10 hover:bg-white/15
+                  ring-0 focus:ring-0 focus:outline-none shadow-none backdrop-blur-0
+                  transition
+                "
+                style={{ WebkitTapHighlightColor: "transparent" }}
+              >
+                <span className="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-white">
+                  <img src={img} alt={nome} className="w-5 h-5 object-contain" loading="eager" />
+                </span>
+                <span className="text-sm font-medium">{nome}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   );
