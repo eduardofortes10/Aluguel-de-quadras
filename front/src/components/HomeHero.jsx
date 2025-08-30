@@ -85,8 +85,7 @@ export default function HomeHero({ nomeUsuario = "Usuário", notificacoesNaoLida
   return (
    <section
   ref={heroRef}
-className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[var(--grad-from)] via-[var(--grad-via)] to-[var(--grad-to)] text-white p-4 sm:p-6 shadow-xl"
-  style={{ "--mx": "50%", "--my": "50%" }}
+  className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800 text-white p-4 sm:p-6 shadow-xl"
 >
 
       {/* brilhos de fundo (z-0) */}

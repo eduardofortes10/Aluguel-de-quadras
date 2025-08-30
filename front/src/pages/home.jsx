@@ -4,7 +4,6 @@ import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import { useNavigate, Link } from "react-router-dom";
 import { quadras, quadrasCarrossel } from "../data/quadras";
-import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
 import Sidebar from "../components/Sidebar";
 import { api } from "../services/api";
@@ -12,10 +11,8 @@ import CourtCard from "../components/CourtCard";
 import { toast } from "react-hot-toast";
 import { enviarNotificacao } from "../services/notificacoes";
 import HomeHero from "../components/HomeHero";
-import CarrosselParaVoce from "../components/CarrosselParaVoce";
 
-
-// ===== Helpers (reaproveitados do Favoritos / QuadraDetalhe) =====
+// ===== Helpers =====
 async function getUsuarioIdSeguro() {
   try {
     const raw = localStorage.getItem("usuario");
@@ -64,7 +61,6 @@ function normalizarFavorito(f) {
   return { favoritoId, quadraId, nome, preco, local, tipo, nota, imagem_url, _raw: f };
 }
 
-// Remove qualquer sufixo "/hora" ou "/h" e garante BRL sem duplicar sufixos
 function precoSemSufixoBRL(v) {
   if (typeof v === "number") {
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -82,20 +78,17 @@ function precoSemSufixoBRL(v) {
   return s;
 }
 
-// Número robusto para salvar no backend
 function precoToNumberAny(v) {
   if (typeof v === "number") return v;
   const n = parseFloat(String(v || "").replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
   return Number.isFinite(n) ? n : 0;
 }
-
 function getImagemNome(quadra) {
   const s = quadra?.imagem_url || quadra?.imagem || "";
   const part = String(s).split("/").pop();
   return part || "sem-imagem.png";
 }
 
-// Helper para mostrar nome do usuário
 async function resolverNomeUsuario() {
   try {
     const raw = localStorage.getItem("usuario");
@@ -209,7 +202,7 @@ export default function Home() {
     } finally {
       await sincronizarFavoritos(userId);
     }
-  };
+  }
 
   // ===== Carrossel (responsivo p/ mobile, desktop igual) =====
   const [sliderRef, instanceRef] = useKeenSlider({
@@ -308,27 +301,14 @@ export default function Home() {
       </div>
 
       <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-hidden">
-        {/* HERO + ThemeSwitcher */}
-        <div className="relative">
-          <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
-
-          {/* Desktop: canto superior direito do herói */}
-          <div className="hidden sm:block absolute top-4 right-4 z-20">
-            <ThemeSwitcher />
-          </div>
-
-          {/* Mobile: botão flutuante (sobe se o aviso de cookies estiver aberto) */}
-          <div className={`sm:hidden fixed right-5 z-40 ${mostrarCookies ? "bottom-28" : "bottom-5"}`}>
-            <ThemeSwitcher compact />
-          </div>
-        </div>
+        {/* HERO */}
+        <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
         {/* Carrossel "Para você" */}
         <section className="mt-8 sm:mt-10">
           <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
 
           <div className="relative">
-            {/* fades laterais só no mobile (melhora a leitura do scroll) */}
             <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent sm:hidden" />
             <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:hidden" />
 
@@ -355,7 +335,7 @@ export default function Home() {
 
         {/* Quadras em destaque */}
         <section className="mt-8 sm:mt-10">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-brand-strong">Quadras em destaque</h2>
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {quadras.map((q) => {
               const isFav = favSet.has(Number(q.id));
@@ -376,7 +356,7 @@ export default function Home() {
 
         {/* COOKIES */}
         {mostrarCookies && (
-          <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-brand text-white rounded-xl shadow-xl z-50">
+          <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50">
             <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
             <p className="text-sm mb-3">Usamos cookies para melhorar sua experiência e analisar o tráfego do site.</p>
             <div className="flex flex-wrap gap-2">
@@ -385,7 +365,7 @@ export default function Home() {
                   localStorage.setItem("cookiesAceitos", "true");
                   setMostrarCookies(false);
                 }}
-                className="bg-white text-brand-strong px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/90 transition"
+                className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
               >
                 Aceitar todos
               </button>
@@ -394,7 +374,7 @@ export default function Home() {
                   localStorage.setItem("cookiesAceitos", "true");
                   setMostrarCookies(false);
                 }}
-                className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/10 transition"
+                className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
               >
                 Rejeitar
               </button>
@@ -408,8 +388,8 @@ export default function Home() {
           </section>
         )}
 
-        {/* RODAPÉ (usa a cor final do gradiente do tema) */}
-        <footer className="bg-[var(--grad-to)] text-white mt-12">
+        {/* RODAPÉ */}
+        <footer className="bg-[#0f3d26] text-white mt-12">
           <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
               <div>
@@ -418,7 +398,6 @@ export default function Home() {
                   Encontre, alugue e jogue nas melhores quadras da sua cidade.
                 </p>
               </div>
-
               <div>
                 <h3 className="text-base font-bold mb-2">Navegação</h3>
                 <ul className="space-y-1 text-white/80">
@@ -427,7 +406,6 @@ export default function Home() {
                   <li><Link to="/filtro" className="hover:text-white">Filtro</Link></li>
                 </ul>
               </div>
-
               <div>
                 <h3 className="text-base font-bold mb-2">Suporte</h3>
                 <ul className="space-y-1 text-white/80">
@@ -436,7 +414,6 @@ export default function Home() {
                   <li><a href="#" className="hover:text-white">Privacidade</a></li>
                 </ul>
               </div>
-
               <div>
                 <h3 className="text-base font-bold mb-2">Contato</h3>
                 <ul className="space-y-1 text-white/80">
