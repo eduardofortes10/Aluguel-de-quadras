@@ -1,7 +1,6 @@
 // src/pages/Home.jsx
 import React, { useEffect, useState } from "react";
-import { useKeenSlider } from "keen-slider/react";
-import "keen-slider/keen-slider.min.css";
+// ❌ removido: useKeenSlider e import do CSS, o novo carrossel já importa o CSS dele
 import { useNavigate, Link } from "react-router-dom";
 import { quadras, quadrasCarrossel } from "../data/quadras";
 import UserDropdown from "../components/DropdownUser";
@@ -12,6 +11,7 @@ import CourtCard from "../components/CourtCard";
 import { toast } from "react-hot-toast";
 import { enviarNotificacao } from "../services/notificacoes";
 import HomeHero from "../components/HomeHero";
+import CarrosselParaVoce from "../components/CarrosselParaVoce";
 
 // ===== Helpers (reaproveitados do Favoritos / QuadraDetalhe) =====
 async function getUsuarioIdSeguro() {
@@ -62,7 +62,6 @@ function normalizarFavorito(f) {
   return { favoritoId, quadraId, nome, preco, local, tipo, nota, imagem_url, _raw: f };
 }
 
-// Remove qualquer sufixo "/hora" ou "/h" e garante BRL sem duplicar sufixos
 function precoSemSufixoBRL(v) {
   if (typeof v === "number") {
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -77,10 +76,9 @@ function precoSemSufixoBRL(v) {
       s = num.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
     }
   }
-  return s; // ← sem /h, para o CourtCard não duplicar
+  return s;
 }
 
-// Número robusto para salvar no backend (aceita "R$ 200", "200,00", etc.)
 function precoToNumberAny(v) {
   if (typeof v === "number") return v;
   const n = parseFloat(String(v || "").replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
@@ -209,26 +207,6 @@ export default function Home() {
     }
   };
 
-  // ===== Carrossel (responsivo p/ mobile) =====
-  const [sliderRef, instanceRef] = useKeenSlider({
-    loop: true,
-    mode: "free-snap",
-    slides: { perView: 4, spacing: 16 },
-    breakpoints: {
-      "(max-width: 480px)": { slides: { perView: 1.15, spacing: 8 } },
-      "(max-width: 640px)": { slides: { perView: 1.35, spacing: 10 } },
-      "(max-width: 768px)": { slides: { perView: 1.75, spacing: 12 } },
-      "(max-width: 1024px)": { slides: { perView: 2.5, spacing: 14 } },
-      "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
-    },
-  });
-
-  useEffect(() => {
-    if (!instanceRef.current) return;
-    const id = setInterval(() => instanceRef.current?.next(), 5000);
-    return () => clearInterval(id);
-  }, [instanceRef]);
-
   // Notificações
   useEffect(() => {
     const usuario = JSON.parse(localStorage.getItem("usuario"));
@@ -303,158 +281,134 @@ export default function Home() {
         <MobileNav />
       </div>
 
-      <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-hidden">
-        {/* HERO novo (gradiente de teste) */}
-        <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
+      {/* topo com safe-area para não “comer” o herói no mobile */}
+      <main className="flex-1 text-black transition-colors px-4 md:pl-16 
+        pt-[calc(env(safe-area-inset-top)+56px)] md:pt-6">
+        <div className="max-w-7xl mx-auto">
+          {/* HERO */}
+          <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
-        {/* Categorias rápidas (mantidas fora do hero para teste) */}
-        <section className="flex gap-4 sm:gap-6 mt-5 sm:mt-6 justify-center flex-wrap">
-          {[
-            { nome: "Futebol", img: "/quadras/Imagem2logo.png" },
-            { nome: "Basquete", img: "/quadras/imagem1logo.png" },
-            { nome: "Vôlei", img: "/quadras/imagem4logo.png" },
-            { nome: "Tênis", img: "/quadras/imagem3logo.png" },
-          ].map(({ nome, img }) => (
-            <button
-              type="button"
-              key={nome}
-              onClick={() =>
-                navigate("/resultados", {
-                  state: { tipo: [nome], precoMaximo: "", avaliacaoMinima: "", local: "" },
-                })
-              }
-              className="flex flex-col items-center"
-            >
-              <div className="bg-white rounded-full p-2 sm:p-3 shadow-md hover:scale-105 transition-transform duration-200">
-                <img src={img} alt={nome} className="w-9 h-9 sm:w-10 sm:h-10 object-contain" />
-              </div>
-              <span className="text-xs sm:text-sm mt-1 capitalize text-black/80">{nome}</span>
-            </button>
-          ))}
-        </section>
+          {/* IMPORTANTE: os ícones de categorias FORA do hero foram removidos.
+              Se você ainda ver aqueles ícones, procure e apague qualquer bloco
+              parecido com “Futebol / Basquete / Vôlei / Tênis” abaixo do hero. */}
 
-        {/* Carrossel "Para você" */}
-        <section className="mt-8 sm:mt-10 px-1 sm:px-0">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
-          <div ref={sliderRef} className="keen-slider -mx-1 sm:mx-0">
-            {quadrasCarrossel.map((q) => {
-              const isFav = favSet.has(Number(q.id));
-              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-              return (
-                <div key={q.id} className="keen-slider__slide px-1 sm:px-2">
+          {/* Carrossel "Para você" (mobile-first) */}
+          <section className="mt-6 sm:mt-8">
+            <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Para você</h2>
+            <CarrosselParaVoce
+              items={quadrasCarrossel.map((q) => ({
+                id: q.id,
+                nome: q.nome,
+                imagem: q.imagem,
+                local: q.local,
+                // passa número para o componente montar "R$.../h"
+                preco: precoToNumberAny(q.preco),
+                avaliacao: q.avaliacao ?? q.nota,
+                tipo: q.tipo,
+              }))}
+            />
+          </section>
+
+          {/* Quadras em destaque */}
+          <section className="mt-8 sm:mt-10">
+            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {quadras.map((q) => {
+                const isFav = favSet.has(Number(q.id));
+                const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
+                return (
                   <CourtCard
                     key={`${q.id}-${isFav ? 1 : 0}`}
                     quadra={qSan}
-                    variant="compact"
+                    variant="default"
                     isFavorited={isFav}
                     onClick={() => handleQuadraClick(qSan)}
                     onFavorite={handleFavorite}
                   />
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Quadras em destaque */}
-        <section className="mt-8 sm:mt-10">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {quadras.map((q) => {
-              const isFav = favSet.has(Number(q.id));
-              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-              return (
-                <CourtCard
-                  key={`${q.id}-${isFav ? 1 : 0}`}
-                  quadra={qSan}
-                  variant="default"
-                  isFavorited={isFav}
-                  onClick={() => handleQuadraClick(qSan)}
-                  onFavorite={handleFavorite}
-                />
-              );
-            })}
-          </div>
-        </section>
-
-        {/* COOKIES */}
-        {mostrarCookies && (
-          <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50">
-            <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
-            <p className="text-sm mb-3">Usamos cookies para melhorar sua experiência e analisar o tráfego do site.</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  localStorage.setItem("cookiesAceitos", "true");
-                  setMostrarCookies(false);
-                }}
-                className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
-              >
-                Aceitar todos
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.setItem("cookiesAceitos", "true");
-                  setMostrarCookies(false);
-                }}
-                className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
-              >
-                Rejeitar
-              </button>
-              <button
-                onClick={() => setMostrarCookies(false)}
-                className="w-full text-center mt-2 text-xs underline text-white/80 hover:text-white"
-              >
-                Fechar
-              </button>
+                );
+              })}
             </div>
           </section>
-        )}
 
-        {/* RODAPÉ */}
-        <footer className="bg-[#0f3d26] text-white mt-12">
-          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
-              <div>
-                <h3 className="text-base font-bold mb-2">Aluguel de Quadras</h3>
-                <p className="text-white/80">
-                  Encontre, alugue e jogue nas melhores quadras da sua cidade.
-                </p>
+          {/* COOKIES */}
+          {mostrarCookies && (
+            <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50">
+              <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
+              <p className="text-sm mb-3">Usamos cookies para melhorar sua experiência e analisar o tráfego do site.</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    localStorage.setItem("cookiesAceitos", "true");
+                    setMostrarCookies(false);
+                  }}
+                  className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+                >
+                  Aceitar todos
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem("cookiesAceitos", "true");
+                    setMostrarCookies(false);
+                  }}
+                  className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
+                >
+                  Rejeitar
+                </button>
+                <button
+                  onClick={() => setMostrarCookies(false)}
+                  className="w-full text-center mt-2 text-xs underline text-white/80 hover:text-white"
+                >
+                  Fechar
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* RODAPÉ */}
+          <footer className="bg-[#0f3d26] text-white mt-12">
+            <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
+                <div>
+                  <h3 className="text-base font-bold mb-2">Aluguel de Quadras</h3>
+                  <p className="text-white/80">
+                    Encontre, alugue e jogue nas melhores quadras da sua cidade.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-bold mb-2">Navegação</h3>
+                  <ul className="space-y-1 text-white/80">
+                    <li><Link to="/home" className="hover:text-white">Home</Link></li>
+                    <li><Link to="/resultados" className="hover:text-white">Quadras</Link></li>
+                    <li><Link to="/filtro" className="hover:text-white">Filtro</Link></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-bold mb-2">Suporte</h3>
+                  <ul className="space-y-1 text-white/80">
+                    <li><a href="#" className="hover:text-white">Central de ajuda</a></li>
+                    <li><a href="#" className="hover:text-white">Termos</a></li>
+                    <li><a href="#" className="hover:text-white">Privacidade</a></li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="text-base font-bold mb-2">Contato</h3>
+                  <ul className="space-y-1 text-white/80">
+                    <li>📧 eduardo_fortes@gmail.com</li>
+                    <li>📞 +55 (19) 99938-7274</li>
+                  </ul>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-base font-bold mb-2">Navegação</h3>
-                <ul className="space-y-1 text-white/80">
-                  <li><Link to="/home" className="hover:text-white">Home</Link></li>
-                  <li><Link to="/resultados" className="hover:text-white">Quadras</Link></li>
-                  <li><Link to="/filtro" className="hover:text-white">Filtro</Link></li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold mb-2">Suporte</h3>
-                <ul className="space-y-1 text-white/80">
-                  <li><a href="#" className="hover:text-white">Central de ajuda</a></li>
-                  <li><a href="#" className="hover:text-white">Termos</a></li>
-                  <li><a href="#" className="hover:text-white">Privacidade</a></li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold mb-2">Contato</h3>
-                <ul className="space-y-1 text-white/80">
-                  <li>📧 eduardo_fortes@gmail.com</li>
-                  <li>📞 +55 (19) 99938-7274</li>
-                </ul>
+              <div className="mt-6 sm:mt-8 border-t border-white/15 pt-4 text-[12px] sm:text-xs flex flex-col sm:flex-row items-center justify-between gap-2 text-white/70">
+                <p>© 2025 Aluguel de Quadras — Todos os direitos reservados.</p>
+                <p>Feito com ❤️ para quem ama esporte.</p>
               </div>
             </div>
-
-            <div className="mt-6 sm:mt-8 border-t border-white/15 pt-4 text-[12px] sm:text-xs flex flex-col sm:flex-row items-center justify-between gap-2 text-white/70">
-              <p>© 2025 Aluguel de Quadras — Todos os direitos reservados.</p>
-              <p>Feito com ❤️ para quem ama esporte.</p>
-            </div>
-          </div>
-        </footer>
+          </footer>
+        </div>
       </main>
     </div>
   );
