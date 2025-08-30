@@ -2,15 +2,23 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- (opcional) melhora o safe-area em iOS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Aluguel de Quadras</title>
 
     <!-- Ícone do site -->
     <link rel="icon" type="image/png" href="/quadras/logo-quadraflex.png" />
     <link rel="shortcut icon" type="image/png" href="/quadras/logo-quadraflex.png" />
     <link rel="apple-touch-icon" href="/quadras/logo-quadraflex.png" />
-    <!-- Cor da barra do navegador (mobile) -->
     <meta name="theme-color" content="#14532d" />
+
+    <!-- 👇 ADICIONE ISSO: aplica a classe de tema antes do React montar -->
+    <script>
+      (function() {
+        var theme = localStorage.getItem('theme') || 'theme-emerald';
+        document.documentElement.classList.add(theme);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
