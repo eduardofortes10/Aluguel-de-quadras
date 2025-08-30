@@ -209,19 +209,22 @@ export default function Home() {
     }
   };
 
-  // ===== Carrossel (responsivo p/ mobile) =====
-  const [sliderRef, instanceRef] = useKeenSlider({
-    loop: true,
-    mode: "free-snap",
-    slides: { perView: 4, spacing: 16 },
-    breakpoints: {
-      "(max-width: 480px)": { slides: { perView: 1.15, spacing: 8 } },
-      "(max-width: 640px)": { slides: { perView: 1.35, spacing: 10 } },
-      "(max-width: 768px)": { slides: { perView: 1.75, spacing: 12 } },
-      "(max-width: 1024px)": { slides: { perView: 2.5, spacing: 14 } },
-      "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
-    },
-  });
+
+// ===== Carrossel (responsivo p/ mobile, desktop igual) =====
+const [sliderRef, instanceRef] = useKeenSlider({
+  loop: true,
+  mode: "free-snap",
+  drag: true,
+  rubberband: true,
+  slides: { perView: 4, spacing: 16 }, // ← DESKTOP permanece igual
+  breakpoints: {
+    "(max-width: 480px)":  { slides: { perView: 1.06, spacing: 10 } }, // peek suave
+    "(max-width: 640px)":  { slides: { perView: 1.2,  spacing: 12 } },
+    "(max-width: 768px)":  { slides: { perView: 1.6,  spacing: 14 } },
+    "(max-width: 1024px)": { slides: { perView: 2.5,  spacing: 14 } },
+    "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
+  },
+});
 
   useEffect(() => {
     if (!instanceRef.current) return;
@@ -310,27 +313,38 @@ export default function Home() {
        
 
         {/* Carrossel "Para você" */}
-        <section className="mt-8 sm:mt-10 px-1 sm:px-0">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
-          <div ref={sliderRef} className="keen-slider -mx-1 sm:mx-0">
-            {quadrasCarrossel.map((q) => {
-              const isFav = favSet.has(Number(q.id));
-              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-              return (
-                <div key={q.id} className="keen-slider__slide px-1 sm:px-2">
-                  <CourtCard
-                    key={`${q.id}-${isFav ? 1 : 0}`}
-                    quadra={qSan}
-                    variant="compact"
-                    isFavorited={isFav}
-                    onClick={() => handleQuadraClick(qSan)}
-                    onFavorite={handleFavorite}
-                  />
-                </div>
-              );
-            })}
+     <section className="mt-8 sm:mt-10">
+  <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
+
+  <div className="relative">
+    {/* fades laterais só no mobile (melhora a leitura do scroll) */}
+    <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent sm:hidden" />
+    <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:hidden" />
+
+    <div
+      ref={sliderRef}
+      className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0"
+    >
+      {quadrasCarrossel.map((q) => {
+        const isFav = favSet.has(Number(q.id));
+        const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
+        return (
+          <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
+            <CourtCard
+              key={`${q.id}-${isFav ? 1 : 0}`}
+              quadra={qSan}
+              variant="compact"
+              isFavorited={isFav}
+              onClick={() => handleQuadraClick(qSan)}
+              onFavorite={handleFavorite}
+            />
           </div>
-        </section>
+        );
+      })}
+    </div>
+  </div>
+</section>
+
 
         {/* Quadras em destaque */}
         <section className="mt-8 sm:mt-10">
