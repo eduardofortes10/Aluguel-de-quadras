@@ -10,36 +10,43 @@ export default function HomeHero({
   const navigate = useNavigate();
   const inputRef = useRef(null);
 
-  // ===== Config =====
-  const [enableFx, setEnableFx] = useState(false); // ativa só em ponteiro fino e sem reduced-motion
+  // Ativa animações só em ponteiro fino e sem reduced-motion
+  const [enableFx, setEnableFx] = useState(false);
   useEffect(() => {
     const fine = window.matchMedia?.("(pointer: fine)").matches;
     const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     setEnableFx(Boolean(fine && !reduced));
   }, []);
 
-  // ===== Parallax / Tilt refs =====
+  // Refs para efeitos
   const heroRef = useRef(null);
-  const innerRef = useRef(null);
   const glowTR = useRef(null);
   const glowBL = useRef(null);
+  const spotRef = useRef(null);
+  const innerRef = useRef(null);
   const rafRef = useRef(0);
 
-  // Parallax + tilt suaves (desktop)
+  // Parallax suave + spotlight de fundo que segue o mouse
   useEffect(() => {
     if (!enableFx || !heroRef.current) return;
 
     const el = heroRef.current;
+
     const onMove = (e) => {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
         const rect = el.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width;  // 0..1
-        const y = (e.clientY - rect.top) / rect.height;  // 0..1
-        const dx = (x - 0.5) * 2; // -1..1
+        const y = (e.clientY - rect.top) / rect.height; // 0..1
+        const dx = (x - 0.5) * 2;
         const dy = (y - 0.5) * 2;
 
-        // Parallax nos brilhos
+        // spotlight posicionado por CSS vars
+        el.style.setProperty("--mx", `${(x * 100).toFixed(2)}%`);
+        el.style.setProperty("--my", `${(y * 100).toFixed(2)}%`);
+        if (spotRef.current) spotRef.current.style.opacity = "1";
+
+        // parallax leve nos brilhos
         if (glowTR.current) {
           glowTR.current.style.transform = `translate(${(-dx * 28).toFixed(1)}px, ${(-dy * 24).toFixed(1)}px)`;
         }
@@ -47,7 +54,7 @@ export default function HomeHero({
           glowBL.current.style.transform = `translate(${(dx * 34).toFixed(1)}px, ${(dy * 28).toFixed(1)}px)`;
         }
 
-        // Tilt sutil no conteúdo
+        // tilt sutil do conteúdo
         if (innerRef.current) {
           innerRef.current.style.transform = `perspective(1000px) rotateX(${(dy * 2).toFixed(2)}deg) rotateY(${(-dx * 2).toFixed(2)}deg)`;
         }
@@ -56,6 +63,7 @@ export default function HomeHero({
 
     const onLeave = () => {
       cancelAnimationFrame(rafRef.current);
+      if (spotRef.current) spotRef.current.style.opacity = "0";
       if (glowTR.current) glowTR.current.style.transform = `translate(0,0)`;
       if (glowBL.current) glowBL.current.style.transform = `translate(0,0)`;
       if (innerRef.current) innerRef.current.style.transform = `none`;
@@ -70,7 +78,7 @@ export default function HomeHero({
     };
   }, [enableFx]);
 
-  // use as mesmas imagens que você já tem em /public/quadras
+  // ícones / categorias
   const categorias = [
     { nome: "Futebol",  img: "/quadras/Imagem2logo.png" },
     { nome: "Basquete", img: "/quadras/imagem1logo.png" },
@@ -95,12 +103,28 @@ export default function HomeHero({
       className="relative overflow-hidden rounded-3xl
                  bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800
                  text-white p-4 sm:p-6 shadow-xl"
+      // valores default das variáveis (centro)
+      style={{ ["--mx"]: "50%", ["--my"]: "50%" }}
     >
-      {/* brilhos suaves (ficam atrás) */}
+      {/* brilhos de fundo (atrás de tudo) */}
       <div ref={glowTR} className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-3xl transition-transform duration-200 will-change-transform" />
       <div ref={glowBL} className="pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl transition-transform duration-200 will-change-transform" />
 
-      {/* conteúdo com tilt */}
+      {/* SPOTLIGHT que segue o mouse (fica entre o fundo e o conteúdo) */}
+      <div
+        ref={spotRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200"
+        style={{
+          background:
+            // círculo claro com borda suave
+            "radial-gradient(650px circle at var(--mx) var(--my), rgba(255,255,255,0.18), rgba(255,255,255,0.10) 25%, transparent 55%)",
+          // opcional: levinho brilho colorido
+          // mixBlendMode: "soft-light",
+        }}
+      />
+
+      {/* conteúdo */}
       <div ref={innerRef} className="relative z-10 will-change-transform transition-transform duration-150">
         {/* topo: saudação + ações */}
         <div className="flex items-start justify-between gap-3">
@@ -120,7 +144,6 @@ export default function HomeHero({
               aria-label="Notificações"
               title="Notificações"
             >
-              {/* micro-efeito no sino */}
               <svg className="h-5 w-5 group-hover:rotate-6 transition-transform" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10 2a6 6 0 00-6 6v2.586l-.707.707A1 1 0 004 13h12a1 1 0 00.707-1.707L16 10.586V8a6 6 0 00-6-6zm0 16a2 2 0 001.995-1.85L12 16H8a2 2 0 001.85 1.995L10 18z" />
               </svg>
@@ -131,7 +154,6 @@ export default function HomeHero({
               )}
             </Link>
 
-            {/* pílula do usuário */}
             <div className="rounded-full bg-white/10 px-2 py-1 backdrop-blur-md ring-1 ring-white/20 max-w-[150px] overflow-hidden">
               <UserDropdown />
             </div>
@@ -173,7 +195,7 @@ export default function HomeHero({
           </div>
         </div>
 
-        {/* categorias rápidas — “magnéticas” */}
+        {/* categorias rápidas */}
         <div className="mt-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ul className="flex gap-3 min-w-max">
             {categorias.map(({ nome, img }) => (
@@ -189,7 +211,6 @@ export default function HomeHero({
                   style={{ WebkitTapHighlightColor: "transparent" }}
                   title={nome}
                 >
-                  {/* bolinha com CROP + leve zoom; desliza um tiquinho no hover */}
                   <span className="relative shrink-0 w-9 h-9 rounded-full overflow-hidden bg-white/0">
                     <img
                       src={img}
