@@ -106,25 +106,38 @@ export default function HomeHero({
         </div>
       </div>
 
-      {/* categorias rápidas dentro do herói — roláveis e “touch-friendly” */}
-      <div className="relative z-10 mt-3 overflow-x-auto snap-x snap-mandatory 
-          [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex gap-2 min-w-max">
-          {categorias.map(({ nome, img }) => (
-            <button
-              key={nome}
-              onClick={() => irParaCategoria(nome)}
-              className="snap-start group flex items-center gap-2 
-                bg-white/12 hover:bg-white/20 ring-1 ring-white/25 
-                rounded-full pl-1.5 pr-3 h-11 transition"
-            >
-              <span className="inline-flex items-center justify-center bg-white rounded-full p-1.5">
-                <img src={img} alt={nome} className="w-6 h-6 object-contain" />
-              </span>
-              <span className="text-sm font-medium">{nome}</span>
-            </button>
-          ))}
-        </div>
+     {/* categorias rápidas — substituir o bloco atual por este */}
+<div className="mt-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+  <ul className="flex gap-3 min-w-max">
+    {categorias.map(({ nome, img }) => (
+      <li key={nome}>
+        <button
+          onClick={() =>
+            navigate("/resultados", {
+              state: { tipo: [nome], precoMaximo: "", avaliacaoMinima: "", local: "" },
+            })
+          }
+          className="inline-flex items-center gap-2
+                     rounded-full border border-white/20
+                     bg-white/10 hover:bg-white/15
+                     px-3 pr-4 h-11 transition"
+        >
+          {/* bolinha do ícone (tamanho fixo e padding igual pra todos) */}
+          <span className="shrink-0 flex items-center justify-center
+                           w-9 h-9 rounded-full bg-white">
+            <img
+              src={img}
+              alt={nome}
+              className="w-5 h-5 object-contain"
+              loading="eager"
+            />
+          </span>
+          <span className="text-sm font-medium">{nome}</span>
+        </button>
+      </li>
+    ))}
+  </ul>
+
       </div>
     </section>
   );
