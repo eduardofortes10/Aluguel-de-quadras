@@ -4,6 +4,7 @@ import { useKeenSlider } from "keen-slider/react";
 import "keen-slider/keen-slider.min.css";
 import { useNavigate, Link } from "react-router-dom";
 import { quadras, quadrasCarrossel } from "../data/quadras";
+import UserDropdown from "../components/DropdownUser";
 import MobileNav from "../components/MobileNav";
 import Sidebar from "../components/Sidebar";
 import { api } from "../services/api";
@@ -11,7 +12,7 @@ import CourtCard from "../components/CourtCard";
 import { toast } from "react-hot-toast";
 import { enviarNotificacao } from "../services/notificacoes";
 import HomeHero from "../components/HomeHero";
-
+import CarrosselParaVoce from "../components/CarrosselParaVoce";
 // ===== Helpers (reaproveitados do Favoritos / QuadraDetalhe) =====
 async function getUsuarioIdSeguro() {
   try {
@@ -208,29 +209,28 @@ export default function Home() {
     }
   };
 
-  // ===== Carrosséis: MOBILE e DESKTOP (desktop igual ao anterior) =====
-  const [mobileSliderRef] = useKeenSlider({
-    mode: "free-snap",
-    rubberband: true,
-    loop: false,
-    slides: { perView: 1.05, spacing: 14 }, // cartões GRANDES no celular
-    breakpoints: {
-      "(min-width: 360px)": { slides: { perView: 1.12, spacing: 16 } },
-      "(min-width: 480px)": { slides: { perView: 1.22, spacing: 18 } },
-    },
-  });
 
-  const [desktopSliderRef, desktopInstanceRef] = useKeenSlider({
-    loop: true,
-    mode: "free-snap",
-    slides: { perView: 4, spacing: 16 }, // ← desktop mantido
-  });
+// ===== Carrossel (responsivo p/ mobile, desktop igual) =====
+const [sliderRef, instanceRef] = useKeenSlider({
+  loop: true,
+  mode: "free-snap",
+  drag: true,
+  rubberband: true,
+  slides: { perView: 4, spacing: 16 }, // ← DESKTOP permanece igual
+  breakpoints: {
+    "(max-width: 480px)":  { slides: { perView: 1.06, spacing: 10 } }, // peek suave
+    "(max-width: 640px)":  { slides: { perView: 1.2,  spacing: 12 } },
+    "(max-width: 768px)":  { slides: { perView: 1.6,  spacing: 14 } },
+    "(max-width: 1024px)": { slides: { perView: 2.5,  spacing: 14 } },
+    "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
+  },
+});
 
   useEffect(() => {
-    if (!desktopInstanceRef.current) return;
-    const id = setInterval(() => desktopInstanceRef.current?.next(), 5000);
+    if (!instanceRef.current) return;
+    const id = setInterval(() => instanceRef.current?.next(), 5000);
     return () => clearInterval(id);
-  }, [desktopInstanceRef]);
+  }, [instanceRef]);
 
   // Notificações
   useEffect(() => {
@@ -306,198 +306,145 @@ export default function Home() {
         <MobileNav />
       </div>
 
-      {/* Safe-area para o MobileNav + container centralizado */}
-      <main className="flex-1 text-black transition-colors px-4 md:pl-16 pt-[calc(env(safe-area-inset-top)+56px)] md:pt-6">
-        <div className="max-w-7xl mx-auto">
-          {/* HERO */}
-          <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
+      <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-hidden">
+        {/* HERO novo (gradiente de teste) */}
+        <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
-          {/* Carrossel "Para você" */}
-          <section className="mt-8 sm:mt-10">
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
+       
 
-            {/* MOBILE: cards grandes com imagem alta */}
-            <div className="sm:hidden relative">
-              {/* fades laterais no mobile */}
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent" />
+        {/* Carrossel "Para você" */}
+     <section className="mt-8 sm:mt-10">
+  <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
 
-              <div ref={mobileSliderRef} className="keen-slider overflow-visible px-1">
-                {quadrasCarrossel.map((q) => {
-                  const isFav = favSet.has(Number(q.id));
-                  const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-                  return (
-                    <div key={q.id} className="keen-slider__slide px-1 touch-pan-y">
-                      <button
-                        onClick={() => handleQuadraClick(qSan)}
-                        className="block w-full bg-white rounded-2xl shadow-md hover:shadow-lg transition ring-1 ring-black/5 overflow-hidden text-left"
-                      >
-                        {/* IMAGEM GRANDE: destaque da quadra */}
-                        <div className="relative aspect-[4/3] overflow-hidden">
-                          <img
-                            src={qSan.imagem}
-                            alt={qSan.nome}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                          <div className="absolute top-2 left-2 bg-black/65 text-white text-xs font-semibold px-2 py-1 rounded-lg">
-                            {qSan.preco}/h
-                          </div>
-                        </div>
+  <div className="relative">
+    {/* fades laterais só no mobile (melhora a leitura do scroll) */}
+    <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent sm:hidden" />
+    <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:hidden" />
 
-                        <div className="p-3">
-                          <h3 className="text-[15px] font-semibold line-clamp-1">{qSan.nome}</h3>
-                          <div className="mt-1 flex items-center gap-1 text-[13px] text-gray-600">
-                            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current opacity-70">
-                              <path d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7zm0 9.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z"/>
-                            </svg>
-                            <span className="line-clamp-1">{qSan.local || "—"}</span>
-                          </div>
+    <div
+      ref={sliderRef}
+      className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0"
+    >
+      {quadrasCarrossel.map((q) => {
+        const isFav = favSet.has(Number(q.id));
+        const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
+        return (
+          <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
+            <CourtCard
+              key={`${q.id}-${isFav ? 1 : 0}`}
+              quadra={qSan}
+              variant="compact"
+              isFavorited={isFav}
+              onClick={() => handleQuadraClick(qSan)}
+              onFavorite={handleFavorite}
+            />
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</section>
 
-                          <div className="mt-2 flex items-center justify-between">
-                            <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-700 rounded-full">
-                              {qSan.tipo || "Poliesportiva"}
-                            </span>
-                            {qSan.avaliacao && (
-                              <span className="text-xs inline-flex items-center gap-1 text-gray-700">
-                                <svg viewBox="0 0 20 20" className="w-4 h-4 fill-yellow-400">
-                                  <path d="M10 15l-5.878 3.09 1.122-6.545L.488 6.91l6.564-.955L10 0l2.948 5.955 6.564.955-4.756 4.635 1.122 6.545z"/>
-                                </svg>
-                                {Number(qSan.avaliacao).toFixed(1)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            {/* DESKTOP: mantém seu CourtCard e layout original */}
-            <div className="hidden sm:block">
-              <div ref={desktopSliderRef} className="keen-slider -mx-1 sm:mx-0">
-                {quadrasCarrossel.map((q) => {
-                  const isFav = favSet.has(Number(q.id));
-                  const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-                  return (
-                    <div key={q.id} className="keen-slider__slide px-1 sm:px-2">
-                      <CourtCard
-                        key={`${q.id}-${isFav ? 1 : 0}`}
-                        quadra={qSan}
-                        variant="compact"
-                        isFavorited={isFav}
-                        onClick={() => handleQuadraClick(qSan)}
-                        onFavorite={handleFavorite}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
+        {/* Quadras em destaque */}
+        <section className="mt-8 sm:mt-10">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {quadras.map((q) => {
+              const isFav = favSet.has(Number(q.id));
+              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
+              return (
+                <CourtCard
+                  key={`${q.id}-${isFav ? 1 : 0}`}
+                  quadra={qSan}
+                  variant="default"
+                  isFavorited={isFav}
+                  onClick={() => handleQuadraClick(qSan)}
+                  onFavorite={handleFavorite}
+                />
+              );
+            })}
+          </div>
+        </section>
 
-          {/* Quadras em destaque */}
-          <section className="mt-8 sm:mt-10">
-            <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {quadras.map((q) => {
-                const isFav = favSet.has(Number(q.id));
-                const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-                return (
-                  <CourtCard
-                    key={`${q.id}-${isFav ? 1 : 0}`}
-                    quadra={qSan}
-                    variant="default"
-                    isFavorited={isFav}
-                    onClick={() => handleQuadraClick(qSan)}
-                    onFavorite={handleFavorite}
-                  />
-                );
-              })}
+        {/* COOKIES */}
+        {mostrarCookies && (
+          <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50">
+            <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
+            <p className="text-sm mb-3">Usamos cookies para melhorar sua experiência e analisar o tráfego do site.</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  localStorage.setItem("cookiesAceitos", "true");
+                  setMostrarCookies(false);
+                }}
+                className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+              >
+                Aceitar todos
+              </button>
+              <button
+                onClick={() => {
+                  localStorage.setItem("cookiesAceitos", "true");
+                  setMostrarCookies(false);
+                }}
+                className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
+              >
+                Rejeitar
+              </button>
+              <button
+                onClick={() => setMostrarCookies(false)}
+                className="w-full text-center mt-2 text-xs underline text-white/80 hover:text-white"
+              >
+                Fechar
+              </button>
             </div>
           </section>
+        )}
 
-          {/* COOKIES */}
-          {mostrarCookies && (
-            <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50">
-              <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
-              <p className="text-sm mb-3">Usamos cookies para melhorar sua experiência e analisar o tráfego do site.</p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => {
-                    localStorage.setItem("cookiesAceitos", "true");
-                    setMostrarCookies(false);
-                  }}
-                  className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
-                >
-                  Aceitar todos
-                </button>
-                <button
-                  onClick={() => {
-                    localStorage.setItem("cookiesAceitos", "true");
-                    setMostrarCookies(false);
-                  }}
-                  className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
-                >
-                  Rejeitar
-                </button>
-                <button
-                  onClick={() => setMostrarCookies(false)}
-                  className="w-full text-center mt-2 text-xs underline text-white/80 hover:text-white"
-                >
-                  Fechar
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* RODAPÉ */}
-          <footer className="bg-[#0f3d26] text-white mt-12">
-            <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
-                <div>
-                  <h3 className="text-base font-bold mb-2">Aluguel de Quadras</h3>
-                  <p className="text-white/80">
-                    Encontre, alugue e jogue nas melhores quadras da sua cidade.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="text-base font-bold mb-2">Navegação</h3>
-                  <ul className="space-y-1 text-white/80">
-                    <li><Link to="/home" className="hover:text-white">Home</Link></li>
-                    <li><Link to="/resultados" className="hover:text-white">Quadras</Link></li>
-                    <li><Link to="/filtro" className="hover:text-white">Filtro</Link></li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-base font-bold mb-2">Suporte</h3>
-                  <ul className="space-y-1 text-white/80">
-                    <li><a href="#" className="hover:text-white">Central de ajuda</a></li>
-                    <li><a href="#" className="hover:text-white">Termos</a></li>
-                    <li><a href="#" className="hover:text-white">Privacidade</a></li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="text-base font-bold mb-2">Contato</h3>
-                  <ul className="space-y-1 text-white/80">
-                    <li>📧 eduardo_fortes@gmail.com</li>
-                    <li>📞 +55 (19) 99938-7274</li>
-                  </ul>
-                </div>
+        {/* RODAPÉ */}
+        <footer className="bg-[#0f3d26] text-white mt-12">
+          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
+              <div>
+                <h3 className="text-base font-bold mb-2">Aluguel de Quadras</h3>
+                <p className="text-white/80">
+                  Encontre, alugue e jogue nas melhores quadras da sua cidade.
+                </p>
               </div>
 
-              <div className="mt-6 sm:mt-8 border-t border-white/15 pt-4 text-[12px] sm:text-xs flex flex-col sm:flex-row items-center justify-between gap-2 text-white/70">
-                <p>© 2025 Aluguel de Quadras — Todos os direitos reservados.</p>
-                <p>Feito com ❤️ para quem ama esporte.</p>
+              <div>
+                <h3 className="text-base font-bold mb-2">Navegação</h3>
+                <ul className="space-y-1 text-white/80">
+                  <li><Link to="/home" className="hover:text-white">Home</Link></li>
+                  <li><Link to="/resultados" className="hover:text-white">Quadras</Link></li>
+                  <li><Link to="/filtro" className="hover:text-white">Filtro</Link></li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold mb-2">Suporte</h3>
+                <ul className="space-y-1 text-white/80">
+                  <li><a href="#" className="hover:text-white">Central de ajuda</a></li>
+                  <li><a href="#" className="hover:text-white">Termos</a></li>
+                  <li><a href="#" className="hover:text-white">Privacidade</a></li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold mb-2">Contato</h3>
+                <ul className="space-y-1 text-white/80">
+                  <li>📧 eduardo_fortes@gmail.com</li>
+                  <li>📞 +55 (19) 99938-7274</li>
+                </ul>
               </div>
             </div>
-          </footer>
-        </div>
+
+            <div className="mt-6 sm:mt-8 border-t border-white/15 pt-4 text-[12px] sm:text-xs flex flex-col sm:flex-row items-center justify-between gap-2 text-white/70">
+              <p>© 2025 Aluguel de Quadras — Todos os direitos reservados.</p>
+              <p>Feito com ❤️ para quem ama esporte.</p>
+            </div>
+          </div>
+        </footer>
       </main>
     </div>
   );
