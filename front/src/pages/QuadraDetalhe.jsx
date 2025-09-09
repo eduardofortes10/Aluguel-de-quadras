@@ -152,33 +152,36 @@ export default function QuadraDetalhe() {
   }, [horaInicio, horaFim, precoBase]);
 
   // 🔎 Checa se essa quadra já está favoritada pelo usuário logado
-  useEffect(() => {
-    let cancel = false;
-    async function checarFavorito() {
-      try {
-        const uid = await getUsuarioIdSeguro();
-        if (!uid || !quadra) return;
 
-        // Busca lista de favoritos do usuário e verifica se esta quadra está nela
-        const { data } = await api.get(`/favoritos/${uid}`);
-        const alvo = (data || []).find(
-          (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
-        );
+useEffect(() => {
+  let cancel = false;
+  async function checarFavorito() {
+    try {
+      const uid = await getUsuarioIdSeguro();
+      if (!uid || !quadra) return;
 
-        if (!cancel && alvo) {
-          setFavoritado(true);
-          setFavoritoId(alvo.id);
-        } else if (!cancel) {
-          setFavoritado(false);
-          setFavoritoId(null);
-        }
-      } catch (e) {
-        console.warn("Falha ao checar favorito:", e);
+      // ✅ busca a lista de favoritos do usuário (id vem do token)
+      const { data } = await api.get("/favoritos");
+
+      const alvo = (data || []).find(
+        (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
+      );
+
+      if (!cancel && alvo) {
+        setFavoritado(true);
+        setFavoritoId(alvo.id); // id do registro na tabela favoritos
+      } else if (!cancel) {
+        setFavoritado(false);
+        setFavoritoId(null);
       }
+    } catch (e) {
+      console.warn("Falha ao checar favorito:", e);
     }
-    checarFavorito();
-    return () => { cancel = true; };
-  }, [quadra]);
+  }
+  checarFavorito();
+  return () => { cancel = true; };
+}, [quadra]);
+
 
   const handleFavoritar = async () => {
     const uid = await getUsuarioIdSeguro();
@@ -220,34 +223,35 @@ export default function QuadraDetalhe() {
   };
 
   const handleDesfavoritar = async () => {
-    const uid = await getUsuarioIdSeguro();
-    if (!uid) {
-      toast.error("Faça login para desfavoritar.");
-      return;
-    }
-    try {
-      // Se já temos o id do favorito, deletamos direto
-      if (favoritoId) {
-        await api.delete(`/favoritos/${favoritoId}`);
-      } else {
-        // Senão, buscamos e removemos o registro correspondente
-        const { data } = await api.get(`/favoritos/${uid}`);
-        const alvo = (data || []).find(
-          (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
-        );
-        if (alvo?.id) {
-          await api.delete(`/favoritos/${alvo.id}`);
-        }
+  const uid = await getUsuarioIdSeguro();
+  if (!uid) {
+    toast.error("Faça login para desfavoritar.");
+    return;
+  }
+  try {
+    // Se já temos o id do favorito, deletamos direto
+    if (favoritoId) {
+      await api.delete(`/favoritos/${favoritoId}`);
+    } else {
+      // Senão, buscamos e removemos o registro correspondente
+      const { data } = await api.get("/favoritos");
+      const alvo = (data || []).find(
+        (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
+      );
+      if (alvo?.id) {
+        await api.delete(`/favoritos/${alvo.id}`);
       }
-      setFavoritado(false);
-      setFavoritoId(null);
-      toast.info("Removido dos favoritos.");
-    } catch (erro) {
-      console.error("Erro ao desfavoritar:", erro);
-      const msg = erro?.response?.data?.erro || "Erro inesperado ao desfavoritar.";
-      toast.error(msg);
     }
-  };
+    setFavoritado(false);
+    setFavoritoId(null);
+    toast.info("Removido dos favoritos.");
+  } catch (erro) {
+    console.error("Erro ao desfavoritar:", erro);
+    const msg = erro?.response?.data?.erro || "Erro inesperado ao desfavoritar.";
+    toast.error(msg);
+  }
+};
+
 
   const confirmarAluguel = async () => {
     const uid = await getUsuarioIdSeguro();
