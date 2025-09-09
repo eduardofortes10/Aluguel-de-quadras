@@ -6,7 +6,7 @@ const API_FROM_ENV = (import.meta.env.VITE_API_URL || "").trim();          // ex
 const FILES_FROM_ENV = (import.meta.env.VITE_FILES_ORIGIN || "").trim();   // ex.: https://SEU-BACK.onrender.com
 
 // Defaults de segurança (troque pro seu domínio da Render, se quiser)
-const ABSOLUTE_DEFAULT = "https://SEU-BACK.onrender.com/api";
+const ABSOLUTE_DEFAULT = "https://aluguel-de-quadras.onrender.com/api";
 const baseURL = (API_FROM_ENV || ABSOLUTE_DEFAULT).replace(/\/+$/, "");
 
 // Se não informarem VITE_FILES_ORIGIN, derivamos da API removendo o /api do fim
