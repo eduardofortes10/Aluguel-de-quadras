@@ -101,7 +101,8 @@ export default function Favoritos() {
           return;
         }
 
-        const { data } = await api.get(`/favoritos/${uid}`);
+        const { data } = await api.get("/favoritos");
+
         const arr = Array.isArray(data) ? data : [];
         const normalizados = arr.map(normalizarFavorito);
         if (!cancelado) setFavoritos(normalizados);

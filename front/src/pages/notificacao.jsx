@@ -17,7 +17,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { getNotificacoes, deleteNotificacao } from "../services/notificacoes";
 import { api } from "../services/api";
 
-// helper: resolve ID do usuário de forma robusta
+// helper: resolve ID do usuário (apenas para feedback amigável)
 async function getUsuarioIdSeguro() {
   try {
     const raw = localStorage.getItem("usuario");
@@ -30,12 +30,10 @@ async function getUsuarioIdSeguro() {
     if (uidStr && /^\d+$/.test(uidStr)) return Number(uidStr);
 
     // tenta /auth/me (se token já está no axios)
-    try {
-      const { data } = await api.get("/auth/me");
-      if (data?.id) return Number(data.id);
-      if (data?.usuario_id) return Number(data.usuario_id);
-    } catch (_) {}
-  } catch (_) {}
+    const { data } = await api.get("/auth/me");
+    if (data?.id) return Number(data.id);
+    if (data?.usuario_id) return Number(data.usuario_id);
+  } catch {}
   return null;
 }
 
@@ -60,7 +58,9 @@ export default function Notificacao() {
         toast.info("Entre na sua conta para ver as notificações.");
         return;
       }
-      const { data } = await getNotificacoes(uid);
+
+      // ✅ chamada correta: o backend usa o id do token, não precisa passar uid
+      const { data } = await getNotificacoes();
       setItems(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Erro ao carregar notificações:", err?.response?.data || err?.message);
