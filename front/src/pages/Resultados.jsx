@@ -159,11 +159,11 @@ export default function Resultados() {
         {/* Header/ações */}
         <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
           <button
-            onClick={() => navigate("/filtro")}
+            onClick={() => navigate("/home")}
             className="inline-flex items-center text-emerald-700 hover:text-emerald-900 font-medium transition"
           >
             <ChevronLeft className="mr-2" size={18} />
-            Editar filtros
+            Voltar para o menu
           </button>
 
           <div className="flex items-center gap-2">
