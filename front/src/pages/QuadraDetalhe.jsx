@@ -8,7 +8,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { enviarNotificacao } from "../services/notificacoes";
 import { api, fileURL } from "../services/api";
 import { quadras as DATA_Q, quadrasCarrossel as DATA_CAR } from "../data/quadras";
-import { FaStar, FaEnvelope, FaPhone, FaCommentDots, FaHeart, FaMapMarkerAlt } from "react-icons/fa";
+import { FaStar, FaEnvelope, FaPhone, FaCommentDots, FaHeart, FaRegHeart, FaMapMarkerAlt } from "react-icons/fa";
 
 // 🔐 Helper: resolve o ID do usuário logado a partir de várias fontes
 async function getUsuarioIdSeguro() {
@@ -82,6 +82,10 @@ export default function QuadraDetalhe() {
   const [duracaoHoras, setDuracaoHoras] = useState(0);
   const [observacoes, setObservacoes] = useState("");
 
+  // ⭐️ Estado de favoritos
+  const [favoritado, setFavoritado] = useState(false);
+  const [favoritoId, setFavoritoId] = useState(null); // id do registro na tabela favoritos
+
   // Carrega quadra se entrou direto pela URL
   useEffect(() => {
     let cancel = false;
@@ -147,6 +151,35 @@ export default function QuadraDetalhe() {
     }
   }, [horaInicio, horaFim, precoBase]);
 
+  // 🔎 Checa se essa quadra já está favoritada pelo usuário logado
+  useEffect(() => {
+    let cancel = false;
+    async function checarFavorito() {
+      try {
+        const uid = await getUsuarioIdSeguro();
+        if (!uid || !quadra) return;
+
+        // Busca lista de favoritos do usuário e verifica se esta quadra está nela
+        const { data } = await api.get(`/favoritos/${uid}`);
+        const alvo = (data || []).find(
+          (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
+        );
+
+        if (!cancel && alvo) {
+          setFavoritado(true);
+          setFavoritoId(alvo.id);
+        } else if (!cancel) {
+          setFavoritado(false);
+          setFavoritoId(null);
+        }
+      } catch (e) {
+        console.warn("Falha ao checar favorito:", e);
+      }
+    }
+    checarFavorito();
+    return () => { cancel = true; };
+  }, [quadra]);
+
   const handleFavoritar = async () => {
     const uid = await getUsuarioIdSeguro();
     if (!uid) {
@@ -170,7 +203,9 @@ export default function QuadraDetalhe() {
     };
 
     try {
-      await api.post("/favoritos", dadosFavorito);
+      const { data } = await api.post("/favoritos", dadosFavorito);
+      if (data?.id) setFavoritoId(data.id);
+      setFavoritado(true);
       toast.success("Quadra favoritada com sucesso!");
       await enviarNotificacao({
         usuario_id: uid,
@@ -180,6 +215,36 @@ export default function QuadraDetalhe() {
     } catch (erro) {
       console.error("Erro ao favoritar:", erro);
       const msg = erro?.response?.data?.erro || "Erro inesperado ao favoritar.";
+      toast.error(msg);
+    }
+  };
+
+  const handleDesfavoritar = async () => {
+    const uid = await getUsuarioIdSeguro();
+    if (!uid) {
+      toast.error("Faça login para desfavoritar.");
+      return;
+    }
+    try {
+      // Se já temos o id do favorito, deletamos direto
+      if (favoritoId) {
+        await api.delete(`/favoritos/${favoritoId}`);
+      } else {
+        // Senão, buscamos e removemos o registro correspondente
+        const { data } = await api.get(`/favoritos/${uid}`);
+        const alvo = (data || []).find(
+          (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
+        );
+        if (alvo?.id) {
+          await api.delete(`/favoritos/${alvo.id}`);
+        }
+      }
+      setFavoritado(false);
+      setFavoritoId(null);
+      toast.info("Removido dos favoritos.");
+    } catch (erro) {
+      console.error("Erro ao desfavoritar:", erro);
+      const msg = erro?.response?.data?.erro || "Erro inesperado ao desfavoritar.";
       toast.error(msg);
     }
   };
@@ -286,11 +351,15 @@ export default function QuadraDetalhe() {
               onError={(e) => (e.currentTarget.src = "/quadras/quadra1.png")}
             />
             <button
-              onClick={handleFavoritar}
-              className="absolute top-4 right-4 bg-white text-red-600 p-2 rounded-full shadow hover:ring-2 hover:ring-red-300 transition transform active:scale-110"
-              title="Favoritar"
+              onClick={favoritado ? handleDesfavoritar : handleFavoritar}
+              className={`absolute top-4 right-4 bg-white p-2 rounded-full shadow transition transform active:scale-110 ring-2 ${
+                favoritado
+                  ? "text-red-600 hover:ring-red-300"
+                  : "text-gray-500 hover:text-red-600 hover:ring-red-200"
+              }`}
+              title={favoritado ? "Remover dos favoritos" : "Favoritar"}
             >
-              <FaHeart className="w-5 h-5" />
+              {favoritado ? <FaHeart className="w-5 h-5" /> : <FaRegHeart className="w-5 h-5" />}
             </button>
           </div>
 
