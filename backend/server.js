@@ -1,4 +1,4 @@
-// server.js
+// server.js (substituição segura)
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
@@ -7,110 +7,111 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const compression = require("compression");
 const morgan = require("morgan");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
+const auth = require("./middleware/auth");
 
 const app = express();
 app.set("trust proxy", 1);
 
-// CORS
-const envOrigins = (process.env.FRONTEND_ORIGINS || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  ...envOrigins,
-  /\.vercel\.app$/i,
-];
-
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin) return cb(null, true);
-      const ok = allowedOrigins.some((o) =>
-        o instanceof RegExp ? o.test(origin) : o === origin
-      );
-      return cb(null, ok);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-// Middlewares
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-app.use(compression());
-app.use(morgan("dev"));
-
-// Diretórios de arquivos
-const uploadDir = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
-  : path.join(__dirname, "uploads");
-
-const avatarsDir = process.env.AVATARS_DIR
-  ? path.resolve(process.env.AVATARS_DIR)
-  : path.join(__dirname, "public", "avatars");
-
-
-// Garante as pastas
+// ====== Paths estáticos ======
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
+const avatarsDir = process.env.AVATARS_DIR || path.join(__dirname, "public", "avatars");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
 
-// Static: /uploads e /api/uploads
+// ====== CORS ======
+function parseOrigins(env) {
+  return (env || "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => {
+      if (s.startsWith("/") && s.endsWith("/")) {
+        try { return new RegExp(s.slice(1, -1)); } catch { return s; }
+      }
+      return s;
+    });
+}
+const allowed = parseOrigins(process.env.FRONTEND_ORIGINS);
+console.log("🌐 CORS allowed origins:", allowed);
+
+app.use(cors({
+  origin(origin, cb) {
+    if (!origin) return cb(null, true); // curl/healthz
+    const ok = allowed.length === 0 || allowed.some(o => o instanceof RegExp ? o.test(origin) : o === origin);
+    return cb(ok ? null : new Error("CORS_ORIGIN_NOT_ALLOWED"), ok ? true : false);
+  },
+  credentials: true,
+  methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization"],
+}));
+
+// ====== Middlewares ======
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(compression());
+app.use(cookieParser());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(morgan("tiny"));
+
+// ====== Arquivos estáticos ======
 app.use("/uploads", express.static(uploadDir, { maxAge: "7d", index: false }));
-app.use("/api/uploads", express.static(uploadDir, { maxAge: "7d", index: false }));
-
-// Static: /avatars e /api/avatars  ✅ (faltava isso)
 app.use("/avatars", express.static(avatarsDir, { maxAge: "7d", index: false }));
-app.use("/api/avatars", express.static(avatarsDir, { maxAge: "7d", index: false }));
 
-// Rotas base
-app.get("/", (_req, res) => res.send("API OK"));
-app.get("/healthz", (_req, res) =>
-  res.json({ ok: true, uptime: process.uptime(), ts: Date.now() })
-);
+// ====== Healthcheck ======
+app.get("/healthz", (_req, res) => res.json({ ok: true }));
 
-// Rotas de API
-app.use("/api/quadras", require("./routes/quadras"));
-app.use("/api/alugueis", require("./routes/alugueis"));
-app.use("/api/favoritos", require("./routes/favoritos"));
-app.use("/api/notificacoes", require("./routes/notificacoes"));
-app.use("/api/fotos-perfil", require("./routes/fotosPerfil"));
-app.use("/api/usuarios", require("./routes/usuarios"));
+// ====== Rate limit em endpoints sensíveis ======
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ====== Rotas ======
+app.use("/api/auth/login", loginLimiter, require("./routes/auth")); // login
 app.use("/api/auth", require("./routes/auth"));
-app.use("/api/conversas", require("./routes/conversas"));
-// 404
-app.use((req, res, next) => {
-  if (
-    req.path.startsWith("/uploads/") ||
-    req.path.startsWith("/api/uploads/") ||
-    req.path.startsWith("/avatars/") ||
-    req.path.startsWith("/api/avatars/")
-  ) return next();
-  res.status(404).json({ erro: "Rota não encontrada" });
+
+app.use("/api/quadras", require("./routes/quadras")); // GETs públicos; mutações protegidas no arquivo
+
+// PROTEGIDAS
+app.use("/api/favoritos", auth, require("./routes/favoritos"));
+app.use("/api/alugueis", auth, require("./routes/alugueis"));
+app.use("/api/notificacoes", auth, require("./routes/notificacoes"));
+app.use("/api/chat/conversas", auth, require("./routes/conversas"));
+// se existir: app.use("/api/chat/mensagens", auth, require("./routes/mensagens"));
+app.use("/api/fotos-perfil", auth, require("./routes/fotosPerfil"));
+app.use("/api/usuarios", auth, require("./routes/usuarios"));
+
+// ====== 404 ======
+app.use((req, res) => {
+  if (req.path === "/" || req.path === "/index.html") {
+    return res.status(200).send("API de aluguel de quadras");
+  }
+  return res.status(404).json({ erro: "Rota não encontrada" });
 });
 
-// Erros
+// ====== Error handler ======
 app.use((err, _req, res, _next) => {
-  console.error("🔥 Erro:", err);
-  if (err.code === "LIMIT_FILE_SIZE")
-    return res.status(413).json({ erro: "Arquivo muito grande (limite 8MB)." });
-  if (err.message && /CORS|Origin/i.test(err.message))
+  if (err && err.message === "CORS_ORIGIN_NOT_ALLOWED") {
     return res.status(403).json({ erro: "Origem não autorizada" });
-  if (err.type === "entity.parse.failed")
+  }
+  if (err && err.type === "entity.parse.failed") {
     return res.status(400).json({ erro: "JSON inválido no corpo da requisição" });
-  res.status(500).json({ erro: err.message || "Erro interno do servidor" });
+  }
+  console.error("🔥 Unhandled error:", err);
+  res.status(500).json({ erro: err?.message || "Erro interno do servidor" });
 });
 
-// Start
+// ====== Start ======
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || "0.0.0.0";
-app.listen(PORT, HOST, () =>
-  console.log(`🚀 API ouvindo em http://${HOST}:${PORT} | Uploads: ${uploadDir} | Avatars: ${avatarsDir}`)
-);
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 API ouvindo em http://${HOST}:${PORT}`);
+  console.log(`📂 Uploads: ${uploadDir}`);
+  console.log(`👤 Avatars: ${avatarsDir}`);
+});
 
 module.exports = app;

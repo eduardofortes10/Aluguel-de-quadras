@@ -5,6 +5,7 @@ const db = require("../db");
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const auth = require("../middleware/auth");
 
 // ====== Uploads ======
 const uploadRoot = process.env.UPLOAD_DIR || path.join(__dirname, "..", "uploads");
@@ -134,8 +135,8 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// POST /api/quadras
-router.post("/", upload.array("imagens", 10), async (req, res) => {
+// POST /api/quadras (PROTEGIDO) – cria quadra; dono_id vem do token
+router.post("/", auth, upload.array("imagens", 10), async (req, res) => {
   try {
     const cols = await getQuadrasColumns();
 
@@ -145,7 +146,7 @@ router.post("/", upload.array("imagens", 10), async (req, res) => {
       preco,
       tipo,
       descricao,
-      dono_id,
+      // dono_id do body é ignorado por segurança
       nota,
       // opcionais (só inserimos se existirem na tabela)
       cep,
@@ -160,9 +161,10 @@ router.post("/", upload.array("imagens", 10), async (req, res) => {
       status,
     } = req.body;
 
+    const dono_id = req.user?.id; // força proprietário ser o usuário logado
     const precoNumber = parseNumber(preco);
     if (!nome || !local || !tipo || !dono_id || isNaN(precoNumber) || precoNumber <= 0) {
-      return res.status(400).json({ erro: "Preencha nome, local, tipo, dono_id e um preço válido." });
+      return res.status(400).json({ erro: "Preencha nome, local, tipo e um preço válido." });
     }
 
     const files = Array.isArray(req.files) ? req.files : [];
@@ -237,9 +239,11 @@ router.post("/", upload.array("imagens", 10), async (req, res) => {
       values.push(status || "ativa");
     }
 
-    // criado_em SEMPRE por último com NOW()
-    fields.push("criado_em");
-    placeholders.push("NOW()");
+    // criado_em por último com NOW() (se existir a coluna)
+    if (hasCol(cols, "criado_em")) {
+      fields.push("criado_em");
+      placeholders.push("NOW()");
+    }
 
     const sql = `INSERT INTO quadras (${fields.join(",")}) VALUES (${placeholders.join(",")})`;
     const [result] = await db.query(sql, values);
@@ -253,16 +257,24 @@ router.post("/", upload.array("imagens", 10), async (req, res) => {
   }
 });
 
-// PATCH /api/quadras/:id  (atualização parcial)
-router.patch("/:id", upload.array("imagens", 10), async (req, res) => {
+// PATCH /api/quadras/:id  (PROTEGIDO) – atualização parcial somente pelo dono
+router.patch("/:id", auth, upload.array("imagens", 10), async (req, res) => {
   const { id } = req.params;
   try {
     const cols = await getQuadrasColumns();
+
+    // Verifica propriedade
+    const [[ownerRow]] = await db.query("SELECT dono_id, imagens FROM quadras WHERE id = ?", [id]);
+    if (!ownerRow) return res.status(404).json({ erro: "Quadra não encontrada" });
+    if (Number(ownerRow.dono_id) !== Number(req.user.id)) {
+      return res.status(403).json({ erro: "Você não tem permissão para editar esta quadra" });
+    }
 
     const up = [];
     const params = [];
 
     // campos simples (se existem na tabela)
+    // Obs: NÃO permitimos mudar dono_id por segurança
     const fields = [
       "nome",
       "local",
@@ -270,7 +282,6 @@ router.patch("/:id", upload.array("imagens", 10), async (req, res) => {
       "tipo",
       "descricao",
       "nota",
-      "dono_id",
       "cep",
       "endereco",
       "numero",
@@ -300,8 +311,7 @@ router.patch("/:id", upload.array("imagens", 10), async (req, res) => {
     // novas imagens anexadas
     if (req.files && req.files.length && hasCol(cols, "imagens")) {
       const novas = req.files.map((f) => toRelUrl(path.join(uploadRoot, f.filename)));
-      const [[row]] = await db.query("SELECT imagens FROM quadras WHERE id = ?", [id]);
-      const antigas = parseImagensField(row?.imagens);
+      const antigas = parseImagensField(ownerRow?.imagens);
       const merged = [...antigas, ...novas].slice(0, 10);
       up.push("imagens = ?");
       params.push(JSON.stringify(merged));
@@ -322,13 +332,16 @@ router.patch("/:id", upload.array("imagens", 10), async (req, res) => {
   }
 });
 
-// DELETE /api/quadras/:id
-router.delete("/:id", async (req, res) => {
+// DELETE /api/quadras/:id (PROTEGIDO) – somente pelo dono
+router.delete("/:id", auth, async (req, res) => {
   const { id } = req.params;
   try {
-    // pega imagens para tentar apagar do disco
-    const [[row]] = await db.query("SELECT imagens FROM quadras WHERE id = ?", [id]);
+    // pega imagens e verifica dono
+    const [[row]] = await db.query("SELECT dono_id, imagens FROM quadras WHERE id = ?", [id]);
     if (!row) return res.status(404).json({ erro: "Quadra não encontrada" });
+    if (Number(row.dono_id) !== Number(req.user.id)) {
+      return res.status(403).json({ erro: "Você não tem permissão para excluir esta quadra" });
+    }
 
     const imgs = parseImagensField(row.imagens);
 

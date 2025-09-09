@@ -1,90 +1,57 @@
-// routes/notificacoes.js
+// routes/alugueis.js (substituição)
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
 
-// Adicionar notificação
+// POST /api/alugueis -> cria aluguel (cliente logado)
 router.post("/", async (req, res) => {
-  const { usuario_id, tipo, mensagem } = req.body;
   try {
-    const [result] = await db.execute(
-      "INSERT INTO notificacoes (usuario_id, tipo, mensagem) VALUES (?, ?, ?)",
-      [usuario_id, tipo, mensagem]
+    const cliente_id = req.user.id; // força ser o usuário logado
+    const { quadra_id, data, hora_inicio, hora_fim, valor_pago, observacoes, imagem_url, nome } = req.body;
+
+    if (!quadra_id || !data || !hora_inicio || !hora_fim) {
+      return res.status(400).json({ erro: "quadra_id, data, hora_inicio e hora_fim são obrigatórios" });
+    }
+
+    // Checagem de conflito (sobreposição de horário) para a mesma quadra no mesmo dia
+    const [conflict] = await db.query(
+      `SELECT 1 FROM alugueis 
+       WHERE quadra_id = ? AND data = ?
+       AND NOT (hora_fim <= ? OR hora_inicio >= ?)
+       LIMIT 1`,
+      [quadra_id, data, hora_inicio, hora_fim]
     );
-    res.json({ sucesso: true, id: result.insertId });
-  } catch (err) {
-    console.error("❌ Erro ao adicionar notificação:", err);
-    res.status(500).json({ erro: err });
+    if (conflict.length) {
+      return res.status(409).json({ erro: "Horário indisponível para esta quadra" });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO alugueis 
+        (quadra_id, cliente_id, data, hora_inicio, hora_fim, valor_pago, observacoes, imagem_url, nome)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [quadra_id, cliente_id, data, hora_inicio, hora_fim, valor_pago || null, observacoes || null, imagem_url || null, nome || null]
+    );
+
+    res.status(201).json({ ok: true, id: result.insertId });
+  } catch (error) {
+    console.error("❌ Erro ao criar aluguel:", error);
+    res.status(500).json({ erro: "Erro interno ao criar aluguel" });
   }
 });
 
-// Buscar notificações por usuário
-router.get("/:usuario_id", async (req, res) => {
-  console.log("🟢 Rota de GET /api/notificacoes/:usuario_id acessada");
-  const { usuario_id } = req.params;
+// GET /api/alugueis/minhas -> lista do cliente logado
+router.get("/minhas", async (req, res) => {
   try {
-    const [rows] = await db.execute(
-      "SELECT * FROM notificacoes WHERE usuario_id = ? ORDER BY id DESC",
-      [usuario_id]
+    const cliente_id = req.user.id;
+    const [rows] = await db.query(
+      "SELECT * FROM alugueis WHERE cliente_id = ? ORDER BY data DESC, hora_inicio DESC",
+      [cliente_id]
     );
-    console.log("📦 Notificações encontradas:", rows);
     res.json(rows);
-  } catch (err) {
-    console.error("❌ Erro ao buscar notificações:", err);
-    res.status(500).json({ erro: err });
+  } catch (error) {
+    console.error("❌ Erro ao buscar aluguéis:", error);
+    res.status(500).json({ erro: "Erro interno ao buscar aluguéis" });
   }
 });
 
-// Marcar como lida
-router.put("/:id/lida", async (req, res) => {
-  const { id } = req.params;
-  try {
-    await db.execute("UPDATE notificacoes SET lida = TRUE WHERE id = ?", [id]);
-    res.json({ sucesso: true });
-  } catch (err) {
-    console.error("❌ Erro ao marcar como lida:", err);
-    res.status(500).json({ erro: err });
-  }
-});
-
-// Excluir notificação permanentemente
-router.delete("/:id", async (req, res) => {
-  const { id } = req.params;
-  try {
-    const [result] = await db.execute("DELETE FROM notificacoes WHERE id = ?", [id]);
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ erro: "Notificação não encontrada." });
-    }
-    res.json({ sucesso: true });
-  } catch (err) {
-    console.error("❌ Erro ao excluir notificação:", err);
-    res.status(500).json({ erro: err });
-  }
-});
-// Contar notificações não lidas por usuário
-router.get("/nao-lidas/:usuario_id", (req, res) => {
-  const { usuario_id } = req.params;
-  const sql = "SELECT COUNT(*) AS total FROM notificacoes WHERE usuario_id = ? AND lida = 0";
-
-  db.query(sql, [usuario_id], (err, results) => {
-    if (err) {
-      console.error("❌ Erro ao contar notificações não lidas:", err);
-      return res.status(500).json({ erro: err });
-    }
-
-    res.json({ total: results[0].total });
-  });
-});
-// Buscar quantidade de notificações não lidas
-router.get("/nao-lidas/:usuario_id", (req, res) => {
-  const { usuario_id } = req.params;
-  const sql = "SELECT COUNT(*) AS total FROM notificacoes WHERE usuario_id = ? AND lida = 0";
-  db.query(sql, [usuario_id], (err, rows) => {
-    if (err) {
-      console.error("❌ Erro ao contar notificações não lidas:", err);
-      return res.status(500).json({ erro: err });
-    }
-    res.json({ total: rows[0].total });
-  });
-});
 module.exports = router;

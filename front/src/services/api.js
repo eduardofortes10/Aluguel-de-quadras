@@ -42,3 +42,9 @@ if (typeof window !== "undefined") {
   console.log("[api] baseURL =", baseURL);
   console.log("[api] filesOrigin =", filesOrigin);
 }
+// após export const api = axios.create({ baseURL: ... })
+api.interceptors.request.use((config) => {
+  const t = localStorage.getItem("token");
+  if (t) config.headers.Authorization = `Bearer ${t}`;
+  return config;
+});

@@ -1,89 +1,58 @@
-const express = require('express');
+// routes/favoritos.js (substituição)
+const express = require("express");
 const router = express.Router();
-const db = require('../db');
+const db = require("../db");
 
-// 🔍 Buscar favoritos de um usuário
-router.get('/:usuario_id', async (req, res) => {
-  const { usuario_id } = req.params;
-  console.log("🔍 Buscando favoritos do usuário:", usuario_id);
-
+// GET /api/favoritos -> lista do usuário logado
+router.get("/", async (req, res) => {
   try {
-    const [results] = await db.query(
-      'SELECT * FROM favoritos WHERE usuario_id = ?',
+    const usuario_id = req.user.id;
+    const [rows] = await db.query(
+      "SELECT * FROM favoritos WHERE usuario_id = ? ORDER BY id DESC",
       [usuario_id]
     );
-    res.json(results);
+    res.json(rows);
   } catch (err) {
-    console.error("❌ Erro ao buscar favoritos:", err);
-    res.status(500).json({ erro: err });
+    console.error("❌ Erro ao listar favoritos:", err);
+    res.status(500).json({ erro: "Falha ao listar favoritos" });
   }
 });
 
-// ➕ Adicionar favorito
-router.post('/', async (req, res) => {
-  const {
-    usuario_id,
-    quadra_id,
-    nome,
-    preco,
-    local,
-    imagem_url,
-    nota
-  } = req.body;
-
-  const precoConvertido = parseFloat(preco);
-  const notaConvertida = parseFloat(nota);
-
-  console.log("📥 Recebido no backend:", req.body);
-  console.log("🧪 Convertidos:", {
-    usuario_id,
-    quadra_id,
-    preco: precoConvertido,
-    nota: notaConvertida,
-  });
-
-  if (
-    !usuario_id || !quadra_id ||
-    isNaN(precoConvertido) ||
-    isNaN(notaConvertida)
-  ) {
-    return res.status(400).json({ erro: 'Dados inválidos ou incompletos.' });
-  }
-
+// POST /api/favoritos -> adiciona favorito do usuário logado
+router.post("/", async (req, res) => {
   try {
-    const [existente] = await db.query(
-      'SELECT * FROM favoritos WHERE usuario_id = ? AND quadra_id = ?',
+    const usuario_id = req.user.id;
+    const { quadra_id } = req.body;
+    if (!quadra_id) return res.status(400).json({ erro: "quadra_id é obrigatório" });
+
+    await db.query(
+      "INSERT IGNORE INTO favoritos (usuario_id, quadra_id) VALUES (?, ?)",
       [usuario_id, quadra_id]
     );
-
-    if (existente.length > 0) {
-      return res.status(400).json({ erro: 'Quadra já favoritada por esse usuário.' });
-    }
-
-    const [result] = await db.query(
-      'INSERT INTO favoritos (usuario_id, quadra_id, nome, preco, local, imagem_url, nota) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [usuario_id, quadra_id, nome, precoConvertido, local, imagem_url, notaConvertida]
-    );
-
-    res.json({ sucesso: true, id: result.insertId });
-    console.log("✅ Favorito inserido com ID:", result.insertId);
-
+    res.status(201).json({ ok: true });
   } catch (err) {
-    console.error("❌ Erro ao inserir favorito:", err);
-    res.status(500).json({ erro: err });
+    console.error("❌ Erro ao favoritar:", err);
+    res.status(500).json({ erro: "Falha ao favoritar" });
   }
 });
 
-// ❌ Remover favorito
-router.delete('/:id', async (req, res) => {
-  const { id } = req.params;
-
+// DELETE /api/favoritos/:id -> remove, garantindo propriedade
+router.delete("/:id", async (req, res) => {
   try {
-    await db.query('DELETE FROM favoritos WHERE id = ?', [id]);
-    res.json({ sucesso: true });
+    const usuario_id = req.user.id;
+    const { id } = req.params;
+
+    const [rows] = await db.query(
+      "SELECT id FROM favoritos WHERE id = ? AND usuario_id = ?",
+      [id, usuario_id]
+    );
+    if (!rows.length) return res.status(404).json({ erro: "Favorito não encontrado" });
+
+    await db.query("DELETE FROM favoritos WHERE id = ?", [id]);
+    res.json({ ok: true });
   } catch (err) {
     console.error("❌ Erro ao deletar favorito:", err);
-    res.status(500).json({ erro: err });
+    res.status(500).json({ erro: "Falha ao deletar favorito" });
   }
 });
 
