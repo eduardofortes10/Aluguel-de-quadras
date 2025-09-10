@@ -1,8 +1,11 @@
 // src/utils/imagens.js
 import { fileURL } from "../services/api";
 
+// defina o fallback para uma imagem real existente em public/quadras/
+const FALLBACK = "/quadras/quadra1.png";
+
 export function resolveImagemQuadra(q) {
-  if (!q) return "/quadras/sem-imagem.png";
+  if (!q) return FALLBACK;
 
   // 1) campo direto
   if (q.imagem) {
@@ -30,5 +33,18 @@ export function resolveImagemQuadra(q) {
   }
 
   // fallback
-  return "/quadras/sem-imagem.png";
+  return FALLBACK;
+}
+
+// utils/preco.js (ou dentro do CourtCard/QuadraDetalhes)
+export function precoToNumberAny(v) {
+  if (typeof v === "number") return v;
+  const s = String(v || "")
+    .replace(/\s*\/\s*hora\b/gi, "")
+    .replace(/\s*\/\s*h\b/gi, "")
+    .replace(/[^\d.,-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
 }

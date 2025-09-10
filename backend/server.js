@@ -1,4 +1,4 @@
-// server.js (versão corrigida)
+// server.js
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
@@ -33,7 +33,7 @@ function parseOrigins(env) {
       return s;
     });
 }
-const allowed = parseOrigins(process.env.FRONTEND_ORIGINS);
+const allowed = parseOrigins(process.env.FRONTEND_ORIGINS || "");
 console.log("🌐 CORS allowed origins:", allowed);
 
 app.use(cors({
@@ -50,7 +50,7 @@ app.use(cors({
 // ====== Middlewares globais ======
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // 👈 libera consumo cross-origin (imagens/arquivos)
+  crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
 app.use(compression());
 app.use(cookieParser());
@@ -60,14 +60,12 @@ app.use(morgan("tiny"));
 
 // ====== Arquivos estáticos ======
 app.use("/uploads", express.static(uploadDir, { maxAge: "7d", index: false }));
-
-// ✅ ÚNICA montagem de /avatars com headers corretos
 app.use("/avatars", express.static(avatarsDir, {
   maxAge: "7d",
   index: false,
   setHeaders: (res) => {
     res.set("Access-Control-Allow-Origin", "*");
-    res.set("Cross-Origin-Resource-Policy", "cross-origin"); // reforço do CORP no próprio static
+    res.set("Cross-Origin-Resource-Policy", "cross-origin");
   }
 }));
 
@@ -83,17 +81,14 @@ const loginLimiter = rateLimit({
 });
 
 // ====== Rotas ======
-app.use("/api/auth/login", loginLimiter, require("./routes/auth")); // login
+app.use("/api/auth/login", loginLimiter, require("./routes/auth"));
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/quadras", require("./routes/quadras"));
 
-app.use("/api/quadras", require("./routes/quadras")); // GETs públicos; mutações protegidas no arquivo
-
-// PROTEGIDAS
 app.use("/api/favoritos", auth, require("./routes/favoritos"));
 app.use("/api/alugueis", auth, require("./routes/alugueis"));
 app.use("/api/notificacoes", auth, require("./routes/notificacoes"));
 app.use("/api/chat/conversas", auth, require("./routes/conversas"));
-// se existir: app.use("/api/chat/mensagens", auth, require("./routes/mensagens"));
 app.use("/api/fotos-perfil", auth, require("./routes/fotosPerfil"));
 app.use("/api/usuarios", auth, require("./routes/usuarios"));
 
