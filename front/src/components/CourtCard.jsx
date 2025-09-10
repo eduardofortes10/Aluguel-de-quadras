@@ -96,12 +96,44 @@ export default function CourtCard({
     return n.toFixed(1);
   }, [avaliacao]);
 
-  const handleFav = (e) => {
-    e.stopPropagation();
-    const newVal = !fav;
-    setFav(newVal);
+  const handleFav = async (e) => {
+  e.stopPropagation();
+  const newVal = !fav;
+  setFav(newVal);
+
+  if (newVal) {
+    const usuarioRaw = localStorage.getItem("usuario");
+    const uid = usuarioRaw ? JSON.parse(usuarioRaw).id : null;
+    if (!uid) {
+      alert("Faça login para favoritar");
+      return;
+    }
+
+    const imgUrl =
+      quadra?.imagem_url || quadra?.imagem || "sem-imagem.png";
+
+    const dadosFavorito = {
+      usuario_id: uid,
+      quadra_id: quadra?.id || quadra?.quadra_id || 0,
+      nome: quadra?.nome || "Quadra sem nome",
+      preco: quadra?.preco || 0,
+      local: quadra?.local || "Local não informado",
+      tipo: quadra?.tipo || "Quadra esportiva",
+      nota: quadra?.avaliacao || 4.5,
+      imagem_url: imgUrl,
+    };
+
+    try {
+      await api.post("/favoritos", dadosFavorito);
+    } catch (err) {
+      console.error("Erro ao salvar favorito:", err);
+    }
+  } else {
+    // desfavoritar → você pode chamar DELETE aqui
     onFavorite?.(quadra, newVal);
-  };
+  }
+};
+
 
   const handleClick = () => {
     if (onClick) return onClick(quadra);
