@@ -105,21 +105,23 @@ export default function Favoritos() {
     return () => { cancelado = true; };
   }, [navigate]);
 
-  const removerFavorito = async (item) => {
-    try {
-      if (item.favoritoId) {
-        await api.delete(`/favoritos/${item.favoritoId}`);
-      } else {
-        const uid = await getUsuarioIdSeguro();
-        if (uid && item.quadraId) {
-          await api.delete(`/favoritos/usuario/${uid}/quadra/${item.quadraId}`);
-        }
-      }
-      setFavoritos((prev) => prev.filter((q) => q.favoritoId !== item.favoritoId));
-    } catch (err) {
-      console.error("Erro ao remover favorito:", err?.response?.data || err?.message);
+const removerFavorito = async (item) => {
+  try {
+    const uid = await getUsuarioIdSeguro();
+    if (!uid) return;
+
+    if (item.quadraId) {
+      await api.delete(`/favoritos/usuario/${uid}/quadra/${item.quadraId}`);
     }
-  };
+
+    setFavoritos((prev) =>
+      prev.filter((q) => q.quadraId !== item.quadraId)
+    );
+  } catch (err) {
+    console.error("Erro ao remover favorito:", err?.response?.data || err?.message);
+  }
+};
+
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
