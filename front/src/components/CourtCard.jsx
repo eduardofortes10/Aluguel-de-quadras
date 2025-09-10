@@ -43,39 +43,34 @@ const formatBRL = (valor) => {
 };
 
 // 🔑 resolve imagem (igual QuadraDetalhes.jsx)
+// 🔑 resolve imagem (corrigido)
 function resolveImagemQuadra(q) {
   if (!q) return "/quadras/sem-imagem.png";
 
-  // campo direto
-  if (q.imagem) {
-    const s = String(q.imagem).trim();
+  const candidatos = [q.imagem, q.imagem_url, ...(Array.isArray(q.imagens) ? q.imagens : [])];
+
+  for (let c of candidatos) {
+    if (!c) continue;
+    const s = String(c).trim().replace(/\\/g, "/");
+
+    // URL completa
     if (/^https?:\/\//i.test(s)) return s;
-    if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
+
+    // imagens salvas no backend
+    if (s.includes("/uploads/") || s.startsWith("/avatars/")) return fileURL(s);
+
+    // imagens do frontend (public/quadras)
+    if (s.startsWith("/quadras/") || !s.includes("/")) return `/quadras/${s.replace(/^\/?quadras\//, "")}`;
+
+    // fallback: tenta no backend
+    if (s.startsWith("/")) return fileURL(s);
+
     return `/quadras/${s}`;
   }
 
-  // campo imagem_url
-  if (q.imagem_url) {
-    const s = String(q.imagem_url).trim();
-    if (/^https?:\/\//i.test(s)) return s;
-    if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
-    return `/quadras/${s}`;
-  }
-
-  // lista de imagens
-  if (Array.isArray(q.imagens)) {
-    for (let c of q.imagens) {
-      if (!c) continue;
-      const s = String(c).trim().replace(/\\/g, "/");
-      if (/^https?:\/\//i.test(s)) return s;
-      if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
-      return `/quadras/${s}`;
-    }
-  }
-
-  // fallback
   return "/quadras/sem-imagem.png";
 }
+
 
 export default function CourtCard({
   quadra,
