@@ -40,7 +40,7 @@ function MinhasQuadras() {
         return;
       }
       try {
-        const { data } = await api.get(`/alugueis/minhas-quadras/${uid}`);
+        const { data } = await api.get("/alugueis/minhas");
         if (!cancelado) setAlugueis(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Erro ao buscar aluguéis:", err?.response?.data || err?.message);
