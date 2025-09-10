@@ -21,10 +21,17 @@ router.get("/", async (req, res) => {
 // POST /api/notificacoes -> cria notificação para o usuário logado
 router.post("/", async (req, res) => {
   try {
-    console.log("🔑 req.user no POST /notificacoes =", req.user);
-    const uid = req.user.id;
+    console.log("🔎 POST /notificacoes", {
+      user: req.user,
+      body: req.body
+    });
+
+    const uid = req.user?.id;
     const { tipo, mensagem } = req.body;
 
+    if (!uid) {
+      return res.status(401).json({ erro: "Usuário não autenticado" });
+    }
     if (!tipo || !mensagem) {
       return res.status(400).json({ erro: "tipo e mensagem são obrigatórios" });
     }
@@ -40,6 +47,7 @@ router.post("/", async (req, res) => {
     res.status(500).json({ erro: "Erro interno ao criar notificação" });
   }
 });
+
 
 // PATCH /api/notificacoes/marcar-lidas -> marca todas como lidas
 router.patch("/marcar-lidas", async (req, res) => {
