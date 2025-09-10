@@ -21,7 +21,8 @@ router.get("/", async (req, res) => {
 // POST /api/notificacoes -> cria notificação para o usuário logado
 router.post("/", async (req, res) => {
   try {
-    const uid = req.user.id; // vem do token
+    console.log("🔑 req.user no POST /notificacoes =", req.user);
+    const uid = req.user.id;
     const { tipo, mensagem } = req.body;
 
     if (!tipo || !mensagem) {

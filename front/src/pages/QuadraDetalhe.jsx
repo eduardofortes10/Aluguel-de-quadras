@@ -1,4 +1,3 @@
-// src/pages/QuadraDetalhe.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
@@ -49,20 +48,15 @@ function precoToNumber(v) {
 }
 
 function resolveImagemCapa(q) {
-  // 1) data local
   if (q?.imagem) return q.imagem;
-
-  // 2) banco: primeira válida do array 'imagens'
   const list = Array.isArray(q?.imagens) ? q.imagens : [];
   for (let c of list) {
     if (!c) continue;
     const s = String(c).trim().replace(/\\/g, "/");
-    if (/^https?:\/\//i.test(s)) return s;       // URL absoluta
+    if (/^https?:\/\//i.test(s)) return s;
     if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
-    return `/quadras/${s}`;                       // se veio algo tipo "quadra1.png"
+    return `/quadras/${s}`;
   }
-
-  // 3) fallback
   return "/quadras/quadra1.png";
 }
 
@@ -82,21 +76,18 @@ export default function QuadraDetalhe() {
   const [duracaoHoras, setDuracaoHoras] = useState(0);
   const [observacoes, setObservacoes] = useState("");
 
-  // ⭐️ Estado de favoritos
   const [favoritado, setFavoritado] = useState(false);
-  const [favoritoId, setFavoritoId] = useState(null); // id do registro na tabela favoritos
+  const [favoritoId, setFavoritoId] = useState(null);
 
-  // Carrega quadra se entrou direto pela URL
   useEffect(() => {
     let cancel = false;
-    if (state?.quadra) return; // já temos pelos resultados (data local)
+    if (state?.quadra) return;
 
     async function carregar() {
       try {
         setCarregando(true);
         const idNum = Number(id);
 
-        // 1) tenta achar no data local
         if (Number.isFinite(idNum)) {
           const local = [...DATA_CAR, ...DATA_Q].find((q) => Number(q.id) === idNum);
           if (local) {
@@ -105,7 +96,6 @@ export default function QuadraDetalhe() {
           }
         }
 
-        // 2) fallback: busca no backend
         if (Number.isFinite(Number(id))) {
           const { data } = await api.get(`/quadras/${id}`);
           if (!cancel) setQuadra(data);
@@ -119,7 +109,9 @@ export default function QuadraDetalhe() {
     }
 
     carregar();
-    return () => { cancel = true; };
+    return () => {
+      cancel = true;
+    };
   }, [id, state?.quadra]);
 
   const capaUrl = useMemo(() => resolveImagemCapa(quadra), [quadra]);
@@ -130,7 +122,6 @@ export default function QuadraDetalhe() {
     return "R$ 0,00 /hora";
   }, [quadra, precoBase]);
 
-  // Recalcula total quando horários mudam
   useEffect(() => {
     if (!horaInicio || !horaFim || !precoBase) {
       setDuracaoHoras(0);
@@ -151,37 +142,32 @@ export default function QuadraDetalhe() {
     }
   }, [horaInicio, horaFim, precoBase]);
 
-  // 🔎 Checa se essa quadra já está favoritada pelo usuário logado
-
-useEffect(() => {
-  let cancel = false;
-  async function checarFavorito() {
-    try {
-      const uid = await getUsuarioIdSeguro();
-      if (!uid || !quadra) return;
-
-      // ✅ busca a lista de favoritos do usuário (id vem do token)
-      const { data } = await api.get("/favoritos");
-
-      const alvo = (data || []).find(
-        (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
-      );
-
-      if (!cancel && alvo) {
-        setFavoritado(true);
-        setFavoritoId(alvo.id); // id do registro na tabela favoritos
-      } else if (!cancel) {
-        setFavoritado(false);
-        setFavoritoId(null);
+  useEffect(() => {
+    let cancel = false;
+    async function checarFavorito() {
+      try {
+        const uid = await getUsuarioIdSeguro();
+        if (!uid || !quadra) return;
+        const { data } = await api.get("/favoritos");
+        const alvo = (data || []).find(
+          (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
+        );
+        if (!cancel && alvo) {
+          setFavoritado(true);
+          setFavoritoId(alvo.id);
+        } else if (!cancel) {
+          setFavoritado(false);
+          setFavoritoId(null);
+        }
+      } catch (e) {
+        console.warn("Falha ao checar favorito:", e);
       }
-    } catch (e) {
-      console.warn("Falha ao checar favorito:", e);
     }
-  }
-  checarFavorito();
-  return () => { cancel = true; };
-}, [quadra]);
-
+    checarFavorito();
+    return () => {
+      cancel = true;
+    };
+  }, [quadra]);
 
   const handleFavoritar = async () => {
     const uid = await getUsuarioIdSeguro();
@@ -211,7 +197,6 @@ useEffect(() => {
       setFavoritado(true);
       toast.success("Quadra favoritada com sucesso!");
       await enviarNotificacao({
-        usuario_id: uid,
         tipo: "favorito",
         mensagem: `Você favoritou a quadra ${quadra?.nome}`,
       });
@@ -223,35 +208,32 @@ useEffect(() => {
   };
 
   const handleDesfavoritar = async () => {
-  const uid = await getUsuarioIdSeguro();
-  if (!uid) {
-    toast.error("Faça login para desfavoritar.");
-    return;
-  }
-  try {
-    // Se já temos o id do favorito, deletamos direto
-    if (favoritoId) {
-      await api.delete(`/favoritos/${favoritoId}`);
-    } else {
-      // Senão, buscamos e removemos o registro correspondente
-      const { data } = await api.get("/favoritos");
-      const alvo = (data || []).find(
-        (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
-      );
-      if (alvo?.id) {
-        await api.delete(`/favoritos/${alvo.id}`);
-      }
+    const uid = await getUsuarioIdSeguro();
+    if (!uid) {
+      toast.error("Faça login para desfavoritar.");
+      return;
     }
-    setFavoritado(false);
-    setFavoritoId(null);
-    toast.info("Removido dos favoritos.");
-  } catch (erro) {
-    console.error("Erro ao desfavoritar:", erro);
-    const msg = erro?.response?.data?.erro || "Erro inesperado ao desfavoritar.";
-    toast.error(msg);
-  }
-};
-
+    try {
+      if (favoritoId) {
+        await api.delete(`/favoritos/${favoritoId}`);
+      } else {
+        const { data } = await api.get("/favoritos");
+        const alvo = (data || []).find(
+          (f) => Number(f.quadra_id) === Number(quadra?.id || quadra?.quadra_id)
+        );
+        if (alvo?.id) {
+          await api.delete(`/favoritos/${alvo.id}`);
+        }
+      }
+      setFavoritado(false);
+      setFavoritoId(null);
+      toast.info("Removido dos favoritos.");
+    } catch (erro) {
+      console.error("Erro ao desfavoritar:", erro);
+      const msg = erro?.response?.data?.erro || "Erro inesperado ao desfavoritar.";
+      toast.error(msg);
+    }
+  };
 
   const confirmarAluguel = async () => {
     const uid = await getUsuarioIdSeguro();
@@ -283,7 +265,6 @@ useEffect(() => {
       });
 
       await enviarNotificacao({
-        usuario_id: uid,
         tipo: "aluguel",
         mensagem: `Você alugou a quadra ${quadra?.nome}`,
       });
@@ -316,7 +297,7 @@ useEffect(() => {
     );
   }
 
-  const dono = quadra?.dono || null; // data local tem 'dono'; banco geralmente não
+  const dono = quadra?.dono || null;
 
   return (
     <div className="relative min-h-screen w-full overflow-y-auto">
