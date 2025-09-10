@@ -18,7 +18,6 @@ async function getUsuarioIdSeguro() {
     }
     const uidStr = localStorage.getItem("usuario_id");
     if (uidStr && /^\d+$/.test(uidStr)) return Number(uidStr);
-    // tenta /auth/me (se o token já está no axios)
     try {
       const { data } = await api.get("/auth/me");
       if (data?.id) return Number(data.id);
@@ -28,22 +27,21 @@ async function getUsuarioIdSeguro() {
   return null;
 }
 
-// Normaliza qualquer formato vindo do backend
 function normalizarFavorito(f) {
   const hasNestedQuadra = f?.quadra && typeof f.quadra === "object";
 
   const favoritoId =
     f.favorito_id ??
-    (hasNestedQuadra ? f.id : undefined) ?? // quando lista é { id: favoritoId, quadra: {...} }
-    (f.quadra_id ? f.id : undefined) ?? // quando vem { id: favoritoId, quadra_id: X }
-    f.id; // fallback
+    (hasNestedQuadra ? f.id : undefined) ??
+    (f.quadra_id ? f.id : undefined) ??
+    f.id;
 
   const quadraId =
     f.quadra_id ??
     (hasNestedQuadra ? f.quadra.id : undefined) ??
     f.id_quadra ??
     f.quadraId ??
-    f.id; // fallback (caso a API devolva direto as quadras)
+    f.id;
 
   const nome = f.nome ?? (hasNestedQuadra ? f.quadra.nome : undefined) ?? "Quadra";
   const preco = f.preco ?? (hasNestedQuadra ? f.quadra.preco : undefined) ?? 0;
@@ -55,33 +53,25 @@ function normalizarFavorito(f) {
     (hasNestedQuadra ? f.quadra.nota ?? f.quadra.avaliacao : undefined) ??
     4.5;
 
-  // imagem: pode vir como /uploads/.. ou só filename
   const imagem_url =
     f.imagem_url ??
     (hasNestedQuadra ? f.quadra.imagem_url ?? f.quadra.imagem : undefined) ??
     "sem-imagem.png";
 
-  return {
-    favoritoId,
-    quadraId,
-    nome,
-    preco,
-    local,
-    tipo,
-    nota,
-    imagem_url,
-    // guarda o original se quiser depurar
-    _raw: f,
-  };
+  return { favoritoId, quadraId, nome, preco, local, tipo, nota, imagem_url, _raw: f };
 }
 
+// garante URL correta para imagem
 function renderImagem(item) {
   const url = item.imagem_url || "sem-imagem.png";
-  if (url.startsWith("/")) return fileURL(url); // servido pelo backend (/uploads, /avatars etc.)
-  if (url.startsWith("http")) return url; // absoluto
-  return `/quadras/${url}`; // arquivo estático da pasta pública
+
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads/") || url.startsWith("/avatars/")) {
+    return fileURL(url);
+  }
+  // caso seja apenas o nome do arquivo
+  return fileURL(`/uploads/${url}`);
 }
-// -----------------
 
 export default function Favoritos() {
   const [favoritos, setFavoritos] = useState([]);
@@ -90,7 +80,6 @@ export default function Favoritos() {
 
   useEffect(() => {
     let cancelado = false;
-
     async function carregar() {
       try {
         setCarregando(true);
@@ -100,9 +89,7 @@ export default function Favoritos() {
           navigate("/login", { replace: true });
           return;
         }
-
         const { data } = await api.get("/favoritos");
-
         const arr = Array.isArray(data) ? data : [];
         const normalizados = arr.map(normalizarFavorito);
         if (!cancelado) setFavoritos(normalizados);
@@ -112,28 +99,18 @@ export default function Favoritos() {
         if (!cancelado) setCarregando(false);
       }
     }
-
     carregar();
-    return () => {
-      cancelado = true;
-    };
+    return () => { cancelado = true; };
   }, [navigate]);
 
   const removerFavorito = async (item) => {
     try {
-      // a maioria dos backends espera o ID do FAVORITO na rota /favoritos/:id
       if (item.favoritoId) {
         await api.delete(`/favoritos/${item.favoritoId}`);
       } else {
-        // fallback: se seu backend usa (usuario, quadra) para deletar
         const uid = await getUsuarioIdSeguro();
         if (uid && item.quadraId) {
-          try {
-            await api.delete(`/favoritos/usuario/${uid}/quadra/${item.quadraId}`);
-          } catch (e) {
-            // se essa rota não existir, re-lança o erro original
-            throw e;
-          }
+          await api.delete(`/favoritos/usuario/${uid}/quadra/${item.quadraId}`);
         }
       }
       setFavoritos((prev) => prev.filter((q) => q.favoritoId !== item.favoritoId));
@@ -144,12 +121,10 @@ export default function Favoritos() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar desktop */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      {/* Nav mobile */}
       <div className="md:hidden block w-full fixed top-0 left-0 z-50">
         <MobileNav />
       </div>
@@ -161,8 +136,7 @@ export default function Favoritos() {
       <div className="flex-1 p-6 md:pl-20 max-w-7xl mx-auto">
         <div className="flex items-center text-sm text-gray-500 mb-6 space-x-2">
           <Link to="/home" className="hover:underline hover:text-green-600 flex items-center">
-            <FaHome className="w-4 h-4 mr-1" />
-            Início
+            <FaHome className="w-4 h-4 mr-1" /> Início
           </Link>
           <span>/</span>
           <span className="text-green-700 font-semibold">Favoritos</span>
@@ -187,6 +161,7 @@ export default function Favoritos() {
                   src={renderImagem(item)}
                   alt={item.nome}
                   className="w-full h-48 object-cover"
+                  onError={(e) => { e.currentTarget.src = "/quadras/sem-imagem.png"; }}
                 />
 
                 <div className="p-4">

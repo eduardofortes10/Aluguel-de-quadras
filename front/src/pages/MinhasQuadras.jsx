@@ -1,3 +1,4 @@
+// src/pages/MinhasQuadras.jsx
 import React, { useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
@@ -24,6 +25,17 @@ async function getUsuarioIdSeguro() {
   return null;
 }
 
+// garante URL correta para imagem
+function renderImagem(item) {
+  const url = item?.imagem_url || "sem-imagem.png";
+
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads/") || url.startsWith("/avatars/")) {
+    return fileURL(url);
+  }
+  return fileURL(`/uploads/${url}`);
+}
+
 function MinhasQuadras() {
   const [alugueis, setAlugueis] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -40,7 +52,7 @@ function MinhasQuadras() {
         return;
       }
       try {
-        const { data } = await api.get("/alugueis/minhas");
+        const { data } = await api.get(`/alugueis/minhas`);
         if (!cancelado) setAlugueis(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Erro ao buscar aluguéis:", err?.response?.data || err?.message);
@@ -54,11 +66,6 @@ function MinhasQuadras() {
   }, [navigate]);
 
   const formatarData = (data) => new Date(data).toLocaleDateString("pt-BR");
-
-  const srcImagem = (a) => {
-    if (a?.imagem_url?.startsWith("/")) return fileURL(a.imagem_url);
-    return `/quadras/${a?.imagem_url || "sem-imagem.png"}`;
-  };
 
   return (
     <div className="flex bg-gray-100 min-h-screen">
@@ -82,8 +89,8 @@ function MinhasQuadras() {
               {alugueis.map((a) => (
                 <div key={a.id} className="bg-white border rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row">
                   <img
-                    src={srcImagem(a)}
-                    alt={a.nome}
+                    src={renderImagem(a)}
+                    alt={a.nome || "Quadra"}
                     onError={(e) => { e.currentTarget.src = "/quadras/sem-imagem.png"; }}
                     className="md:w-1/3 w-full h-48 object-cover"
                   />

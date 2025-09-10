@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { MapPin, Star, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { fileURL } from "../services/api";
 
 function cx(...cls) {
   return cls.filter(Boolean).join(" ");
@@ -17,6 +18,7 @@ const tipoClasses = {
   Golfe: "bg-lime-600/90 text-white",
 };
 
+// 🔎 normaliza valores de preço
 const formatBRL = (valor) => {
   if (valor == null) return "—";
   if (typeof valor === "string") {
@@ -40,6 +42,17 @@ const formatBRL = (valor) => {
   return String(valor);
 };
 
+// 🔑 resolve imagem (sem imagem → placeholder)
+function getImagemUrl(quadra) {
+  const url = quadra?.imagem_url || quadra?.imagem || "sem-imagem.png";
+
+  if (url.startsWith("http")) return url;
+  if (url.startsWith("/uploads/") || url.startsWith("/avatars/")) {
+    return fileURL(url);
+  }
+  return `/quadras/${url}`;
+}
+
 export default function CourtCard({
   quadra,
   onFavorite,
@@ -51,8 +64,7 @@ export default function CourtCard({
   const navigate = useNavigate();
   const [fav, setFav] = useState(!!isFavorited);
 
-  const { id, nome, imagem, local, preco, avaliacao, tipo, dono, distancia } =
-    quadra || {};
+  const { id, nome, local, preco, avaliacao, tipo, dono, distancia } = quadra || {};
 
   const badgeTipoClass = tipoClasses[tipo] || "bg-zinc-800/80 text-white";
   const precoFmt = useMemo(
@@ -107,7 +119,7 @@ export default function CourtCard({
       {/* Mídia */}
       <div className={cx("relative w-full", sizes.aspect)}>
         <img
-          src={imagem}
+          src={getImagemUrl(quadra)}
           alt={nome || "Quadra"}
           loading="lazy"
           decoding="async"
@@ -116,8 +128,7 @@ export default function CourtCard({
             "transition-transform duration-500 group-hover:scale-[1.03]"
           )}
           onError={(e) => {
-            e.currentTarget.src =
-              "https://via.placeholder.com/800x600?text=Quadra";
+            e.currentTarget.src = "/quadras/sem-imagem.png";
           }}
         />
 
@@ -168,11 +179,11 @@ export default function CourtCard({
           </span>
         </div>
 
-        {/* Gradiente sutil no rodapé da imagem (melhora leitura do preço/badges) */}
+        {/* Gradiente rodapé */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
       </div>
 
-      {/* Info – SEM dark mode, sempre branco */}
+      {/* Info */}
       <div className="p-3 md:p-4 bg-white">
         <h3 className={cx("line-clamp-1 font-semibold text-zinc-900", sizes.title)}>
           {nome || "Quadra sem nome"}
