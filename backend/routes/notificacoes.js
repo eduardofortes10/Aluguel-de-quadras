@@ -8,8 +8,7 @@ router.get("/", async (req, res) => {
   try {
     const uid = req.user.id;
     const [rows] = await db.query(
-      `SELECT id, usuario_id, tipo, mensagem, lida, criado_em 
-       FROM notificacoes 
+      `SELECT id, usuario_id, tipo, mensagem, lida, criado_em FROM notificacoes
        WHERE usuario_id = ? 
        ORDER BY criado_em DESC`,
       [uid]
@@ -40,8 +39,7 @@ router.post("/", async (req, res) => {
     }
 
     await db.query(
-      `INSERT INTO notificacoes (usuario_id, tipo, mensagem, lida, criado_em) 
-       VALUES (?, ?, ?, 0, NOW())`,
+      "INSERT INTO notificacoes (usuario_id, tipo, mensagem, lida, criado_em) VALUES (?, ?, ?, 0, NOW())",
       [uid, tipo, mensagem]
     );
 
