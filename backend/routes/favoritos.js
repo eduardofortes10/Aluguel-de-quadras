@@ -44,10 +44,12 @@ router.post("/", async (req, res) => {
 
     res.status(201).json({ id: result.insertId, ok: true });
   } catch (err) {
-    console.error("❌ Erro ao favoritar:", err);
-    res.status(500).json({ erro: "Falha ao favoritar" });
+  console.error("❌ Erro ao favoritar:", err.sqlMessage || err.message, err);
+  res.status(500).json({ erro: err.sqlMessage || "Falha ao favoritar" });
+}
+res.status(500).json({ erro: "Falha ao favoritar" });
   }
-});
+);
 
 // DELETE /api/favoritos/:id -> remove, garantindo propriedade
 router.delete("/:id", async (req, res) => {
