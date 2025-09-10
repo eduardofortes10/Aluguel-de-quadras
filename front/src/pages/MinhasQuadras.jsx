@@ -25,15 +25,18 @@ async function getUsuarioIdSeguro() {
   return null;
 }
 
-// garante URL correta para imagem
-function renderImagem(item) {
-  const url = item?.imagem_url || "sem-imagem.png";
+// 🔑 resolve imagem (mesmo padrão do CourtCard / QuadraDetalhes)
+function resolveImagemQuadra(q) {
+  if (!q) return "/quadras/sem-imagem.png";
+  const url = q.imagem_url || q.imagem || "sem-imagem.png";
+  const s = String(url).trim().replace(/\\/g, "/");
 
-  if (url.startsWith("http")) return url;
-  if (url.startsWith("/uploads/") || url.startsWith("/avatars/")) {
-    return fileURL(url);
-  }
-  return fileURL(`/uploads/${url}`);
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.includes("/uploads/") || s.startsWith("/avatars/")) return fileURL(s);
+  if (s.startsWith("/quadras/") || !s.includes("/")) return `/quadras/${s.replace(/^\/?quadras\//, "")}`;
+  if (s.startsWith("/")) return fileURL(s);
+
+  return `/quadras/${s}`;
 }
 
 function MinhasQuadras() {
@@ -89,7 +92,7 @@ function MinhasQuadras() {
               {alugueis.map((a) => (
                 <div key={a.id} className="bg-white border rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row">
                   <img
-                    src={renderImagem(a)}
+                    src={resolveImagemQuadra(a)}
                     alt={a.nome || "Quadra"}
                     onError={(e) => { e.currentTarget.src = "/quadras/sem-imagem.png"; }}
                     className="md:w-1/3 w-full h-48 object-cover"

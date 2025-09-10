@@ -27,6 +27,7 @@ async function getUsuarioIdSeguro() {
   return null;
 }
 
+// 🔑 normaliza os campos recebidos
 function normalizarFavorito(f) {
   const hasNestedQuadra = f?.quadra && typeof f.quadra === "object";
 
@@ -61,16 +62,17 @@ function normalizarFavorito(f) {
   return { favoritoId, quadraId, nome, preco, local, tipo, nota, imagem_url, _raw: f };
 }
 
-// garante URL correta para imagem
-function renderImagem(item) {
-  const url = item.imagem_url || "sem-imagem.png";
+// 🔑 resolve imagem (mesmo padrão do CourtCard / QuadraDetalhes)
+function resolveImagemFavorito(item) {
+  const url = item?.imagem_url || "sem-imagem.png";
+  const s = String(url).trim().replace(/\\/g, "/");
 
-  if (url.startsWith("http")) return url;
-  if (url.startsWith("/uploads/") || url.startsWith("/avatars/")) {
-    return fileURL(url);
-  }
-  // caso seja apenas o nome do arquivo
-  return fileURL(`/uploads/${url}`);
+  if (/^https?:\/\//i.test(s)) return s;
+  if (s.includes("/uploads/") || s.startsWith("/avatars/")) return fileURL(s);
+  if (s.startsWith("/quadras/") || !s.includes("/")) return `/quadras/${s.replace(/^\/?quadras\//, "")}`;
+  if (s.startsWith("/")) return fileURL(s);
+
+  return `/quadras/${s}`;
 }
 
 export default function Favoritos() {
@@ -121,10 +123,12 @@ export default function Favoritos() {
 
   return (
     <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Sidebar */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
+      {/* Mobile nav */}
       <div className="md:hidden block w-full fixed top-0 left-0 z-50">
         <MobileNav />
       </div>
@@ -158,7 +162,7 @@ export default function Favoritos() {
                 className="bg-white rounded-xl shadow-md overflow-hidden relative hover:shadow-lg hover:scale-[1.01] transition-transform duration-300"
               >
                 <img
-                  src={renderImagem(item)}
+                  src={resolveImagemFavorito(item)}
                   alt={item.nome}
                   className="w-full h-48 object-cover"
                   onError={(e) => { e.currentTarget.src = "/quadras/sem-imagem.png"; }}
@@ -190,7 +194,7 @@ export default function Favoritos() {
                             nome: item.nome,
                             preco: item.preco,
                             local: item.local,
-                            imagem: renderImagem(item),
+                            imagem: resolveImagemFavorito(item),
                             avaliacao: item.nota,
                             tipo: item.tipo,
                           },
