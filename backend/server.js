@@ -1,4 +1,4 @@
-// server.js (substituição segura)
+// server.js (versão corrigida)
 require("dotenv").config();
 const path = require("path");
 const fs = require("fs");
@@ -47,22 +47,29 @@ app.use(cors({
   allowedHeaders: ["Content-Type","Authorization"],
 }));
 
-// ====== Middlewares ======
-app.use(helmet({ contentSecurityPolicy: false }));
+// ====== Middlewares globais ======
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // 👈 libera consumo cross-origin (imagens/arquivos)
+}));
 app.use(compression());
 app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(morgan("tiny"));
-app.use("/avatars", express.static(path.join(__dirname, "public/avatars"), {
-  setHeaders: (res) => {
-    res.set("Access-Control-Allow-Origin", "*");
-  }
-}));
 
 // ====== Arquivos estáticos ======
 app.use("/uploads", express.static(uploadDir, { maxAge: "7d", index: false }));
-app.use("/avatars", express.static(avatarsDir, { maxAge: "7d", index: false }));
+
+// ✅ ÚNICA montagem de /avatars com headers corretos
+app.use("/avatars", express.static(avatarsDir, {
+  maxAge: "7d",
+  index: false,
+  setHeaders: (res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Cross-Origin-Resource-Policy", "cross-origin"); // reforço do CORP no próprio static
+  }
+}));
 
 // ====== Healthcheck ======
 app.get("/healthz", (_req, res) => res.json({ ok: true }));
