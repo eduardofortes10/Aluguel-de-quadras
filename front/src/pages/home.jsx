@@ -143,7 +143,8 @@ export default function Home() {
   async function sincronizarFavoritos(userId = uid) {
     if (!userId) return;
     try {
-      const { data } = await api.get(`/favoritos/${userId}`);
+     const { data } = await api.get("/favoritos");
+
       const arr = Array.isArray(data) ? data : [];
       const normalizados = arr.map(normalizarFavorito);
       const novoSet = new Set(normalizados.map((x) => Number(x.quadraId)));
@@ -181,11 +182,11 @@ export default function Home() {
         await api.post("/favoritos", dadosFavorito);
         toast.success("Adicionada aos favoritos!");
         try {
-          await enviarNotificacao({
-            usuario_id: userId,
-            tipo: "favorito",
-            mensagem: `Você favoritou a quadra ${quadra?.nome}`,
-          });
+       await enviarNotificacao({
+  tipo: "favorito",
+  mensagem: `Você favoritou a quadra ${quadra?.nome}`,
+});
+
         } catch {}
       } else {
         const favId = favIdByQuadra.get(Number(quadra.id));
@@ -232,7 +233,8 @@ export default function Home() {
     if (!usuario?.id) return;
     const buscarTodasNotificacoes = async () => {
       try {
-        const { data } = await api.get(`/notificacoes/${usuario.id}`);
+        const { data } = await api.get("/notificacoes");
+
         const total = Array.isArray(data) ? data.length : 0;
         setNotificacoesNaoLidas(total);
       } catch (err) {
