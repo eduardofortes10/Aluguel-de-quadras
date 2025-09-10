@@ -3,7 +3,7 @@ import React, { useMemo, useState } from "react";
 import { MapPin, Star, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fileURL } from "../services/api";
-
+import { api } from "../services/api"; // ✅ IMPORTA O API
 function cx(...cls) {
   return cls.filter(Boolean).join(" ");
 }
