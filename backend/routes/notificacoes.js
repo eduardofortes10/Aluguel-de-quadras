@@ -8,7 +8,10 @@ router.get("/", async (req, res) => {
   try {
     const uid = req.user.id;
     const [rows] = await db.query(
-      "SELECT id, usuario_id, tipo, mensagem, lida, data FROM notificacoes WHERE usuario_id = ? ORDER BY data DESC",
+      `SELECT id, usuario_id, tipo, mensagem, lida, criado_em 
+       FROM notificacoes 
+       WHERE usuario_id = ? 
+       ORDER BY criado_em DESC`,
       [uid]
     );
     res.json(rows);
@@ -37,7 +40,8 @@ router.post("/", async (req, res) => {
     }
 
     await db.query(
-      "INSERT INTO notificacoes (usuario_id, tipo, mensagem, lida, data) VALUES (?, ?, ?, 0, NOW())",
+      `INSERT INTO notificacoes (usuario_id, tipo, mensagem, lida, criado_em) 
+       VALUES (?, ?, ?, 0, NOW())`,
       [uid, tipo, mensagem]
     );
 
@@ -47,7 +51,6 @@ router.post("/", async (req, res) => {
     res.status(500).json({ erro: "Erro interno ao criar notificação" });
   }
 });
-
 
 // PATCH /api/notificacoes/marcar-lidas -> marca todas como lidas
 router.patch("/marcar-lidas", async (req, res) => {
