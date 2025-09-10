@@ -46,11 +46,11 @@ const formatBRL = (valor) => {
 function getImagemUrl(quadra) {
   const url = quadra?.imagem_url || quadra?.imagem || "sem-imagem.png";
 
-  if (url.startsWith("http")) return url;
+  if (url.startsWith("http")) return url; // absoluto
   if (url.startsWith("/uploads/") || url.startsWith("/avatars/")) {
-    return fileURL(url);
+    return fileURL(url); // backend
   }
-  return `/quadras/${url}`;
+  return `/quadras/${url}`; // frontend (public/quadras)
 }
 
 export default function CourtCard({
