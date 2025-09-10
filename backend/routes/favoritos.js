@@ -19,22 +19,35 @@ router.get("/", async (req, res) => {
 });
 
 // POST /api/favoritos -> adiciona favorito do usuário logado
+// POST /api/favoritos -> adiciona favorito do usuário logado
 router.post("/", async (req, res) => {
   try {
     const usuario_id = req.user.id;
-    const { quadra_id } = req.body;
+    const { quadra_id, nome, preco, local, tipo, imagem_url, nota } = req.body;
+
     if (!quadra_id) return res.status(400).json({ erro: "quadra_id é obrigatório" });
 
-    await db.query(
-      "INSERT IGNORE INTO favoritos (usuario_id, quadra_id) VALUES (?, ?)",
-      [usuario_id, quadra_id]
+    const [result] = await db.query(
+      `INSERT INTO favoritos 
+       (usuario_id, quadra_id, nome, preco, local, tipo, imagem_url, nota)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         nome = VALUES(nome),
+         preco = VALUES(preco),
+         local = VALUES(local),
+         tipo = VALUES(tipo),
+         imagem_url = VALUES(imagem_url),
+         nota = VALUES(nota)`,
+      [usuario_id, quadra_id, nome, preco, local, tipo, imagem_url, nota]
     );
-    res.status(201).json({ ok: true });
+
+    res.status(201).json({ id: result.insertId, ok: true });
   } catch (err) {
     console.error("❌ Erro ao favoritar:", err);
     res.status(500).json({ erro: "Falha ao favoritar" });
   }
 });
+
 
 // DELETE /api/favoritos/:id -> remove, garantindo propriedade
 router.delete("/:id", async (req, res) => {
