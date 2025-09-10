@@ -42,15 +42,39 @@ const formatBRL = (valor) => {
   return String(valor);
 };
 
-// 🔑 resolve imagem (sem imagem → placeholder)
-function getImagemUrl(quadra) {
-  const url = quadra?.imagem_url || quadra?.imagem || "sem-imagem.png";
+// 🔑 resolve imagem (igual QuadraDetalhes.jsx)
+function resolveImagemQuadra(q) {
+  if (!q) return "/quadras/sem-imagem.png";
 
-  if (url.startsWith("http")) return url; // absoluto
-  if (url.startsWith("/uploads/") || url.startsWith("/avatars/")) {
-    return fileURL(url); // backend
+  // campo direto
+  if (q.imagem) {
+    const s = String(q.imagem).trim();
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
+    return `/quadras/${s}`;
   }
-  return `/quadras/${url}`; // frontend (public/quadras)
+
+  // campo imagem_url
+  if (q.imagem_url) {
+    const s = String(q.imagem_url).trim();
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
+    return `/quadras/${s}`;
+  }
+
+  // lista de imagens
+  if (Array.isArray(q.imagens)) {
+    for (let c of q.imagens) {
+      if (!c) continue;
+      const s = String(c).trim().replace(/\\/g, "/");
+      if (/^https?:\/\//i.test(s)) return s;
+      if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
+      return `/quadras/${s}`;
+    }
+  }
+
+  // fallback
+  return "/quadras/sem-imagem.png";
 }
 
 export default function CourtCard({
@@ -119,7 +143,7 @@ export default function CourtCard({
       {/* Mídia */}
       <div className={cx("relative w-full", sizes.aspect)}>
         <img
-          src={getImagemUrl(quadra)}
+          src={resolveImagemQuadra(quadra)}
           alt={nome || "Quadra"}
           loading="lazy"
           decoding="async"
