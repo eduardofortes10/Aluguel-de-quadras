@@ -19,12 +19,9 @@ router.post("/", auth, async (req, res) => {
       `SELECT 1 FROM alugueis
        WHERE quadra_id = ?
          AND data = ?
-         AND (
-           (hora_inicio < ? AND hora_fim > ?)
-           OR (hora_inicio < ? AND hora_fim > ?)
-           OR (hora_inicio >= ? AND hora_inicio < ?)
-         )`,
-      [quadra_id, data, hora_fim, hora_inicio, hora_fim, hora_inicio, hora_inicio, hora_fim]
+         AND NOT (hora_fim <= ? OR hora_inicio >= ?)
+       LIMIT 1`,
+      [quadra_id, data, hora_inicio, hora_fim]
     );
 
     if (conflitos.length > 0) {
@@ -42,6 +39,21 @@ router.post("/", auth, async (req, res) => {
   } catch (err) {
     console.error("POST /alugueis erro:", err);
     res.status(500).json({ erro: "Erro ao criar aluguel" });
+  }
+});
+
+// 📌 Nova rota → lista aluguéis do cliente logado
+router.get("/minhas", auth, async (req, res) => {
+  try {
+    const cliente_id = req.user.id;
+    const [rows] = await db.query(
+      "SELECT * FROM alugueis WHERE cliente_id = ? ORDER BY data DESC, hora_inicio DESC",
+      [cliente_id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("GET /alugueis/minhas erro:", err);
+    res.status(500).json({ erro: "Erro ao buscar aluguéis" });
   }
 });
 
