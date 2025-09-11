@@ -4,7 +4,7 @@ const router = express.Router();
 const db = require("../db");
 const auth = require("../middleware/auth");
 
-// Garante req.user em todas as rotas
+// 🔒 Garante req.user em todas as rotas
 router.use(auth);
 
 // GET /api/favoritos -> lista do usuário logado
@@ -17,14 +17,18 @@ router.get("/", async (req, res) => {
          f.id,
          f.usuario_id,
          f.quadra_id,
-         COALESCE(f.nome, q.nome)     AS nome,
-         COALESCE(f.preco, q.preco)   AS preco,
-         COALESCE(f.local, q.local)   AS local,
-         COALESCE(f.tipo, q.tipo)     AS tipo,
-         f.imagem_url,                -- usa o salvo em favoritos
-         COALESCE(f.nota, q.avaliacao) AS nota
+         COALESCE(f.nome, iq.nome_arquivo)       AS nome,
+         iq.local,
+         iq.tipo,
+         iq.preco,
+         iq.avaliacao                           AS avaliacao,
+         iq.url_completa                        AS imagem_url,
+         iq.dono_nome,
+         iq.dono_foto,
+         iq.dono_email,
+         iq.dono_telefone
        FROM favoritos f
-       LEFT JOIN quadras q ON q.id = f.quadra_id
+       LEFT JOIN imagens_quadras iq ON iq.id = f.quadra_id
        WHERE f.usuario_id = ?
        ORDER BY f.id DESC`,
       [usuario_id]
