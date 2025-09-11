@@ -17,12 +17,12 @@ router.get("/", async (req, res) => {
          f.id,
          f.usuario_id,
          f.quadra_id,
-         COALESCE(f.nome, iq.nome_arquivo)       AS nome,
+         COALESCE(f.nome, iq.nome_arquivo) AS nome,
          iq.local,
          iq.tipo,
          iq.preco,
-         iq.avaliacao                           AS avaliacao,
-         iq.url_completa                        AS imagem_url,
+         iq.avaliacao                       AS avaliacao,
+         iq.url_completa                    AS imagem_url, -- 🔑 usa url_completa
          iq.dono_nome,
          iq.dono_foto,
          iq.dono_email,
@@ -45,11 +45,23 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const usuario_id = req.user.id;
-    const { quadra_id, nome, preco, local, tipo, imagem_url, nota } = req.body;
+    const { quadra_id } = req.body;
 
     if (!quadra_id) {
       return res.status(400).json({ erro: "quadra_id é obrigatório" });
     }
+
+    // 🔎 Busca os dados direto da tabela imagens_quadras
+    const [quadraRows] = await db.query(
+      "SELECT nome_arquivo, local, tipo, preco, avaliacao, url_completa FROM imagens_quadras WHERE id = ?",
+      [quadra_id]
+    );
+
+    if (!quadraRows.length) {
+      return res.status(404).json({ erro: "Quadra não encontrada" });
+    }
+
+    const quadra = quadraRows[0];
 
     const [result] = await db.query(
       `INSERT INTO favoritos 
@@ -62,7 +74,16 @@ router.post("/", async (req, res) => {
          tipo = VALUES(tipo),
          imagem_url = VALUES(imagem_url),
          nota = VALUES(nota)`,
-      [usuario_id, quadra_id, nome, preco, local, tipo, imagem_url, nota]
+      [
+        usuario_id,
+        quadra_id,
+        quadra.nome_arquivo,
+        quadra.preco,
+        quadra.local,
+        quadra.tipo,
+        quadra.url_completa,
+        quadra.avaliacao,
+      ]
     );
 
     return res.status(201).json({ id: result.insertId || 0, ok: true });
@@ -72,7 +93,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// DELETE /api/favoritos/:id -> remove garantindo propriedade
+// DELETE /api/favoritos/:id
 router.delete("/:id", async (req, res) => {
   try {
     const usuario_id = req.user.id;
@@ -95,7 +116,6 @@ router.delete("/:id", async (req, res) => {
 });
 
 // DELETE /api/favoritos/usuario/:usuario_id/quadra/:quadra_id
-// Ignora :usuario_id e usa SEMPRE o id do token
 router.delete("/usuario/:usuario_id/quadra/:quadra_id", async (req, res) => {
   try {
     const usuario_id = req.user.id;
