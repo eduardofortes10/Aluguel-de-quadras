@@ -6,8 +6,9 @@ import MobileNav from "../components/MobileNav";
 import { FaEllipsisV, FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
-import MessageBubble from "../components/MessageBubble"; // ⬅️ NOVO
+import MessageBubble from "../components/MessageBubble";
 
+/* ===== Helpers ===== */
 function getUsuarioLocal() {
   try {
     const raw = localStorage.getItem("usuario");
@@ -20,12 +21,22 @@ function getUsuarioLocal() {
     return { id: null, tipo: null };
   }
 }
-
 function normalizarNumero(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
+// Trata 404 como “sem dados”
+async function safeGet(url, fallback = []) {
+  try {
+    const { data } = await api.get(url);
+    return data ?? fallback;
+  } catch (err) {
+    if (err?.response?.status === 404) return fallback;
+    throw err;
+  }
+}
 
+/* ===== Página ===== */
 export default function Chat() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -66,53 +77,53 @@ export default function Chat() {
   // Param ?id= (alvo com quem queremos conversar)
   const alvoId = useMemo(() => normalizarNumero(params.get("id")), [params]);
 
-  // Util: scroll pro fim quando mensagens mudarem
+  // Scroll pro fim quando mensagens mudarem
   useEffect(() => {
     if (mensagensRef.current) {
       mensagensRef.current.scrollTop = mensagensRef.current.scrollHeight;
     }
   }, [mensagens]);
 
-  // Buscar lista de conversas
+  /* ===== API ===== */
   const carregarConversas = async () => {
     if (!meId || carregandoConversasRef.current) return;
     try {
       carregandoConversasRef.current = true;
-      const { data } = await api.get(`/conversas/ultimas/${meId}`);
+      const data = await safeGet(`/conversas/ultimas/${meId}`, []);
       setConversas(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Erro ao carregar conversas:", err);
+      console.error("Erro ao carregar conversas:", err?.response?.data || err?.message);
+      // opcional: toast.error("Não foi possível carregar suas conversas.");
     } finally {
       carregandoConversasRef.current = false;
     }
   };
 
-  // Marca como lidas as mensagens da conversa (para o usuário logado)
   const marcarComoLidas = async (conversaId) => {
     if (!meId || !conversaId) return;
     try {
       await api.patch(`/conversas/mensagens/ler/${conversaId}`, { usuario_id: meId });
     } catch (err) {
-      console.warn("Não foi possível marcar mensagens como lidas:", err?.response?.data || err?.message);
+      // não quebra UX
+      console.warn("Não foi possível marcar como lidas:", err?.response?.data || err?.message);
     }
   };
 
-  // Buscar mensagens da conversa ativa
   const carregarMensagens = async (conversaId) => {
     if (!conversaId || carregandoMensagensRef.current) return;
     try {
       carregandoMensagensRef.current = true;
-      const { data } = await api.get(`/conversas/mensagens/${conversaId}`);
+      const data = await safeGet(`/conversas/mensagens/${conversaId}`, []);
       setMensagens(Array.isArray(data) ? data : []);
       await marcarComoLidas(conversaId);
     } catch (err) {
-      console.error("Erro ao carregar mensagens:", err);
+      console.error("Erro ao carregar mensagens:", err?.response?.data || err?.message);
     } finally {
       carregandoMensagensRef.current = false;
     }
   };
 
-  // Inicia/garante uma conversa com o alvo (?id=) sem duplicar
+  // Garante uma conversa com o alvo (?id=...) sem duplicar
   const garantirConversaComAlvo = async (alvo) => {
     if (!meId || !alvo) return;
 
@@ -120,7 +131,8 @@ export default function Chat() {
     const cliente_id = euSouLocador ? alvo : meId;
     const locador_id = euSouLocador ? meId : alvo;
 
-    const { data: lista } = await api.get(`/conversas/ultimas/${meId}`);
+    // lista pode dar 404 -> receber []
+    const lista = await safeGet(`/conversas/ultimas/${meId}`, []);
     const existente =
       (lista || []).find(
         (c) =>
@@ -131,16 +143,21 @@ export default function Chat() {
       ) || null;
 
     if (!existente) {
-      await api.post("/conversas", {
-        cliente_id,
-        locador_id,
-        autor_id: meId,
-        mensagem: "Olá, gostaria de saber mais sobre o aluguel.",
-      });
+      try {
+        await api.post("/conversas", {
+          cliente_id,
+          locador_id,
+          autor_id: meId,
+          mensagem: "Olá, gostaria de saber mais sobre o aluguel.",
+        });
+      } catch (err) {
+        // se o back responder 409 (já existe), ignorar
+        if (err?.response?.status !== 409) throw err;
+      }
     }
 
     await carregarConversas();
-    const { data: lista2 } = await api.get(`/conversas/ultimas/${meId}`);
+    const lista2 = await safeGet(`/conversas/ultimas/${meId}`, []);
     const conv =
       (lista2 || []).find(
         (c) =>
@@ -156,27 +173,25 @@ export default function Chat() {
     }
   };
 
-  // Carrega conversas ao abrir
+  /* ===== Efeitos ===== */
   useEffect(() => {
     if (!meId) return;
     carregarConversas();
   }, [meId]);
 
-  // Se veio com ?id=, tenta garantir a conversa
   useEffect(() => {
     if (!meId || !alvoId) return;
     garantirConversaComAlvo(alvoId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meId, alvoId]);
 
-  // Sempre que troca conversa ativa, carrega mensagens
   useEffect(() => {
     if (conversaAtiva?.conversa_id) {
       carregarMensagens(conversaAtiva.conversa_id);
     }
   }, [conversaAtiva]);
 
-  // Polling leve
+  // Polling leve (apenas quando há conversa ativa)
   useEffect(() => {
     if (!conversaAtiva?.conversa_id) return;
     if (pollRef.current) clearInterval(pollRef.current);
@@ -190,7 +205,7 @@ export default function Chat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversaAtiva?.conversa_id]);
 
-  // Enviar mensagem
+  /* ===== Ações ===== */
   const enviarMensagem = async () => {
     const texto = (novaMensagem || "").trim();
     if (!texto || !conversaAtiva) return;
@@ -210,12 +225,11 @@ export default function Chat() {
       await carregarMensagens(conversaAtiva.conversa_id);
       await carregarConversas();
     } catch (err) {
-      console.error("Erro ao enviar mensagem:", err);
+      console.error("Erro ao enviar mensagem:", err?.response?.data || err?.message);
       toast.error("Não foi possível enviar sua mensagem.");
     }
   };
 
-  // Enter para enviar
   const onKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -223,7 +237,6 @@ export default function Chat() {
     }
   };
 
-  // Excluir conversa
   const excluirConversa = async (conversaId) => {
     try {
       await api.delete(`/conversas/${conversaId}`);
@@ -238,7 +251,6 @@ export default function Chat() {
     }
   };
 
-  // Excluir mensagem (com confirmação)
   const excluirMensagem = async (id) => {
     toast(
       (t) => (
@@ -273,7 +285,7 @@ export default function Chat() {
     );
   };
 
-  // Formatações
+  /* ===== Formatação e filtros ===== */
   const formatarHora = (iso) => {
     try {
       const d = new Date(iso);
@@ -287,7 +299,6 @@ export default function Chat() {
       return "—";
     }
   };
-
   const formatarDataMensagem = (iso) => {
     const data = new Date(iso);
     const hoje = new Date();
@@ -298,13 +309,12 @@ export default function Chat() {
     return data.toLocaleDateString("pt-BR");
   };
 
-  // Filtra contatos por nome
   const conversasFiltradas = useMemo(() => {
     const f = (filtro || "").toLowerCase();
     return conversas.filter((c) => (c?.nome || "").toLowerCase().includes(f));
   }, [conversas, filtro]);
 
-  // ⬇️ NOVO: descobrir a última mensagem enviada por mim (para mostrar "visto")
+  // última mensagem enviada por mim (para exibir “visto”)
   const lastOwnMsgId = useMemo(() => {
     if (!Array.isArray(mensagens) || !meId) return null;
     for (let i = mensagens.length - 1; i >= 0; i--) {
@@ -315,6 +325,7 @@ export default function Chat() {
 
   if (!meId) return null;
 
+  /* ===== UI ===== */
   return (
     <div className="flex bg-gray-100 min-h-screen pb-16 md:pb-0">
       <div className="hidden md:block">
@@ -419,7 +430,7 @@ export default function Chat() {
 
           {conversaAtiva ? (
             <>
-              {/* LISTA DE MENSAGENS: agora com MessageBubble */}
+              {/* LISTA DE MENSAGENS */}
               <div className="flex-grow overflow-y-auto p-4 mb-24" ref={mensagensRef}>
                 {mensagens.map((msg, idx) => {
                   const atual = new Date(msg.data_envio);
@@ -429,7 +440,7 @@ export default function Chat() {
                   const isOwn = Number(msg.autor_id) === Number(meId);
                   const isLastOwn = isOwn && msg.id === lastOwnMsgId;
 
-                  // aceita backend com 'visto', 'lida', 'lido' em formatos boolean/number/string
+                  // aceita 'visto'/'lida'/'lido' em diferentes formatos
                   const vistoBackend = msg?.visto ?? msg?.lida ?? msg?.lido ?? false;
                   const seen =
                     isLastOwn &&
@@ -446,17 +457,15 @@ export default function Chat() {
                         </div>
                       )}
 
-                      {/* Wrapper para posicionar menu de mensagem sem quebrar o layout da bolha */}
                       <div className={isOwn ? "flex justify-end" : "flex justify-start"}>
                         <div className="relative w-full max-w-[78%] sm:max-w-[65%]">
                           <MessageBubble
                             text={msg.mensagem || ""}
                             timestamp={msg.data_envio || msg.created_at || Date.now()}
                             isOwn={isOwn}
-                            seen={seen} // ⬅️ "visto" discreto apenas na última msg própria
+                            seen={seen}
                           />
 
-                          {/* Menu de ações da mensagem (somente suas mensagens) */}
                           {isOwn && (
                             <div className="absolute -top-2 -right-2">
                               <button
@@ -496,7 +505,6 @@ export default function Chat() {
                   onChange={(e) => setNovaMensagem(e.target.value)}
                   onKeyDown={onKeyDown}
                   placeholder="Digite sua mensagem..."
-              
                   className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
                 />
                 <button
