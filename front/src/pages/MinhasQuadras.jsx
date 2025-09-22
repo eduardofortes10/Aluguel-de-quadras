@@ -1,11 +1,11 @@
 // src/pages/MinhasQuadras.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import { api, fileURL } from "../services/api";
 import { useNavigate } from "react-router-dom";
 
-// helper para obter o id do usuário
+// ===== Helpers =====
 async function getUsuarioIdSeguro() {
   try {
     const raw = localStorage.getItem("usuario");
@@ -25,29 +25,74 @@ async function getUsuarioIdSeguro() {
   return null;
 }
 
-// 🔑 resolve imagem (mesmo padrão do CourtCard / QuadraDetalhes)
-function resolveImagemQuadra(q) {
-  if (!q) return "/quadras/sem-imagem.png";
-  const url = q.imagem_url || q.imagem || "sem-imagem.png";
-  const s = String(url).trim().replace(/\\/g, "/");
+const FALLBACK_BY_TIPO = {
+  Futebol: "/quadras/futebol.png",
+  "Futebol Society": "/quadras/futebol.png",
+  Futsal: "/quadras/futsal.png",
+  Basquete: "/quadras/basquete.png",
+  Vôlei: "/quadras/volei.png",
+  Tenis: "/quadras/tenis.png",
+  Tênis: "/quadras/tenis.png",
+  Poliesportiva: "/quadras/poliesportiva.png",
+};
 
-  if (/^https?:\/\//i.test(s)) return s;
-  if (s.includes("/uploads/") || s.startsWith("/avatars/")) return fileURL(s);
-  if (s.startsWith("/quadras/") || !s.includes("/")) return `/quadras/${s.replace(/^\/?quadras\//, "")}`;
-  if (s.startsWith("/")) return fileURL(s);
-
-  return `/quadras/${s}`;
+function getFileName(s) {
+  if (!s) return "";
+  const clean = String(s).split("?")[0].split("#")[0].replace(/\\/g, "/");
+  return clean.split("/").filter(Boolean).pop() || "";
 }
 
-function MinhasQuadras() {
+function resolveImagemPreferindoLocal(any) {
+  // 1) filename explícito (preferir /public/quadras)
+  const candidatos = [
+    any?.imagem_url,
+    any?.imagem,
+    any?.quadra?.imagem_url,
+    any?.quadra?.imagem,
+  ].filter(Boolean);
+
+  for (const c of candidatos) {
+    const file = getFileName(c);
+    if (file) return `/quadras/${file}`;
+  }
+
+  // 2) caminhos absolutos/relativos do backend
+  for (const c of candidatos) {
+    const s = String(c).trim().replace(/\\/g, "/");
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.includes("/uploads/") || s.startsWith("/avatars/")) return fileURL(s);
+    if (s.startsWith("/")) return fileURL(s);
+  }
+
+  // 3) fallback por tipo
+  const tipo = any?.tipo || any?.quadra?.tipo;
+  if (tipo && FALLBACK_BY_TIPO[tipo]) return FALLBACK_BY_TIPO[tipo];
+
+  // 4) fallback final
+  return "/quadras/sem-imagem.png";
+}
+
+function brDate(d) {
+  try {
+    return new Date(d).toLocaleDateString("pt-BR");
+  } catch {
+    return "--/--/----";
+  }
+}
+function brMoney(n) {
+  const num = Number(n);
+  if (!Number.isFinite(num)) return "R$ 0,00";
+  return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+export default function MinhasQuadras() {
   const [alugueis, setAlugueis] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    let cancelado = false;
-
-    async function carregar() {
+    let cancel = false;
+    (async () => {
       const uid = await getUsuarioIdSeguro();
       if (!uid) {
         setCarregando(false);
@@ -55,26 +100,42 @@ function MinhasQuadras() {
         return;
       }
       try {
+        setCarregando(true);
         const { data } = await api.get(`/alugueis/minhas`);
-        if (!cancelado) setAlugueis(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? data : [];
+
+        const normalizados = arr.map((a) => {
+          const q = a?.quadra || {};
+          return {
+            id: a.id,
+            nome: a.nome || q.nome || "Quadra",
+            local: a.local || q.local || "",
+            tipo: a.tipo || q.tipo || "",
+            data: a.data,
+            hora_inicio: a.hora_inicio,
+            hora_fim: a.hora_fim,
+            valor_pago: a.valor_pago,
+            observacoes: a.observacoes,
+            imagem: resolveImagemPreferindoLocal(a),
+          };
+        });
+
+        if (!cancel) setAlugueis(normalizados);
       } catch (err) {
         console.error("Erro ao buscar aluguéis:", err?.response?.data || err?.message);
       } finally {
-        if (!cancelado) setCarregando(false);
+        if (!cancel) setCarregando(false);
       }
-    }
-
-    carregar();
-    return () => { cancelado = true; };
+    })();
+    return () => { cancel = true; };
   }, [navigate]);
-
-  const formatarData = (data) => new Date(data).toLocaleDateString("pt-BR");
 
   return (
     <div className="flex bg-gray-100 min-h-screen">
       <div className="hidden md:block">
         <Sidebar />
       </div>
+
       <div className="flex-1">
         <div className="md:hidden">
           <MobileNav />
@@ -90,23 +151,39 @@ function MinhasQuadras() {
           ) : (
             <div className="grid gap-6">
               {alugueis.map((a) => (
-                <div key={a.id} className="bg-white border rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row">
+                <div
+                  key={a.id}
+                  className="bg-white border rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row"
+                >
                   <img
-                    src={resolveImagemQuadra(a)}
-                    alt={a.nome || "Quadra"}
+                    src={a.imagem}
+                    alt={a.nome}
                     onError={(e) => { e.currentTarget.src = "/quadras/sem-imagem.png"; }}
                     className="md:w-1/3 w-full h-48 object-cover"
                   />
                   <div className="p-4 flex flex-col justify-between flex-1">
                     <div>
-                      <h2 className="text-xl font-bold text-green-700 mb-2">{a.nome || "Quadra"}</h2>
-                      <p className="text-gray-600 flex items-center mb-1">📅 <span className="ml-2 font-medium">Data:</span> {a.data ? formatarData(a.data) : "--/--/----"}</p>
-                      <p className="text-gray-600 flex items-center mb-1">⏰ <span className="ml-2 font-medium">Horário:</span> {a.hora_inicio} às {a.hora_fim}</p>
-                      {a.valor_pago && (
-                        <p className="text-gray-600 flex items-center mb-1">💰 <span className="ml-2 font-medium">Valor pago:</span> R$ {parseFloat(a.valor_pago).toFixed(2)}</p>
+                      <h2 className="text-xl font-bold text-green-700 mb-2">
+                        {a.nome}
+                      </h2>
+                      <p className="text-gray-600 mb-1">
+                        📍 <span className="font-medium">Local:</span> {a.local || "—"}
+                      </p>
+                      <p className="text-gray-600 mb-1">
+                        📅 <span className="font-medium">Data:</span> {brDate(a.data)}
+                      </p>
+                      <p className="text-gray-600 mb-1">
+                        ⏰ <span className="font-medium">Horário:</span> {a.hora_inicio} às {a.hora_fim}
+                      </p>
+                      {a.valor_pago != null && (
+                        <p className="text-gray-600 mb-1">
+                          💰 <span className="font-medium">Valor pago:</span> {brMoney(a.valor_pago)}
+                        </p>
                       )}
                       {a.observacoes && (
-                        <p className="text-gray-600 flex items-start mb-1">📝 <span className="ml-2 font-medium">Obs:</span> {a.observacoes}</p>
+                        <p className="text-gray-600 mb-1">
+                          📝 <span className="font-medium">Obs:</span> {a.observacoes}
+                        </p>
                       )}
                     </div>
                     <div className="mt-4">{/* ações futuras */}</div>
@@ -120,5 +197,3 @@ function MinhasQuadras() {
     </div>
   );
 }
-
-export default MinhasQuadras;

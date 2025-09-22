@@ -315,7 +315,7 @@ const handleQuadraClick = (quadra) => {
         <MobileNav />
       </div>
 
-      <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-hidden">
+      <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-visible">
         {/* HERO */}
         <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
