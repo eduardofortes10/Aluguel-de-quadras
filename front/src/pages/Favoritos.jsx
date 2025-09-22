@@ -40,6 +40,7 @@ function sanitize(str) {
     .trim();
 }
 
+// extrai apenas o arquivo, independente de URL absoluta, query etc.
 function getImagemNome(obj) {
   const tryList = [
     obj?.imagem_url,
@@ -112,75 +113,56 @@ export default function Favoritos() {
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState([]); // { favoritoId, quadra: {...} }
+  const [items, setItems] = useState([]);        // { favoritoId, quadra: {...} }
   const [favSet, setFavSet] = useState(() => new Set());
   const [favIdByQuadra, setFavIdByQuadra] = useState(() => new Map());
   const [uid, setUid] = useState(null);
 
-  // Catálogo local (serve para casar id/nome e pegar imagem local)
+  // Catálogo local (igual ao Home) — index por id e por nome
   const catalogo = useMemo(() => {
     const baseRaw = [...quadrasCarrossel, ...quadras];
     const base = baseRaw.map((q) => ({
       ...q,
       imagem: toLocalImagem(q),
     }));
-    const byId = new Map(
-      base.filter((x) => x?.id != null).map((x) => [String(x.id), x])
-    );
-    const byName = new Map(
-      base.filter((x) => x?.nome).map((x) => [sanitize(x.nome), x])
-    );
+    const byId = new Map(base.filter(x => x?.id != null).map(x => [String(x.id), x]));
+    const byName = new Map(base.filter(x => x?.nome).map(x => [sanitize(x.nome), x]));
     return { base, byId, byName };
   }, []);
 
+  // Resolve imagem local quando não acharmos no catálogo direto
   function resolveImagemLocal(f) {
     // 1) por id
-    const ids = [
-      f?.quadra_id,
-      f?.quadra?.id,
-      f?.id_quadra,
-      f?.id, // alguns dumps antigos
-    ]
-      .map((v) => (v != null ? String(v) : null))
+    const ids = [f?.quadra_id, f?.quadra?.id, f?.id_quadra, f?.id]
+      .map(v => (v != null ? String(v) : null))
       .filter(Boolean);
-
     for (const id of ids) {
       const hit = catalogo.byId.get(id);
       if (hit?.imagem?.startsWith("/quadras/")) return hit.imagem;
     }
-
     // 2) por nome
-    const nomes = [f?.quadra?.nome, f?.nome_quadra, f?.nome, f?.titulo].filter(
-      Boolean
-    );
+    const nomes = [f?.quadra?.nome, f?.nome_quadra, f?.nome, f?.titulo].filter(Boolean);
     for (const n of nomes) {
       const hit = catalogo.byName.get(sanitize(n));
       if (hit?.imagem?.startsWith("/quadras/")) return hit.imagem;
     }
-
-    // 3) por arquivo salvo
-    const candidatos = [f?.imagem_url, f?.quadra?.imagem, f?.imagem, f?.foto].filter(
-      Boolean
-    );
+    // 3) arquivo salvo
+    const candidatos = [f?.imagem_url, f?.quadra?.imagem, f?.imagem, f?.foto].filter(Boolean);
     for (const c of candidatos) {
       const name = getImagemNome({ imagem: c });
       if (name) return `/quadras/${name}`;
     }
-
-    // 4) por tipo
+    // 4) fallback por tipo
     const tipos = [f?.quadra?.tipo, f?.tipo, f?.categoria].filter(Boolean);
     for (const t of tipos) {
-      const img =
-        FALLBACK_BY_TIPO[t] ||
-        FALLBACK_BY_TIPO[t?.charAt(0).toUpperCase() + t?.slice(1)];
+      const img = FALLBACK_BY_TIPO[t] || FALLBACK_BY_TIPO[t?.charAt(0).toUpperCase() + t?.slice(1)];
       if (img) return img;
     }
-
-    // 5) fallback final
+    // 5) final
     return "/quadras/sem-imagem.png";
   }
 
-  // Carrega favoritos do backend + normaliza
+  // Carrega favoritos do backend + reconcilia com catálogo local (nome, preço etc.)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -192,21 +174,34 @@ export default function Favoritos() {
         const { data } = await api.get("/favoritos");
         const arr = Array.isArray(data) ? data : [];
 
-        const normalizados = arr.map((f) => {
+        const list = arr.map((f) => {
           const qDb = f?.quadra || {};
-          const imagemLocal = resolveImagemLocal(f);
+          const qId = String(f.quadra_id ?? qDb.id ?? f.id ?? "");
+          const qName = qDb.nome || f.nome_quadra || f.nome || "";
 
-          const precoBase =
-            qDb.preco ?? f.preco ?? 0;
+          const hitById = qId ? catalogo.byId.get(qId) : null;
+          const hitByName = !hitById && qName ? catalogo.byName.get(sanitize(qName)) : null;
+          const base = hitById || hitByName || {};
+
+          const nome  = base.nome || qName || "Quadra";
+          const tipo  = base.tipo || qDb.tipo || f.tipo || "Quadra esportiva";
+          const local = base.local || qDb.local || f.local || "";
+
+          // mantém o formato igual ao Home
+          const precoBase = f.preco ?? qDb.preco ?? base.preco ?? 0;
+          const precoFmt  = precoSemSufixoBRL(precoBase);
+
+          // imagem local priorizando catálogo; senão, resolve dinâmica
+          const imagemLocal = base.imagem || resolveImagemLocal(f);
 
           const quadraLoc = {
-            id: qDb.id ?? f.quadra_id ?? f.id,
-            nome: qDb.nome ?? f.nome_quadra ?? f.nome ?? "Quadra",
-            local: qDb.local ?? f.local ?? "",
-            tipo: qDb.tipo ?? f.tipo ?? "Quadra esportiva",
-            preco: precoSemSufixoBRL(precoBase),
-            avaliacao: qDb.avaliacao ?? f.avaliacao ?? f.nota ?? 4.5,
-            imagem: imagemLocal, // sempre local
+            id: Number(qId) || base.id || f.id,
+            nome,
+            tipo,
+            local,
+            preco: precoFmt,                         // já formatado
+            avaliacao: base.avaliacao ?? qDb.avaliacao ?? f.avaliacao ?? f.nota ?? 4.5,
+            imagem: imagemLocal,                     // sempre local
             imagem_url: getImagemNome({ imagem: imagemLocal }),
           };
 
@@ -219,19 +214,17 @@ export default function Favoritos() {
 
         if (!mounted) return;
 
-        // set auxiliar (ids favoritados) e map quadraId -> favoritoId
+        // sets auxiliares para corações
         const setIds = new Set(
-          normalizados
-            .map((x) => (x.quadra?.id != null ? Number(x.quadra.id) : null))
-            .filter((v) => v != null)
+          list.map((x) => (x.quadra?.id != null ? Number(x.quadra.id) : null)).filter((v) => v != null)
         );
         const mapIds = new Map();
-        for (const it of normalizados) {
+        for (const it of list) {
           const qid = Number(it.quadra?.id);
           if (qid && it.favoritoId != null) mapIds.set(qid, Number(it.favoritoId));
         }
 
-        setItems(normalizados);
+        setItems(list);
         setFavSet(setIds);
         setFavIdByQuadra(mapIds);
       } catch (err) {
@@ -241,30 +234,26 @@ export default function Favoritos() {
         if (mounted) setLoading(false);
       }
     })();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [catalogo]);
 
   // Navegar p/ detalhe
   const handleQuadraClick = (q) => {
-    const nome = getImagemNome(q);
+    const imgName = getImagemNome(q);
     navigate(`/quadra/${q.id}`, {
-      state: { quadra: { ...q, imagem_url: nome, imagem: `/quadras/${nome}` } },
+      state: { quadra: { ...q, imagem_url: imgName, imagem: `/quadras/${imgName}` } },
     });
   };
 
-  // Toggle de favorito (mesma assinatura da Home)
+  // Toggle favorito (mesma assinatura do Home)
   const handleFavorite = async (quadra, isNowFav) => {
     const userId = uid ?? (await getUsuarioIdSeguro());
     if (!userId) {
       toast.error("Faça login para favoritar.");
       return;
     }
-
     try {
       if (isNowFav) {
-        // adicionar (caso usuário desfaça e refaça dentro da página)
         const precoNumber = precoToNumberAny(quadra?.preco);
         const payload = {
           usuario_id: userId,
@@ -278,7 +267,6 @@ export default function Favoritos() {
         await api.post("/favoritos", payload);
         toast.success("Adicionada aos favoritos!");
       } else {
-        // remover
         const favId = favIdByQuadra.get(Number(quadra.id));
         if (favId) {
           await api.delete(`/favoritos/${favId}`);
@@ -287,10 +275,8 @@ export default function Favoritos() {
         }
         toast("Removida dos favoritos.", { icon: "🗑️" });
 
-        // Atualiza a lista localmente
-        setItems((prev) =>
-          prev.filter((it) => Number(it.quadra?.id) !== Number(quadra.id))
-        );
+        // Atualiza localmente
+        setItems((prev) => prev.filter((it) => Number(it.quadra?.id) !== Number(quadra.id)));
         setFavSet((prev) => {
           const n = new Set(prev);
           n.delete(Number(quadra.id));
@@ -349,11 +335,8 @@ export default function Favoritos() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {items.map(({ favoritoId, quadra }) => {
                 const isFav = favSet.has(Number(quadra.id));
-                const qSan = {
-                  ...quadra,
-                  preco: precoSemSufixoBRL(quadra.preco),
-                  imagem: toLocalImagem(quadra),
-                };
+                // quadra já vem normalizada (nome, preço e imagem locais) — não reformatar aqui
+                const qSan = { ...quadra };
                 return (
                   <CourtCard
                     key={favoritoId ?? quadra.id}
@@ -369,7 +352,7 @@ export default function Favoritos() {
           )}
         </div>
 
-        {/* Rodapé simples */}
+        {/* Rodapé */}
         <footer className="bg-[#0f3d26] text-white mt-12">
           <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
             <div className="text-sm text-white/80">
