@@ -88,7 +88,9 @@ app.use("/api/quadras", require("./routes/quadras"));
 app.use("/api/favoritos", auth, require("./routes/favoritos"));
 app.use("/api/alugueis", auth, require("./routes/alugueis"));
 app.use("/api/notificacoes", auth, require("./routes/notificacoes"));
+// manter a rota antiga e expor também a rota curta usada pelo front
 app.use("/api/chat/conversas", auth, require("./routes/conversas"));
+app.use("/api/conversas",     auth, require("./routes/conversas"));
 app.use("/api/fotos-perfil", auth, require("./routes/fotosPerfil"));
 app.use("/api/usuarios", auth, require("./routes/usuarios"));
 
