@@ -1,226 +1,189 @@
 // src/pages/Favoritos.jsx
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import Sidebar from "../components/Sidebar";
-import UserDropdown from "../components/DropdownUser";
-import MobileNav from "../components/MobileNav";
-import { FaHome } from "react-icons/fa";
-import { api, fileURL } from "../services/api";
+import { useEffect, useState, useMemo } from "react";
+import { toast } from "react-hot-toast";
+import { Heart, Loader2 } from "lucide-react";
+import api from "../services/api";
+import CourtCard from "../components/CourtCard";
+import { quadras, quadrasCarrossel } from "../data/quadras";
 
-// ---- helpers ----
-async function getUsuarioIdSeguro() {
+const FALLBACK_BY_TIPO = {
+  Futebol: "/quadras/futebol.png",
+  "Futebol Society": "/quadras/futebol.png",
+  Futsal: "/quadras/futsal.png",
+  Basquete: "/quadras/basquete.png",
+  Vôlei: "/quadras/volei.png",
+  Tenis: "/quadras/tenis.png",
+  Tênis: "/quadras/tenis.png",
+  Poliesportiva: "/quadras/poliesportiva.png",
+};
+
+function sanitize(str) {
+  return (str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function basename(path = "") {
   try {
-    const raw = localStorage.getItem("usuario");
-    if (raw) {
-      const u = JSON.parse(raw);
-      if (u?.id) return Number(u.id);
-      if (u?.usuario_id) return Number(u.usuario_id);
-    }
-    const uidStr = localStorage.getItem("usuario_id");
-    if (uidStr && /^\d+$/.test(uidStr)) return Number(uidStr);
-    try {
-      const { data } = await api.get("/auth/me");
-      if (data?.id) return Number(data.id);
-      if (data?.usuario_id) return Number(data.usuario_id);
-    } catch {}
-  } catch {}
-  return null;
-}
-
-// 🔑 normaliza os campos recebidos
-function normalizarFavorito(f) {
-  const hasNestedQuadra = f?.quadra && typeof f.quadra === "object";
-
-  const favoritoId =
-    f.favorito_id ??
-    (hasNestedQuadra ? f.id : undefined) ??
-    (f.quadra_id ? f.id : undefined) ??
-    f.id;
-
-  const quadraId =
-    f.quadra_id ??
-    (hasNestedQuadra ? f.quadra.id : undefined) ??
-    f.id_quadra ??
-    f.quadraId ??
-    f.id;
-
-  const nome = f.nome ?? (hasNestedQuadra ? f.quadra.nome : undefined) ?? "Quadra";
-  const preco = f.preco ?? (hasNestedQuadra ? f.quadra.preco : undefined) ?? 0;
-  const local = f.local ?? (hasNestedQuadra ? f.quadra.local : undefined) ?? "";
-  const tipo = f.tipo ?? (hasNestedQuadra ? f.quadra.tipo : undefined) ?? "Quadra esportiva";
-  const nota =
-    f.nota ??
-    f.avaliacao ??
-    (hasNestedQuadra ? f.quadra.nota ?? f.quadra.avaliacao : undefined) ??
-    4.5;
-
-  const imagem_url =
-    f.imagem_url ??
-    (hasNestedQuadra ? f.quadra.imagem_url ?? f.quadra.imagem : undefined) ??
-    "sem-imagem.png";
-
-  return { favoritoId, quadraId, nome, preco, local, tipo, nota, imagem_url, _raw: f };
-}
-
-// 🔑 resolve imagem (mesmo padrão do CourtCard / QuadraDetalhes)
-function resolveImagemFavorito(item) {
-  const url = item?.imagem_url || "sem-imagem.png";
-  const s = String(url).trim().replace(/\\/g, "/");
-
-  if (/^https?:\/\//i.test(s)) return s;
-  if (s.includes("/uploads/") || s.startsWith("/avatars/")) return fileURL(s);
-  if (s.startsWith("/quadras/") || !s.includes("/")) return `/quadras/${s.replace(/^\/?quadras\//, "")}`;
-  if (s.startsWith("/")) return fileURL(s);
-
-  return `/quadras/${s}`;
+    const clean = path.split("?")[0].split("#")[0];
+    return clean.split("/").filter(Boolean).pop() || "";
+  } catch {
+    return "";
+  }
 }
 
 export default function Favoritos() {
+  const [loading, setLoading] = useState(true);
   const [favoritos, setFavoritos] = useState([]);
-  const [carregando, setCarregando] = useState(true);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    let cancelado = false;
-    async function carregar() {
-      try {
-        setCarregando(true);
-        const uid = await getUsuarioIdSeguro();
-        if (!uid) {
-          setCarregando(false);
-          navigate("/login", { replace: true });
-          return;
-        }
-        const { data } = await api.get("/favoritos");
-        const arr = Array.isArray(data) ? data : [];
-        const normalizados = arr.map(normalizarFavorito);
-        if (!cancelado) setFavoritos(normalizados);
-      } catch (err) {
-        console.error("❌ Erro ao buscar favoritos:", err?.response?.data || err?.message);
-      } finally {
-        if (!cancelado) setCarregando(false);
+  // Catálogo local igual ao Resultados.jsx
+  const catalogo = useMemo(() => {
+    const base = [...quadrasCarrossel, ...quadras];
+    // índices auxiliares por id e por nome (normalizado)
+    const byId = new Map(base.filter(x => x?.id != null).map(x => [String(x.id), x]));
+    const byName = new Map(base.filter(x => x?.nome).map(x => [sanitize(x.nome), x]));
+    return { base, byId, byName };
+  }, []);
+
+  // Resolve a melhor imagem LOCAL possível para o item
+  const resolveImagemLocal = (fav) => {
+    // 1) Tentar por id de quadra
+    const idsPossiveis = [
+      fav?.quadra_id,
+      fav?.quadra?.id,
+      fav?.id_quadra,
+      fav?.id, // em alguns dumps favoritos herdavam o id da quadra
+    ]
+      .map(v => (v != null ? String(v) : null))
+      .filter(Boolean);
+
+    for (const id of idsPossiveis) {
+      const hit = catalogo.byId.get(id);
+      if (hit?.imagem && hit.imagem.startsWith("/quadras/")) {
+        return hit.imagem;
       }
     }
-    carregar();
-    return () => { cancelado = true; };
-  }, [navigate]);
 
-const removerFavorito = async (item) => {
-  try {
-    const uid = await getUsuarioIdSeguro();
-    if (!uid) return;
+    // 2) Tentar por nome de quadra
+    const nomesPossiveis = [
+      fav?.quadra?.nome,
+      fav?.nome_quadra,
+      fav?.nome,
+      fav?.titulo,
+    ].filter(Boolean);
 
-    if (item.quadraId) {
-      await api.delete(`/favoritos/usuario/${uid}/quadra/${item.quadraId}`);
+    for (const n of nomesPossiveis) {
+      const hit = catalogo.byName.get(sanitize(n));
+      if (hit?.imagem && hit.imagem.startsWith("/quadras/")) {
+        return hit.imagem;
+      }
     }
 
-    setFavoritos((prev) =>
-      prev.filter((q) => q.quadraId !== item.quadraId)
-    );
-  } catch (err) {
-    console.error("Erro ao remover favorito:", err?.response?.data || err?.message);
-  }
-};
+    // 3) Tentar extrair um arquivo válido e apontar para /quadras/<arquivo>
+    const candidatosArquivo = [
+      fav?.imagem_url,
+      fav?.quadra?.imagem,
+      fav?.imagem,
+      fav?.foto,
+    ].filter(Boolean);
 
+    for (const c of candidatosArquivo) {
+      const file = basename(c);
+      if (file) {
+        // Você precisa garantir que esse arquivo exista em /public/quadras/
+        return `/quadras/${file}`;
+      }
+    }
+
+    // 4) Fallback por tipo
+    const tipos = [
+      fav?.quadra?.tipo,
+      fav?.tipo,
+      fav?.categoria,
+    ].filter(Boolean);
+
+    for (const t of tipos) {
+      const img = FALLBACK_BY_TIPO[t] || FALLBACK_BY_TIPO[t?.charAt(0).toUpperCase() + t?.slice(1)];
+      if (img) return img;
+    }
+
+    // 5) Último fallback
+    return "/quadras/sem-imagem.png";
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setLoading(true);
+        const { data } = await api.get("/favoritos"); // mantém a origem dinâmica (DB)
+        if (!mounted) return;
+
+        // Normaliza cada favorito + injeta a imagem LOCAL
+        const list = (Array.isArray(data) ? data : []).map((f) => {
+          const quadra = f?.quadra || {};
+          const localImg = resolveImagemLocal(f);
+
+          return {
+            id: f.id || `${quadra.id || f.quadra_id || Math.random()}`,
+            nome: quadra.nome || f.nome_quadra || f.nome || "Quadra",
+            local: quadra.local || f.local || "",
+            tipo: quadra.tipo || f.tipo || "",
+            preco: quadra.preco ?? f.preco ?? null,
+            avaliacao: quadra.avaliacao ?? f.avaliacao ?? null,
+            dono: quadra.dono || f.dono || "",
+            imagem: localImg, // <- sempre local agora ("/quadras/..")
+            raw: f,
+          };
+        });
+
+        setFavoritos(list);
+      } catch (err) {
+        console.error(err);
+        toast.error("Não foi possível carregar seus favoritos.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => (mounted = false);
+  }, []); // sem deps
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-zinc-300">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        Carregando seus favoritos...
+      </div>
+    );
+  }
+
+  if (!favoritos.length) {
+    return (
+      <div className="py-16 text-center">
+        <Heart className="mx-auto mb-3 h-8 w-8 opacity-70" />
+        <p className="text-zinc-300">Você ainda não favoritou nenhuma quadra.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar */}
-      <div className="hidden md:block">
-        <Sidebar />
-      </div>
+    <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <h1 className="mb-4 text-xl font-semibold">Meus Favoritos</h1>
 
-      {/* Mobile nav */}
-      <div className="md:hidden block w-full fixed top-0 left-0 z-50">
-        <MobileNav />
-      </div>
-
-      <div className="absolute top-4 right-4 z-50">
-        <UserDropdown />
-      </div>
-
-      <div className="flex-1 p-6 md:pl-20 max-w-7xl mx-auto">
-        <div className="flex items-center text-sm text-gray-500 mb-6 space-x-2">
-          <Link to="/home" className="hover:underline hover:text-green-600 flex items-center">
-            <FaHome className="w-4 h-4 mr-1" /> Início
-          </Link>
-          <span>/</span>
-          <span className="text-green-700 font-semibold">Favoritos</span>
-        </div>
-
-        <h1 className="text-2xl font-bold mb-6 text-green-700">Favoritos</h1>
-
-        {carregando ? (
-          <p className="animate-pulse text-gray-500">Carregando quadras favoritas...</p>
-        ) : favoritos.length === 0 ? (
-          <p className="text-center text-gray-500 text-sm mt-10">
-            💤 Você ainda não adicionou nenhuma quadra aos favoritos.
-          </p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {favoritos.map((item) => (
-              <div
-                key={item.favoritoId ?? item.quadraId}
-                className="bg-white rounded-xl shadow-md overflow-hidden relative hover:shadow-lg hover:scale-[1.01] transition-transform duration-300"
-              >
-                <img
-                  src={resolveImagemFavorito(item)}
-                  alt={item.nome}
-                  className="w-full h-48 object-cover"
-                  onError={(e) => { e.currentTarget.src = "/quadras/sem-imagem.png"; }}
-                />
-
-                <div className="p-4">
-                  <h2 className="text-lg font-semibold text-gray-800">{item.nome}</h2>
-                  <p className="text-sm text-gray-600">{item.local}</p>
-                  <div className="flex justify-between items-center mt-2">
-                    <span className="text-green-700 font-bold">
-                      {String(item.preco).toString().includes("R$")
-                        ? item.preco
-                        : `R$ ${item.preco}`}
-                    </span>
-                    <span className="text-yellow-500">⭐ {item.nota || "4.5"}</span>
-                  </div>
-                  <div className="mt-2">
-                    <p className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full w-max">
-                      Tipo: {item.tipo}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() =>
-                      navigate(`/quadra/${item.quadraId}`, {
-                        state: {
-                          quadra: {
-                            id: item.quadraId,
-                            nome: item.nome,
-                            preco: item.preco,
-                            local: item.local,
-                            imagem: resolveImagemFavorito(item),
-                            avaliacao: item.nota,
-                            tipo: item.tipo,
-                          },
-                        },
-                      })
-                    }
-                    className="mt-3 text-sm text-blue-600 hover:underline"
-                  >
-                    Ver detalhes
-                  </button>
-                </div>
-
-                <button
-                  onClick={() => removerFavorito(item)}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 hover:ring-2 ring-offset-1 ring-red-300"
-                  title="Remover dos favoritos"
-                  aria-label="Remover dos favoritos"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* grid de cards reaproveitando o CourtCard (ele aceita src começando com /quadras/ normalmente) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {favoritos.map((q) => (
+          <CourtCard
+            key={q.id}
+            id={q.raw?.quadra_id || q.raw?.quadra?.id || q.id}
+            nome={q.nome}
+            local={q.local}
+            tipo={q.tipo}
+            preco={q.preco}
+            avaliacao={q.avaliacao}
+            imagem={q.imagem} // sempre um caminho local (/quadras/...)
+            dono={q.dono}
+            // Se o seu CourtCard espera outras props (onUnfavorite, etc.), adicione aqui
+          />
+        ))}
       </div>
     </div>
   );

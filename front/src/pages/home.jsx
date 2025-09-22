@@ -83,10 +83,16 @@ function precoToNumberAny(v) {
   const n = parseFloat(String(v || "").replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
   return Number.isFinite(n) ? n : 0;
 }
+// Substitua sua função atual por esta
 function getImagemNome(quadra) {
-  const s = quadra?.imagem_url || quadra?.imagem || "";
-  const part = String(s).split("/").pop();
-  return part || "sem-imagem.png";
+  const s = quadra?.imagem || quadra?.imagem_url || "";
+  if (!s) return "sem-imagem.png";
+  // remove query/hash
+  const clean = String(s).split("?")[0].split("#")[0];
+  // pega só o último segmento
+  const file = clean.split("/").filter(Boolean).pop();
+  // fallback
+  return file || "sem-imagem.png";
 }
 
 async function resolverNomeUsuario() {
@@ -251,12 +257,19 @@ export default function Home() {
   }, []);
 
   // Navegar p/ detalhe
-  const handleQuadraClick = (quadra) => {
-    const imagem_nome = quadra.imagem?.split("/").pop();
-    navigate(`/quadra/${quadra.id}`, {
-      state: { quadra: { ...quadra, imagem_url: imagem_nome, imagem: `/quadras/${imagem_nome}` } },
-    });
-  };
+ // Pelo bloco abaixo (mais seguro p/ querystring, uploads, http, etc.):
+const handleQuadraClick = (quadra) => {
+  const imagem_nome = getImagemNome(quadra);
+  navigate(`/quadra/${quadra.id}`, {
+    state: {
+      quadra: {
+        ...quadra,
+        imagem_url: imagem_nome,
+        imagem: `/quadras/${imagem_nome}`,
+      },
+    },
+  });
+};
 
   // Nome do usuário
   useEffect(() => {
@@ -315,22 +328,28 @@ export default function Home() {
             <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:hidden" />
 
             <div ref={sliderRef} className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0">
-              {quadrasCarrossel.map((q) => {
-                const isFav = favSet.has(Number(q.id));
-                const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-                return (
-                  <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
-                    <CourtCard
-                      key={`${q.id}-${isFav ? 1 : 0}`}
-                      quadra={qSan}
-                      variant="compact"
-                      isFavorited={isFav}
-                      onClick={() => handleQuadraClick(qSan)}
-                      onFavorite={handleFavorite}
-                    />
-                  </div>
-                );
-              })}
+             {quadrasCarrossel.map((q) => {
+  const isFav = favSet.has(Number(q.id));
+  const imgName = getImagemNome(q);
+  const qSan = {
+    ...q,
+    preco: precoSemSufixoBRL(q.preco),
+    imagem: `/quadras/${imgName}`, // <— força local
+  };
+  return (
+    <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
+      <CourtCard
+        key={`${q.id}-${isFav ? 1 : 0}`}
+        quadra={qSan}
+        variant="compact"
+        isFavorited={isFav}
+        onClick={() => handleQuadraClick(qSan)}
+        onFavorite={handleFavorite}
+      />
+    </div>
+  );
+})}
+
             </div>
           </div>
         </section>
@@ -339,20 +358,26 @@ export default function Home() {
         <section className="mt-8 sm:mt-10">
           <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {quadras.map((q) => {
-              const isFav = favSet.has(Number(q.id));
-              const qSan = { ...q, preco: precoSemSufixoBRL(q.preco) };
-              return (
-                <CourtCard
-                  key={`${q.id}-${isFav ? 1 : 0}`}
-                  quadra={qSan}
-                  variant="default"
-                  isFavorited={isFav}
-                  onClick={() => handleQuadraClick(qSan)}
-                  onFavorite={handleFavorite}
-                />
-              );
-            })}
+           {quadras.map((q) => {
+  const isFav = favSet.has(Number(q.id));
+  const imgName = getImagemNome(q);
+  const qSan = {
+    ...q,
+    preco: precoSemSufixoBRL(q.preco),
+    imagem: `/quadras/${imgName}`, // <— força local
+  };
+  return (
+    <CourtCard
+      key={`${q.id}-${isFav ? 1 : 0}`}
+      quadra={qSan}
+      variant="default"
+      isFavorited={isFav}
+      onClick={() => handleQuadraClick(qSan)}
+      onFavorite={handleFavorite}
+    />
+  );
+})}
+
           </div>
         </section>
 

@@ -5,7 +5,7 @@ import MobileNav from "../components/MobileNav";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { enviarNotificacao } from "../services/notificacoes";
-import { api, fileURL } from "../services/api";
+import { api } from "../services/api";
 import { quadras as DATA_Q, quadrasCarrossel as DATA_CAR } from "../data/quadras";
 import { FaStar, FaEnvelope, FaPhone, FaCommentDots, FaHeart, FaRegHeart, FaMapMarkerAlt } from "react-icons/fa";
 
@@ -48,16 +48,35 @@ function precoToNumber(v) {
 }
 
 function resolveImagemCapa(q) {
-  if (q?.imagem) return q.imagem;
-  const list = Array.isArray(q?.imagens) ? q.imagens : [];
-  for (let c of list) {
-    if (!c) continue;
-    const s = String(c).trim().replace(/\\/g, "/");
-    if (/^https?:\/\//i.test(s)) return s;
-    if (s.includes("/uploads/") || s.startsWith("/")) return fileURL(s);
-    return `/quadras/${s}`;
+  const name = getImagemNome(q);
+  return `/quadras/${name}`;
+}
+
+// 🔧 Sempre extrai só o filename, independente se veio http/uploads/querystring
+function getImagemNome(obj) {
+  const tryList = [
+    obj?.imagem_url,
+    obj?.imagem,
+    ...(Array.isArray(obj?.imagens) ? obj.imagens : []),
+  ].filter(Boolean);
+
+  for (const raw of tryList) {
+    const clean = String(raw).split("?")[0].split("#")[0].replace(/\\/g, "/");
+    const file = clean.split("/").filter(Boolean).pop();
+    if (file) return file;
   }
-  return "/quadras/quadra1.png";
+  return "sem-imagem.png";
+}
+
+// 🔧 Normaliza a quadra para sempre usar caminho local (/quadras/<arquivo>)
+function toLocalQuadra(q) {
+  if (!q) return q;
+  const name = getImagemNome(q);
+  return {
+    ...q,
+    imagem_url: name,
+    imagem: `/quadras/${name}`,
+  };
 }
 
 export default function QuadraDetalhe() {
@@ -65,7 +84,8 @@ export default function QuadraDetalhe() {
   const { id } = useParams();
   const { state } = useLocation();
 
-  const [quadra, setQuadra] = useState(state?.quadra || null);
+  const [quadra, setQuadra] = useState(state?.quadra ? toLocalQuadra(state.quadra) : null);
+
   const [carregando, setCarregando] = useState(!state?.quadra);
 
   const [mostrarModal, setMostrarModal] = useState(false);
@@ -79,40 +99,39 @@ export default function QuadraDetalhe() {
   const [favoritado, setFavoritado] = useState(false);
   const [favoritoId, setFavoritoId] = useState(null);
 
-  useEffect(() => {
-    let cancel = false;
-    if (state?.quadra) return;
+ useEffect(() => {
+  let cancel = false;
+  if (state?.quadra) return;
 
-    async function carregar() {
-      try {
-        setCarregando(true);
-        const idNum = Number(id);
+  async function carregar() {
+    try {
+      setCarregando(true);
+      const idNum = Number(id);
 
-        if (Number.isFinite(idNum)) {
-          const local = [...DATA_CAR, ...DATA_Q].find((q) => Number(q.id) === idNum);
-          if (local) {
-            if (!cancel) setQuadra(local);
-            return;
-          }
+      if (Number.isFinite(idNum)) {
+        const local = [...DATA_CAR, ...DATA_Q].find((q) => Number(q.id) === idNum);
+        if (local) {
+          if (!cancel) setQuadra(toLocalQuadra(local)); // ← aqui
+          return;
         }
-
-        if (Number.isFinite(Number(id))) {
-          const { data } = await api.get(`/quadras/${id}`);
-          if (!cancel) setQuadra(data);
-        }
-      } catch (e) {
-        console.error("Erro ao carregar quadra:", e);
-        if (!cancel) setQuadra(null);
-      } finally {
-        if (!cancel) setCarregando(false);
       }
-    }
 
-    carregar();
-    return () => {
-      cancel = true;
-    };
-  }, [id, state?.quadra]);
+      if (Number.isFinite(Number(id))) {
+        const { data } = await api.get(`/quadras/${id}`);
+        if (!cancel) setQuadra(toLocalQuadra(data));   // ← e aqui
+      }
+    } catch (e) {
+      console.error("Erro ao carregar quadra:", e);
+      if (!cancel) setQuadra(null);
+    } finally {
+      if (!cancel) setCarregando(false);
+    }
+  }
+
+  carregar();
+  return () => { cancel = true; };
+}, [id, state?.quadra]);
+
 
   const capaUrl = useMemo(() => resolveImagemCapa(quadra), [quadra]);
   const precoBase = useMemo(() => precoToNumber(quadra?.preco), [quadra]);
@@ -176,10 +195,8 @@ export default function QuadraDetalhe() {
       return;
     }
 
-    const imgName =
-      quadra?.imagem_url?.split("/").pop() ||
-      quadra?.imagem?.split("/").pop() ||
-      "sem-imagem.png";
+    const imgName = getImagemNome(quadra);
+
 
     const dadosFavorito = {
       usuario_id: uid,
@@ -251,7 +268,8 @@ export default function QuadraDetalhe() {
     }
 
     try {
-      const imgName = quadra?.imagem?.split("/").pop() || "sem-imagem.png";
+const imgName = getImagemNome(quadra);
+
       await api.post("/alugueis", {
         quadra_id: quadra?.id || quadra?.quadra_id || 0,
         cliente_id: uid,
