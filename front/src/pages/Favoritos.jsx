@@ -2,7 +2,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import { Heart, Loader2 } from "lucide-react";
-import api from "../services/api";
+import { api } from "../services/api";
+
 import CourtCard from "../components/CourtCard";
 import { quadras, quadrasCarrossel } from "../data/quadras";
 
