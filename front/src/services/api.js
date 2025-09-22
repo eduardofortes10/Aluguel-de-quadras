@@ -1,50 +1,73 @@
 // src/services/api.js
 import axios from "axios";
 
-// 👉 Defina isso na Vercel:
+// Vars vindas do Vite/Vercel
 const API_FROM_ENV = (import.meta.env.VITE_API_URL || "").trim();          // ex.: https://SEU-BACK.onrender.com/api
 const FILES_FROM_ENV = (import.meta.env.VITE_FILES_ORIGIN || "").trim();   // ex.: https://SEU-BACK.onrender.com
 
-// Defaults de segurança (troque pro seu domínio da Render, se quiser)
-const ABSOLUTE_DEFAULT = "https://aluguel-de-quadras.onrender.com/api";
-const baseURL = (API_FROM_ENV || ABSOLUTE_DEFAULT).replace(/\/+$/, "");
+// ⚠️ Falhar cedo se a API não foi configurada (evita cair num default silencioso)
+if (!API_FROM_ENV) {
+  // Em produção, apenas loga; em dev, ajuda a perceber a falta de env
+  console.warn("[api] VITE_API_URL não definido. Configure nas variáveis do Vite/Vercel.");
+}
+const baseURL = (API_FROM_ENV || "").replace(/\/+$/, "");
 
-// Se não informarem VITE_FILES_ORIGIN, derivamos da API removendo o /api do fim
-const derivedFilesOrigin = baseURL.replace(/\/api\/?$/i, "");
+// Deriva origin de arquivos removendo o /api do fim, se não foi informado
+const derivedFilesOrigin = baseURL ? baseURL.replace(/\/api\/?$/i, "") : "";
 const filesOrigin = (FILES_FROM_ENV || derivedFilesOrigin).replace(/\/+$/, "");
 
+// Axios instance
 export const api = axios.create({
   baseURL,
-  withCredentials: true, // deixe true se usar cookies de sessão; se usar só Authorization, pode ser false
-  headers: { Accept: "application/json" }
+  withCredentials: false, // ✅ usando somente Authorization (sem cookies)
+  headers: { Accept: "application/json" },
+  timeout: 20000,
 });
 
-// Helper robusto para montar URL de arquivo
+// Anexa JWT se existir
+api.interceptors.request.use((config) => {
+  try {
+    const t = localStorage.getItem("token");
+    if (t) config.headers.Authorization = `Bearer ${t}`;
+  } catch {}
+  return config;
+});
+
+// Log simples de erro (opcional)
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (typeof window !== "undefined") {
+      console.debug("[api:erro]", err?.response?.status, err?.config?.url, err?.response?.data);
+    }
+    return Promise.reject(err);
+  }
+);
+
+// Monta URL de arquivo do backend (/uploads, /avatars), normalizando contrabarras
 export function fileURL(p = "") {
   if (!p) return "";
-  const s = String(p).trim();
+  let s = String(p).trim().replace(/\\/g, "/");
 
-  // se já é absoluta, retorna como está
+  // já é absoluta?
   if (/^https?:\/\//i.test(s)) return s;
 
-  // normaliza caminhos armazenados de formas diferentes
-  // exemplos que viram "/uploads/xyz.png": "uploads/xyz.png", "/uploads/xyz.png", "/var/.../uploads/xyz.png"
-  const idx = s.indexOf("/uploads/");
-  const rel = idx >= 0 ? s.slice(idx) : (s.startsWith("/") ? s : `/${s}`);
+  // normaliza caminhos tipo "uploads/xyz.png", "/uploads/xyz.png", "C:/.../uploads/xyz.png"
+  const uploadsIdx = s.toLowerCase().indexOf("/uploads/");
+  const avatarsIdx = s.toLowerCase().indexOf("/avatars/");
+  let rel = "";
+
+  if (uploadsIdx >= 0) rel = s.slice(uploadsIdx);
+  else if (avatarsIdx >= 0) rel = s.slice(avatarsIdx);
+  else rel = s.startsWith("/") ? s : `/${s}`;
 
   return `${filesOrigin}${rel}`;
 }
 
-// Debug opcional no browser
+// Debug (desativar em prod se quiser)
 if (typeof window !== "undefined") {
   window.__API_BASE__ = baseURL;
   window.__FILES_ORIGIN__ = filesOrigin;
-  console.log("[api] baseURL =", baseURL);
-  console.log("[api] filesOrigin =", filesOrigin);
+  console.log("[api] baseURL =", baseURL || "(NÃO DEFINIDO)");
+  console.log("[api] filesOrigin =", filesOrigin || "(NÃO DEFINIDO)");
 }
-// após export const api = axios.create({ baseURL: ... })
-api.interceptors.request.use((config) => {
-  const t = localStorage.getItem("token");
-  if (t) config.headers.Authorization = `Bearer ${t}`;
-  return config;
-});
