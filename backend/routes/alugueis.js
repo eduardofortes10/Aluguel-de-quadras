@@ -4,56 +4,143 @@ const router = express.Router();
 const db = require("../db");
 const auth = require("../middleware/auth");
 
-// Criar novo aluguel
-router.post("/", auth, async (req, res) => {
+router.use(auth);
+
+/**
+ * POST /api/alugueis
+ * Cria um aluguel. Recebe (além dos campos obrigatórios) imagem_url, nome, local e observacoes.
+ * Se algum desses vier vazio, busca na tabela quadras para preencher.
+ */
+router.post("/", async (req, res) => {
   try {
-    const { quadra_id, data, hora_inicio, hora_fim } = req.body;
-    const cliente_id = req.user.id;
+    const {
+      quadra_id,
+      // cliente_id, // ignorado — usamos o usuário logado (req.user.id)
+      data,
+      hora_inicio,
+      hora_fim,
+      imagem_url,
+      nome,
+      local,
+      valor_pago,
+      observacoes,
+    } = req.body;
 
     if (!quadra_id || !data || !hora_inicio || !hora_fim) {
-      return res.status(400).json({ erro: "Preencha todos os campos obrigatórios." });
+      return res
+        .status(400)
+        .json({ erro: "quadra_id, data, hora_inicio e hora_fim são obrigatórios." });
     }
 
-    // 🔎 Checa conflito
-    const [conflitos] = await db.query(
-      `SELECT 1 FROM alugueis
-       WHERE quadra_id = ?
-         AND data = ?
-         AND NOT (hora_fim <= ? OR hora_inicio >= ?)
-       LIMIT 1`,
-      [quadra_id, data, hora_inicio, hora_fim]
-    );
+    // Prepara fallbacks a partir da tabela quadras, se necessário
+    let nomeFinal = (nome || "").trim();
+    let localFinal = (local || "").trim();
+    let imagemFinal = (imagem_url || "").trim();
 
-    if (conflitos.length > 0) {
-      return res.status(409).json({ erro: "Horário indisponível para esta quadra." });
+    if (!nomeFinal || !localFinal || !imagemFinal) {
+      const [[q]] = await db.query(
+        "SELECT nome, local, imagem_url FROM quadras WHERE id = ?",
+        [quadra_id]
+      );
+      if (q) {
+        if (!nomeFinal) nomeFinal = q.nome || "Quadra";
+        if (!localFinal) localFinal = q.local || "";
+        if (!imagemFinal) imagemFinal = q.imagem_url || "sem-imagem.png";
+      }
     }
 
-    // Se não houver conflito → insere
-    await db.query(
-      `INSERT INTO alugueis (quadra_id, cliente_id, data, hora_inicio, hora_fim, criado_em)
-       VALUES (?, ?, ?, ?, ?, NOW())`,
-      [quadra_id, cliente_id, data, hora_inicio, hora_fim]
+    const [ins] = await db.query(
+      `INSERT INTO alugueis
+         (quadra_id, cliente_id, data, hora_inicio, hora_fim,
+          imagem_url, nome, local, valor_pago, observacoes)
+       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [
+        quadra_id,
+        req.user.id, // sempre o usuário logado
+        data,
+        hora_inicio,
+        hora_fim,
+        imagemFinal || null,
+        nomeFinal || null,
+        localFinal || null,
+        valor_pago ?? null,
+        observacoes || null,
+      ]
     );
 
-    res.status(201).json({ sucesso: true, msg: "Aluguel criado com sucesso" });
-  } catch (err) {
-    console.error("POST /alugueis erro:", err);
-    res.status(500).json({ erro: "Erro ao criar aluguel" });
+    return res.status(201).json({ id: ins.insertId });
+  } catch (e) {
+    console.error("POST /alugueis", e);
+    return res.status(500).json({ erro: "Erro ao salvar aluguel." });
   }
 });
 
-// 📌 Nova rota → lista aluguéis do cliente logado
-router.get("/minhas", auth, async (req, res) => {
+/**
+ * GET /api/alugueis/minhas
+ * Lista os aluguéis do usuário logado, retornando imagem/nome/local do aluguel
+ * (ou, se nulos, fazendo fallback para os dados atuais da quadra).
+ */
+router.get("/minhas", async (req, res) => {
   try {
-    const cliente_id = req.user.id;
+    const uid = req.user.id;
+
     const [rows] = await db.query(
-      "SELECT * FROM alugueis WHERE cliente_id = ? ORDER BY data DESC, hora_inicio DESC",
-      [cliente_id]
+      `
+      SELECT
+        a.id,
+        a.quadra_id,
+        a.data,
+        a.hora_inicio,
+        a.hora_fim,
+        a.valor_pago,
+        a.observacoes,
+        COALESCE(a.nome,  q.nome)  AS nome,
+        COALESCE(a.local, q.local) AS local,
+        COALESCE(a.imagem_url, q.imagem_url) AS imagem_url
+      FROM alugueis a
+      LEFT JOIN quadras q ON q.id = a.quadra_id
+      WHERE a.cliente_id = ?
+      ORDER BY a.data DESC, a.hora_inicio DESC
+      `,
+      [uid]
     );
+
     res.json(rows);
-  } catch (err) {
-    console.error("GET /alugueis/minhas erro:", err);
-    res.status(500).json({ erro: "Erro ao buscar aluguéis" });
+  } catch (e) {
+    console.error("GET /alugueis/minhas", e);
+    res.status(500).json({ erro: "Erro ao buscar seus aluguéis." });
+  }
+});
+
+/**
+ * GET /api/alugueis/:id
+ * Detalhe de um aluguel (apenas se pertence ao usuário logado).
+ * Útil para depuração e futuras telas de detalhe.
+ */
+router.get("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ erro: "id inválido." });
+
+    const [[row]] = await db.query(
+      `
+      SELECT
+        a.*,
+        COALESCE(a.nome,  q.nome)  AS nome_resolvido,
+        COALESCE(a.local, q.local) AS local_resolvido,
+        COALESCE(a.imagem_url, q.imagem_url) AS imagem_resolvida
+      FROM alugueis a
+      LEFT JOIN quadras q ON q.id = a.quadra_id
+      WHERE a.id = ? AND a.cliente_id = ?
+      `,
+      [id, req.user.id]
+    );
+
+    if (!row) return res.status(404).json({ erro: "Aluguel não encontrado." });
+    res.json(row);
+  } catch (e) {
+    console.error("GET /alugueis/:id", e);
+    res.status(500).json({ erro: "Erro ao buscar aluguel." });
   }
 });
 
