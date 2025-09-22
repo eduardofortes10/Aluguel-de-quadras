@@ -8,20 +8,19 @@ router.use(auth);
 
 /**
  * POST /api/alugueis
- * Cria um aluguel. Recebe (além dos campos obrigatórios) imagem_url, nome, local e observacoes.
- * Se algum desses vier vazio, busca na tabela quadras para preencher.
+ * Cria um aluguel. Salva nome e imagem_url se existirem na tabela,
+ * e usa o usuário logado (req.user.id) como cliente_id.
+ * OBS: NÃO grava 'local' (vem de quadras no GET).
  */
 router.post("/", async (req, res) => {
   try {
     const {
       quadra_id,
-      // cliente_id, // ignorado — usamos o usuário logado (req.user.id)
       data,
       hora_inicio,
       hora_fim,
       imagem_url,
       nome,
-      local,
       valor_pago,
       observacoes,
     } = req.body;
@@ -32,37 +31,35 @@ router.post("/", async (req, res) => {
         .json({ erro: "quadra_id, data, hora_inicio e hora_fim são obrigatórios." });
     }
 
-    // Prepara fallbacks a partir da tabela quadras, se necessário
+    // Fallbacks a partir de quadras (para nome/imagem_url)
     let nomeFinal = (nome || "").trim();
-    let localFinal = (local || "").trim();
     let imagemFinal = (imagem_url || "").trim();
 
-    if (!nomeFinal || !localFinal || !imagemFinal) {
+    if (!nomeFinal || !imagemFinal) {
       const [[q]] = await db.query(
-        "SELECT nome, local, imagem_url FROM quadras WHERE id = ?",
+        "SELECT nome, imagem_url FROM quadras WHERE id = ?",
         [quadra_id]
       );
       if (q) {
         if (!nomeFinal) nomeFinal = q.nome || "Quadra";
-        if (!localFinal) localFinal = q.local || "";
         if (!imagemFinal) imagemFinal = q.imagem_url || "sem-imagem.png";
       }
     }
 
+    // IMPORTANTE: NÃO usamos coluna 'local' aqui (não existe na tabela alugueis)
     const [ins] = await db.query(
       `INSERT INTO alugueis
          (quadra_id, cliente_id, data, hora_inicio, hora_fim,
-          imagem_url, nome, local, valor_pago, observacoes)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
+          imagem_url, nome, valor_pago, observacoes)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
       [
         quadra_id,
-        req.user.id, // sempre o usuário logado
+        req.user.id, // usuário logado
         data,
         hora_inicio,
         hora_fim,
         imagemFinal || null,
         nomeFinal || null,
-        localFinal || null,
         valor_pago ?? null,
         observacoes || null,
       ]
@@ -77,8 +74,7 @@ router.post("/", async (req, res) => {
 
 /**
  * GET /api/alugueis/minhas
- * Lista os aluguéis do usuário logado, retornando imagem/nome/local do aluguel
- * (ou, se nulos, fazendo fallback para os dados atuais da quadra).
+ * Lista aluguéis do usuário. 'local' SEMPRE vem de quadras.
  */
 router.get("/minhas", async (req, res) => {
   try {
@@ -94,8 +90,8 @@ router.get("/minhas", async (req, res) => {
         a.hora_fim,
         a.valor_pago,
         a.observacoes,
-        COALESCE(a.nome,  q.nome)  AS nome,
-        COALESCE(a.local, q.local) AS local,
+        COALESCE(a.nome, q.nome)         AS nome,
+        q.local                           AS local,         -- <- pega de quadras
         COALESCE(a.imagem_url, q.imagem_url) AS imagem_url
       FROM alugueis a
       LEFT JOIN quadras q ON q.id = a.quadra_id
@@ -114,8 +110,7 @@ router.get("/minhas", async (req, res) => {
 
 /**
  * GET /api/alugueis/:id
- * Detalhe de um aluguel (apenas se pertence ao usuário logado).
- * Útil para depuração e futuras telas de detalhe.
+ * Detalhe de um aluguel (pertencente ao usuário logado).
  */
 router.get("/:id", async (req, res) => {
   try {
@@ -126,8 +121,8 @@ router.get("/:id", async (req, res) => {
       `
       SELECT
         a.*,
-        COALESCE(a.nome,  q.nome)  AS nome_resolvido,
-        COALESCE(a.local, q.local) AS local_resolvido,
+        COALESCE(a.nome, q.nome)            AS nome_resolvido,
+        q.local                              AS local_resolvido,      -- <- de quadras
         COALESCE(a.imagem_url, q.imagem_url) AS imagem_resolvida
       FROM alugueis a
       LEFT JOIN quadras q ON q.id = a.quadra_id
