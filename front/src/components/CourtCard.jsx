@@ -19,31 +19,46 @@ const tipoClasses = {
   Golfe: "bg-lime-600/90 text-white",
 };
 
-// Normaliza preço
-const formatBRL = (valor) => {
-  if (valor == null) return "—";
-  if (typeof valor === "string") {
-    if (valor.trim().startsWith("R$")) return valor;
-    const n = Number(valor.replace(/[^\d]/g, "")) / 100;
-    if (!isNaN(n)) {
-      return n.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-        maximumFractionDigits: 0,
-      });
-    }
-  }
-  if (typeof valor === "number") {
-    return valor.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    });
-  }
-  return String(valor);
-};
+// -------- Preço: normaliza e evita "/h" duplicado --------
+function normalizePrecoToDisplay(preco) {
+  if (preco == null || preco === "") return "—";
 
-// Resolve imagem robusto
+  if (typeof preco === "string") {
+    let s = preco.trim();
+
+    // se já tem "/h" em qualquer formato, padroniza e garante uma vez só
+    if (/\/\s*h\b/i.test(s)) {
+      s = s.replace(/\s*\/\s*h\b/gi, "/h");    // ex: "/ hora" → "/h"
+      s = s.replace(/\/h\s*\/h\b/gi, "/h");    // evita "/h/h"
+      return s;
+    }
+
+    // se já começa com "R$" sem "/h", só anexa "/h"
+    if (/^R\$\s*/.test(s)) {
+      return s.replace(/\s+/g, " ").trim() + "/h";
+    }
+
+    // tenta parse numérico vindo como string ("200", "200,00", "200.00")
+    const n = parseFloat(
+      s.replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".")
+    );
+    if (Number.isFinite(n)) {
+      const inteiro = Math.round(n);
+      return `R$ ${inteiro.toLocaleString("pt-BR")}/h`;
+    }
+
+    return s; // fallback: mostra como veio
+  }
+
+  if (typeof preco === "number") {
+    const inteiro = Math.round(preco);
+    return `R$ ${inteiro.toLocaleString("pt-BR")}/h`;
+  }
+
+  return String(preco);
+}
+
+// -------- Resolve imagem robusto --------
 function resolveImagemQuadra(q) {
   if (!q) return "/quadras/sem-imagem.png";
 
@@ -89,7 +104,7 @@ export default function CourtCard({
   const sizes = {
     default: {
       card: "w-full",
-      mediaH: "h-56 sm:h-60 md:h-64", // altura fixa estável
+      mediaH: "h-56 sm:h-60 md:h-64", // altura fixa estável e maior no mobile
       title: "text-base md:text-lg",
       meta: "text-xs md:text-sm",
     },
@@ -107,7 +122,7 @@ export default function CourtCard({
   };
 
   const badgeTipoClass = tipoClasses[tipo] || "bg-zinc-800/80 text-white";
-  const precoFmt = useMemo(() => (preco ? `${formatBRL(preco)}/h` : "—"), [preco]);
+  const precoFmt = useMemo(() => normalizePrecoToDisplay(preco), [preco]);
   const ratingFmt = useMemo(() => {
     const n = Number(avaliacao);
     return isNaN(n) ? null : n.toFixed(1);
@@ -164,7 +179,7 @@ export default function CourtCard({
       )}
       aria-label={nome || "Quadra"}
     >
-      {/* Mídia (altura fixa; img não é absolute) */}
+      {/* Mídia */}
       <div className={cx("relative w-full overflow-hidden rounded-t-2xl", sizes.mediaH)}>
         <img
           src={resolveImagemQuadra(quadra)}

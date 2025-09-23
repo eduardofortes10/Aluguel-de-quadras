@@ -224,7 +224,7 @@ export default function Home() {
     }
   };
 
-  // Keen slider (volta o visual “original”: margens/cozy/grid central)
+  // Keen slider (cartões maiores no mobile)
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
     mode: "free-snap",
@@ -232,8 +232,8 @@ export default function Home() {
     rubberband: true,
     slides: { perView: 4, spacing: 16 },
     breakpoints: {
-      "(max-width: 480px)":  { slides: { perView: 1.06, spacing: 10 } },
-      "(max-width: 640px)":  { slides: { perView: 1.2,  spacing: 12 } },
+      "(max-width: 480px)":  { slides: { perView: 1.12, spacing: 10 } },
+      "(max-width: 640px)":  { slides: { perView: 1.28, spacing: 12 } },
       "(max-width: 768px)":  { slides: { perView: 1.6,  spacing: 14 } },
       "(max-width: 1024px)": { slides: { perView: 2.5,  spacing: 14 } },
       "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
@@ -314,7 +314,7 @@ export default function Home() {
     setMostrarCookies(cookiesAceitos !== "true");
   }, []);
 
-  /* ================= Render (visual original) ================= */
+  /* ================= Render ================= */
   return (
     <div className="flex min-h-screen bg-white">
       {/* Sidebar fixa no desktop */}
@@ -327,13 +327,15 @@ export default function Home() {
         <MobileNav />
       </div>
 
-      {/* Conteúdo centralizado, com largura contida como no início */}
+      {/* Conteúdo central — container mais elástico e overflow visível p/ dropdown */}
       <main className="flex-1 text-black md:pl-64">
-        <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 pt-16 md:pt-10">
-          {/* HERO (seu componente original) */}
-          <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
+        <div className="mx-auto w-full max-w-[1200px] px-3 sm:px-4 lg:px-6 pt-16 md:pt-10 overflow-visible">
+          {/* HERO com camada alta p/ dropdown não cortar */}
+          <div className="relative z-40 overflow-visible">
+            <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
+          </div>
 
-          {/* “Para você” com aparência original: título forte + slider com bordas suaves */}
+          {/* “Para você” */}
           <section className="mt-10">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Para você</h2>
@@ -373,11 +375,11 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Quadras em destaque — volta a grid "limpa", com espaçamento e títulos como no início */}
+          {/* Quadras em destaque */}
           <section className="mt-12">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Quadras em destaque</h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
               {quadras.slice(0, destaqueCount).map((q) => {
                 const isFav = favSet.has(Number(q.id));
                 const imgName = getImagemNome(q);
@@ -401,7 +403,7 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Cookies (mesmo estilo do início) */}
+          {/* Cookies */}
           {mostrarCookies && cookiesState && (
             <section className="fixed bottom-6 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-[420px] mx-4 sm:mx-0 p-4 bg-green-700 text-white rounded-xl shadow-2xl z-50">
               <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
@@ -442,7 +444,7 @@ export default function Home() {
             </section>
           )}
 
-          {/* Rodapé com a mesma pegada visual */}
+          {/* Rodapé */}
           <footer className="bg-[#0f3d26] text-white mt-14 rounded-t-2xl">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
