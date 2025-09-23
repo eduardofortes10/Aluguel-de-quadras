@@ -132,24 +132,23 @@ export default function Home() {
   const [uid, setUid] = useState(null);
   const [favSet, setFavSet] = useState(() => new Set());
   const [favIdByQuadra, setFavIdByQuadra] = useState(() => new Map());
-// Limite responsivo p/ "Quadras em destaque"
-const [destaqueCount, setDestaqueCount] = useState(() => {
-  const w = typeof window !== "undefined" ? window.innerWidth : 1280;
-  if (w < 640) return 4;   // mobile
-  if (w < 1024) return 6;  // tablet
-  return 9;                // desktop
-});
 
-useEffect(() => {
-  function onResize() {
-    const w = window.innerWidth;
-    setDestaqueCount(w < 640 ? 4 : w < 1024 ? 6 : 9);
-  }
-  window.addEventListener("resize", onResize);
-  return () => window.removeEventListener("resize", onResize);
-}, []);
+  // Limite responsivo p/ "Quadras em destaque"
+  const [destaqueCount, setDestaqueCount] = useState(() => {
+    const w = typeof window !== "undefined" ? window.innerWidth : 1280;
+    if (w < 640) return 4;   // mobile
+    if (w < 1024) return 6;  // tablet
+    return 9;                // desktop
+  });
+  useEffect(() => {
+    function onResize() {
+      const w = window.innerWidth;
+      setDestaqueCount(w < 640 ? 4 : w < 1024 ? 6 : 9);
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
-  
   // sync favoritos
   useEffect(() => {
     let cancel = false;
@@ -225,7 +224,7 @@ useEffect(() => {
     }
   };
 
-  // Keen slider
+  // Keen slider (volta o visual “original”: margens/cozy/grid central)
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
     mode: "free-snap",
@@ -308,33 +307,78 @@ useEffect(() => {
   }, []);
 
   // Cookies
+  const [cookiesState, setCookiesState] = useState(false);
   useEffect(() => {
     const cookiesAceitos = localStorage.getItem("cookiesAceitos");
+    setCookiesState(cookiesAceitos !== "true");
     setMostrarCookies(cookiesAceitos !== "true");
   }, []);
 
-  /* ================= Render ================= */
+  /* ================= Render (visual original) ================= */
   return (
-    <div className="flex min-h-screen overflow-x-hidden bg-white">
+    <div className="flex min-h-screen bg-white">
+      {/* Sidebar fixa no desktop */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
+      {/* Topbar mobile */}
       <div className="md:hidden fixed top-0 left-0 w-full z-50">
         <MobileNav />
       </div>
 
-      <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-visible">
-        <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
+      {/* Conteúdo centralizado, com largura contida como no início */}
+      <main className="flex-1 text-black md:pl-64">
+        <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 pt-16 md:pt-10">
+          {/* HERO (seu componente original) */}
+          <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
-        {/* Para você */}
-        <section className="mt-8 sm:mt-10">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
-          <div className="relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent sm:hidden" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:hidden" />
-            <div ref={sliderRef} className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0">
-              {quadrasCarrossel.map((q) => {
+          {/* “Para você” com aparência original: título forte + slider com bordas suaves */}
+          <section className="mt-10">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">Para você</h2>
+            </div>
+
+            <div className="relative mt-4">
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent sm:hidden" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent sm:hidden" />
+
+              <div
+                ref={sliderRef}
+                className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0"
+              >
+                {quadrasCarrossel.map((q) => {
+                  const isFav = favSet.has(Number(q.id));
+                  const imgName = getImagemNome(q);
+                  const qSan = {
+                    ...q,
+                    preco: precoSemSufixoBRL(q.preco),
+                    imagem: `/quadras/${imgName}`,
+                  };
+                  return (
+                    <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
+                      <div className="bg-white rounded-2xl shadow-md ring-1 ring-black/5 hover:shadow-lg transition">
+                        <CourtCard
+                          quadra={qSan}
+                          variant="compact"
+                          isFavorited={isFav}
+                          onClick={() => handleQuadraClick(qSan)}
+                          onFavorite={handleFavorite}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          {/* Quadras em destaque — volta a grid "limpa", com espaçamento e títulos como no início */}
+          <section className="mt-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Quadras em destaque</h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {quadras.slice(0, destaqueCount).map((q) => {
                 const isFav = favSet.has(Number(q.id));
                 const imgName = getImagemNome(q);
                 const qSan = {
@@ -343,11 +387,10 @@ useEffect(() => {
                   imagem: `/quadras/${imgName}`,
                 };
                 return (
-                  <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
+                  <div key={`${q.id}-${isFav ? 1 : 0}`} className="bg-white rounded-2xl shadow-md ring-1 ring-black/5 hover:shadow-lg transition">
                     <CourtCard
-                      key={`${q.id}-${isFav ? 1 : 0}`}
                       quadra={qSan}
-                      variant="compact"
+                      variant="default"
                       isFavorited={isFav}
                       onClick={() => handleQuadraClick(qSan)}
                       onFavorite={handleFavorite}
@@ -356,108 +399,91 @@ useEffect(() => {
                 );
               })}
             </div>
-          </div>
-        </section>
-
-        {/* Quadras em destaque */}
-        <section className="mt-8 sm:mt-10">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {quadras.slice(0, destaqueCount).map((q) => {
-              const isFav = favSet.has(Number(q.id));
-              const imgName = getImagemNome(q);
-              const qSan = {
-                ...q,
-                preco: precoSemSufixoBRL(q.preco),
-                imagem: `/quadras/${imgName}`,
-              };
-              return (
-                <CourtCard
-                  key={`${q.id}-${isFav ? 1 : 0}`}
-                  quadra={qSan}
-                  variant="default"
-                  isFavorited={isFav}
-                  onClick={() => handleQuadraClick(qSan)}
-                  onFavorite={handleFavorite}
-                />
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Cookies */}
-        {mostrarCookies && (
-          <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50">
-            <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
-            <p className="text-sm mb-3">Usamos cookies para melhorar sua experiência e analisar o tráfego do site.</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  localStorage.setItem("cookiesAceitos", "true");
-                  setMostrarCookies(false);
-                }}
-                className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
-              >
-                Aceitar todos
-              </button>
-              <button
-                onClick={() => {
-                  localStorage.setItem("cookiesAceitos", "true");
-                  setMostrarCookies(false);
-                }}
-                className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
-              >
-                Rejeitar
-              </button>
-              <button
-                onClick={() => setMostrarCookies(false)}
-                className="w-full text-center mt-2 text-xs underline text-white/80 hover:text-white"
-              >
-                Fechar
-              </button>
-            </div>
           </section>
-        )}
 
-        {/* Rodapé */}
-        <footer className="bg-[#0f3d26] text-white mt-12">
-          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
-              <div>
-                <h3 className="text-base font-bold mb-2">Aluguel de Quadras</h3>
-                <p className="text-white/80">Encontre, alugue e jogue nas melhores quadras da sua cidade.</p>
+          {/* Cookies (mesmo estilo do início) */}
+          {mostrarCookies && cookiesState && (
+            <section className="fixed bottom-6 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 sm:w-[420px] mx-4 sm:mx-0 p-4 bg-green-700 text-white rounded-xl shadow-2xl z-50">
+              <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
+              <p className="text-sm mb-3">
+                Usamos cookies para melhorar sua experiência e analisar o tráfego do site.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => {
+                    localStorage.setItem("cookiesAceitos", "true");
+                    setMostrarCookies(false);
+                    setCookiesState(false);
+                  }}
+                  className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+                >
+                  Aceitar todos
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem("cookiesAceitos", "true");
+                    setMostrarCookies(false);
+                    setCookiesState(false);
+                  }}
+                  className="border border-white text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600 transition"
+                >
+                  Rejeitar
+                </button>
+                <button
+                  onClick={() => {
+                    setMostrarCookies(false);
+                    setCookiesState(false);
+                  }}
+                  className="w-full text-center mt-2 text-xs underline text-white/80 hover:text-white"
+                >
+                  Fechar
+                </button>
               </div>
-              <div>
-                <h3 className="text-base font-bold mb-2">Navegação</h3>
-                <ul className="space-y-1 text-white/80">
-                  <li><Link to="/home" className="hover:text-white">Home</Link></li>
-                  <li><Link to="/resultados" className="hover:text-white">Quadras</Link></li>
-                  <li><Link to="/filtro" className="hover:text-white">Filtro</Link></li>
-                </ul>
+            </section>
+          )}
+
+          {/* Rodapé com a mesma pegada visual */}
+          <footer className="bg-[#0f3d26] text-white mt-14 rounded-t-2xl">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
+                <div>
+                  <h3 className="text-base font-bold mb-2">Aluguel de Quadras</h3>
+                  <p className="text-white/80">
+                    Encontre, alugue e jogue nas melhores quadras da sua cidade.
+                  </p>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold mb-2">Navegação</h3>
+                  <ul className="space-y-1 text-white/80">
+                    <li><Link to="/home" className="hover:text-white">Home</Link></li>
+                    <li><Link to="/resultados" className="hover:text-white">Quadras</Link></li>
+                    <li><Link to="/filtro" className="hover:text-white">Filtro</Link></li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold mb-2">Suporte</h3>
+                  <ul className="space-y-1 text-white/80">
+                    <li><a href="#" className="hover:text-white">Central de ajuda</a></li>
+                    <li><a href="#" className="hover:text-white">Termos</a></li>
+                    <li><a href="#" className="hover:text-white">Privacidade</a></li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold mb-2">Contato</h3>
+                  <ul className="space-y-1 text-white/80">
+                    <li>📧 eduardo_fortes@gmail.com</li>
+                    <li>📞 +55 (19) 99938-7274</li>
+                  </ul>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold mb-2">Suporte</h3>
-                <ul className="space-y-1 text-white/80">
-                  <li><a href="#" className="hover:text-white">Central de ajuda</a></li>
-                  <li><a href="#" className="hover:text-white">Termos</a></li>
-                  <li><a href="#" className="hover:text-white">Privacidade</a></li>
-                </ul>
-              </div>
-              <div>
-                <h3 className="text-base font-bold mb-2">Contato</h3>
-                <ul className="space-y-1 text-white/80">
-                  <li>📧 eduardo_fortes@gmail.com</li>
-                  <li>📞 +55 (19) 99938-7274</li>
-                </ul>
+
+              <div className="mt-6 sm:mt-8 border-t border-white/15 pt-4 text-[12px] sm:text-xs flex flex-col sm:flex-row items-center justify-between gap-2 text-white/70">
+                <p>© 2025 Aluguel de Quadras — Todos os direitos reservados.</p>
+                <p>Feito com ❤️ para quem ama esporte.</p>
               </div>
             </div>
-
-            <div className="mt-6 sm:mt-8 border-t border-white/15 pt-4 text-[12px] sm:text-xs flex flex-col sm:flex-row items-center justify-between gap-2 text-white/70">
-              <p>© 2025 Aluguel de Quadras — Todos os direitos reservados.</p>
-              <p>Feito com ❤️ para quem ama esporte.</p>
-            </div>
-          </div>
-        </footer>
+          </footer>
+        </div>
       </main>
     </div>
   );
