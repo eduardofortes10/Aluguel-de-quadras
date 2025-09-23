@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { Heart, Loader2 } from "lucide-react";
-
+import { formatBRLHour } from "../utils/money";
 import Sidebar from "../components/Sidebar";
 import MobileNav from "../components/MobileNav";
 import CourtCard from "../components/CourtCard";
@@ -72,37 +72,13 @@ const FALLBACK_BY_TIPO = {
   Poliesportiva: "/quadras/poliesportiva.png",
 };
 
-function precoSemSufixoBRL(v) {
-  if (typeof v === "number") {
-    return v.toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      maximumFractionDigits: 0,
-    });
-  }
-  let s = String(v || "").trim();
-  s = s.replace(/\s*\/\s*hora\b/gi, "");
-  s = s.replace(/\s*\/\s*h\b/gi, "");
-  s = s.trim();
-  if (!/^R\$\s?/.test(s)) {
-    const num = parseFloat(
-      s.replace(/[^\d.,]/g, "").replace(/\./g, "").replace(",", ".")
-    );
-    if (Number.isFinite(num)) {
-      s = num.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-        maximumFractionDigits: 0,
-      });
-    }
-  }
-  return s;
-}
-
 function precoToNumberAny(v) {
   if (typeof v === "number") return v;
   const n = parseFloat(
-    String(v || "").replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".")
+    String(v || "")
+      .replace(/[^\d.,-]/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".")
   );
   return Number.isFinite(n) ? n : 0;
 }
@@ -187,9 +163,9 @@ export default function Favoritos() {
           const tipo  = base.tipo || qDb.tipo || f.tipo || "Quadra esportiva";
           const local = base.local || qDb.local || f.local || "";
 
-          // mantém o formato igual ao Home
+          // Agora usamos formatBRLHour -> "R$ 200/h"
           const precoBase = f.preco ?? qDb.preco ?? base.preco ?? 0;
-          const precoFmt  = precoSemSufixoBRL(precoBase);
+          const precoFmt  = formatBRLHour(precoBase);
 
           // imagem local priorizando catálogo; senão, resolve dinâmica
           const imagemLocal = base.imagem || resolveImagemLocal(f);
@@ -199,7 +175,7 @@ export default function Favoritos() {
             nome,
             tipo,
             local,
-            preco: precoFmt,                         // já formatado
+            preco: precoFmt,                         // já formatado "R$ 200/h"
             avaliacao: base.avaliacao ?? qDb.avaliacao ?? f.avaliacao ?? f.nota ?? 4.5,
             imagem: imagemLocal,                     // sempre local
             imagem_url: getImagemNome({ imagem: imagemLocal }),
@@ -254,7 +230,7 @@ export default function Favoritos() {
     }
     try {
       if (isNowFav) {
-        const precoNumber = precoToNumberAny(quadra?.preco);
+        const precoNumber = precoToNumberAny(quadra?.preco); // "R$ 200/h" -> 200
         const payload = {
           usuario_id: userId,
           quadra_id: quadra?.id || 0,

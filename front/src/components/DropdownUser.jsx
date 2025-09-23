@@ -1,9 +1,10 @@
 // src/components/DropdownUser.jsx
-console.log("[Dropdown] build marker v10");
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User as UserIcon, LogOut, Bell, ChevronDown } from "lucide-react";
 import { api, fileURL } from "../services/api";
+
+console.log("[Dropdown] build marker v10"); // <-- MOVIDO pra depois dos imports
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -135,7 +136,7 @@ export default function UserDropdown() {
           ref={menuRef}
           role="menu"
           className="absolute right-0 top-full mt-2 w-56 bg-white border rounded-lg shadow-xl z-[9999] overflow-hidden"
-          onMouseLeave={() => setIsOpen(false)}
+        
         >
           <div className="px-4 py-3 border-b bg-gray-50 text-sm text-gray-700">
             <p className="font-semibold">Olá, {nomeUsuario.split(" ")[0]} 👋</p>
