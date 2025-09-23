@@ -28,7 +28,11 @@ function parseOrigins(env) {
     .filter(Boolean)
     .map(s => {
       if (s.startsWith("/") && s.endsWith("/")) {
-        try { return new RegExp(s.slice(1, -1)); } catch { return s; }
+        try {
+          return new RegExp(s.slice(1, -1));
+        } catch {
+          return s;
+        }
       }
       return s;
     });
@@ -36,16 +40,21 @@ function parseOrigins(env) {
 const allowed = parseOrigins(process.env.FRONTEND_ORIGINS || "");
 console.log("🌐 CORS allowed origins:", allowed);
 
+function corsOrigin(origin, cb) {
+  if (!origin) return cb(null, true); // curl/healthz
+  const ok = allowed.length === 0 || allowed.some(o =>
+    o instanceof RegExp ? o.test(origin) : o === origin
+  );
+  return cb(ok ? null : new Error("CORS_ORIGIN_NOT_ALLOWED"), ok);
+}
+
 app.use(cors({
-  origin(origin, cb) {
-    if (!origin) return cb(null, true); // curl/healthz
-    const ok = allowed.length === 0 || allowed.some(o => o instanceof RegExp ? o.test(origin) : o === origin);
-    return cb(ok ? null : new Error("CORS_ORIGIN_NOT_ALLOWED"), ok ? true : false);
-  },
-  credentials: true,
+  origin: corsOrigin,
+  credentials: true, // só deixe true se estiver usando cookies no login
   methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type","Authorization"],
 }));
+app.options("*", cors({ origin: corsOrigin, credentials: true }));
 
 // ====== Middlewares globais ======
 app.use(helmet({
@@ -81,14 +90,13 @@ const loginLimiter = rateLimit({
 });
 
 // ====== Rotas ======
-app.use("/api/auth/login", loginLimiter, require("./routes/auth"));
-app.use("/api/auth", require("./routes/auth"));
+// aplique o limiter diretamente na rota /login do router de auth
+app.use("/api/auth", require("./routes/auth")(loginLimiter));
 app.use("/api/quadras", require("./routes/quadras"));
 
 app.use("/api/favoritos", auth, require("./routes/favoritos"));
 app.use("/api/alugueis", auth, require("./routes/alugueis"));
 app.use("/api/notificacoes", auth, require("./routes/notificacoes"));
-// manter a rota antiga e expor também a rota curta usada pelo front
 app.use("/api/chat/conversas", auth, require("./routes/conversas"));
 app.use("/api/conversas",     auth, require("./routes/conversas"));
 app.use("/api/fotos-perfil", auth, require("./routes/fotosPerfil"));
