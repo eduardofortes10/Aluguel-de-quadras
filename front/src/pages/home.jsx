@@ -224,7 +224,7 @@ export default function Home() {
     }
   };
 
-  // Keen slider (cartões maiores no mobile)
+  // Keen slider (cartões maiores no mobile e sem vazar largura)
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
     mode: "free-snap",
@@ -232,8 +232,8 @@ export default function Home() {
     rubberband: true,
     slides: { perView: 4, spacing: 16 },
     breakpoints: {
-      "(max-width: 480px)":  { slides: { perView: 1.12, spacing: 10 } },
-      "(max-width: 640px)":  { slides: { perView: 1.28, spacing: 12 } },
+      "(max-width: 480px)":  { slides: { perView: 1.1, spacing: 10 } },
+      "(max-width: 640px)":  { slides: { perView: 1.25, spacing: 12 } },
       "(max-width: 768px)":  { slides: { perView: 1.6,  spacing: 14 } },
       "(max-width: 1024px)": { slides: { perView: 2.5,  spacing: 14 } },
       "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
@@ -316,7 +316,7 @@ export default function Home() {
 
   /* ================= Render ================= */
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-white overflow-x-hidden touch-pan-y">
       {/* Sidebar fixa no desktop */}
       <div className="hidden md:block">
         <Sidebar />
@@ -327,11 +327,11 @@ export default function Home() {
         <MobileNav />
       </div>
 
-      {/* Conteúdo central — container mais elástico e overflow visível p/ dropdown */}
+      {/* Conteúdo central */}
       <main className="flex-1 text-black md:pl-64">
-        <div className="mx-auto w-full max-w-[1200px] px-3 sm:px-4 lg:px-6 pt-16 md:pt-10 overflow-visible">
-          {/* HERO com camada alta p/ dropdown não cortar */}
-          <div className="relative z-40 overflow-visible">
+        <div className="mx-auto w-full max-w-[1200px] px-3 sm:px-4 lg:px-6 pt-16 md:pt-10">
+          {/* HERO com z alto e overflow visível (dropdown) */}
+          <div className="relative z-50 overflow-visible">
             <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
           </div>
 
@@ -342,12 +342,13 @@ export default function Home() {
             </div>
 
             <div className="relative mt-4">
+              {/* Gradientes só no mobile para não vazar largura */}
               <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-white to-transparent sm:hidden" />
               <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white to-transparent sm:hidden" />
 
               <div
                 ref={sliderRef}
-                className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0"
+                className="keen-slider overflow-hidden sm:overflow-visible px-0 sm:px-0"
               >
                 {quadrasCarrossel.map((q) => {
                   const isFav = favSet.has(Number(q.id));
@@ -358,7 +359,7 @@ export default function Home() {
                     imagem: `/quadras/${imgName}`,
                   };
                   return (
-                    <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
+                    <div key={q.id} className="keen-slider__slide min-w-0 px-2 touch-pan-y">
                       <div className="bg-white rounded-2xl shadow-md ring-1 ring-black/5 hover:shadow-lg transition">
                         <CourtCard
                           quadra={qSan}

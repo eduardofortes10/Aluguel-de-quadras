@@ -100,3 +100,27 @@
     transform: rotate(360deg);
   }
 }
+/* ===== Mobile: impedir arraste lateral global ===== */
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Imagens e vídeos nunca estouram a largura do container */
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Keen Slider: no mobile, não vazar largura; slides podem encolher */
+@media (max-width: 640px) {
+  .keen-slider {
+    overflow: hidden !important;
+  }
+  .keen-slider__slide {
+    min-width: 0 !important;
+  }
+}
