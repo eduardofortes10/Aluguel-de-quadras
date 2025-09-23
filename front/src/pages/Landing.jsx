@@ -84,11 +84,12 @@ export default function Landing() {
       {/* Header */}
       <header className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3">
-          <img
-            src="/quadras/logo-quadraflex.png"
-            alt="QuadraFlex"
-            className="h-10 w-auto object-contain drop-shadow-sm"
-          />
+         <img
+  src="/quadras/logo-quadraflex.png"
+  alt="QuadraFlex"
+  className="h-10 w-auto object-contain rounded-xl drop-shadow-sm"
+/>
+
           <span className="font-semibold text-gray-900 text-lg">QuadraFlex</span>
         </Link>
         <nav className="flex items-center gap-3">
