@@ -12,7 +12,7 @@ import { toast } from "react-hot-toast";
 import { enviarNotificacao } from "../services/notificacoes";
 import HomeHero from "../components/HomeHero";
 
-// ===== Helpers =====
+/* ================= Helpers ================= */
 async function getUsuarioIdSeguro() {
   try {
     const raw = localStorage.getItem("usuario");
@@ -83,15 +83,12 @@ function precoToNumberAny(v) {
   const n = parseFloat(String(v || "").replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", "."));
   return Number.isFinite(n) ? n : 0;
 }
-// Substitua sua função atual por esta
+
 function getImagemNome(quadra) {
   const s = quadra?.imagem || quadra?.imagem_url || "";
   if (!s) return "sem-imagem.png";
-  // remove query/hash
   const clean = String(s).split("?")[0].split("#")[0];
-  // pega só o último segmento
   const file = clean.split("/").filter(Boolean).pop();
-  // fallback
   return file || "sem-imagem.png";
 }
 
@@ -123,6 +120,7 @@ async function resolverNomeUsuario() {
   return "Usuário(a)";
 }
 
+/* ================= Componente ================= */
 export default function Home() {
   const navigate = useNavigate();
 
@@ -130,11 +128,29 @@ export default function Home() {
   const [mostrarCookies, setMostrarCookies] = useState(false);
   const [notificacoesNaoLidas, setNotificacoesNaoLidas] = useState(0);
 
-  // ===== Favoritos =====
+  // Favoritos
   const [uid, setUid] = useState(null);
   const [favSet, setFavSet] = useState(() => new Set());
   const [favIdByQuadra, setFavIdByQuadra] = useState(() => new Map());
+// Limite responsivo p/ "Quadras em destaque"
+const [destaqueCount, setDestaqueCount] = useState(() => {
+  const w = typeof window !== "undefined" ? window.innerWidth : 1280;
+  if (w < 640) return 4;   // mobile
+  if (w < 1024) return 6;  // tablet
+  return 9;                // desktop
+});
 
+useEffect(() => {
+  function onResize() {
+    const w = window.innerWidth;
+    setDestaqueCount(w < 640 ? 4 : w < 1024 ? 6 : 9);
+  }
+  window.addEventListener("resize", onResize);
+  return () => window.removeEventListener("resize", onResize);
+}, []);
+
+  
+  // sync favoritos
   useEffect(() => {
     let cancel = false;
     (async () => {
@@ -149,8 +165,7 @@ export default function Home() {
   async function sincronizarFavoritos(userId = uid) {
     if (!userId) return;
     try {
-     const { data } = await api.get("/favoritos");
-
+      const { data } = await api.get("/favoritos");
       const arr = Array.isArray(data) ? data : [];
       const normalizados = arr.map(normalizarFavorito);
       const novoSet = new Set(normalizados.map((x) => Number(x.quadraId)));
@@ -188,11 +203,10 @@ export default function Home() {
         await api.post("/favoritos", dadosFavorito);
         toast.success("Adicionada aos favoritos!");
         try {
-       await enviarNotificacao({
-  tipo: "favorito",
-  mensagem: `Você favoritou a quadra ${quadra?.nome}`,
-});
-
+          await enviarNotificacao({
+            tipo: "favorito",
+            mensagem: `Você favoritou a quadra ${quadra?.nome}`,
+          });
         } catch {}
       } else {
         const favId = favIdByQuadra.get(Number(quadra.id));
@@ -209,15 +223,15 @@ export default function Home() {
     } finally {
       await sincronizarFavoritos(userId);
     }
-  }
+  };
 
-  // ===== Carrossel (responsivo p/ mobile, desktop igual) =====
+  // Keen slider
   const [sliderRef, instanceRef] = useKeenSlider({
     loop: true,
     mode: "free-snap",
     drag: true,
     rubberband: true,
-    slides: { perView: 4, spacing: 16 }, // DESKTOP
+    slides: { perView: 4, spacing: 16 },
     breakpoints: {
       "(max-width: 480px)":  { slides: { perView: 1.06, spacing: 10 } },
       "(max-width: 640px)":  { slides: { perView: 1.2,  spacing: 12 } },
@@ -226,7 +240,6 @@ export default function Home() {
       "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
     },
   });
-
   useEffect(() => {
     if (!instanceRef.current) return;
     const id = setInterval(() => instanceRef.current?.next(), 5000);
@@ -240,15 +253,11 @@ export default function Home() {
     const buscarTodasNotificacoes = async () => {
       try {
         const { data } = await api.get("/notificacoes");
-
         const total = Array.isArray(data) ? data.length : 0;
         setNotificacoesNaoLidas(total);
       } catch (err) {
-        if (err?.response?.status === 404) {
-          setNotificacoesNaoLidas(0);
-        } else {
-          console.error("Erro ao buscar notificações:", err?.response?.data || err?.message);
-        }
+        if (err?.response?.status === 404) setNotificacoesNaoLidas(0);
+        else console.error("Erro ao buscar notificações:", err?.response?.data || err?.message);
       }
     };
     buscarTodasNotificacoes();
@@ -257,19 +266,18 @@ export default function Home() {
   }, []);
 
   // Navegar p/ detalhe
- // Pelo bloco abaixo (mais seguro p/ querystring, uploads, http, etc.):
-const handleQuadraClick = (quadra) => {
-  const imagem_nome = getImagemNome(quadra);
-  navigate(`/quadra/${quadra.id}`, {
-    state: {
-      quadra: {
-        ...quadra,
-        imagem_url: imagem_nome,
-        imagem: `/quadras/${imagem_nome}`,
+  const handleQuadraClick = (quadra) => {
+    const imagem_nome = getImagemNome(quadra);
+    navigate(`/quadra/${quadra.id}`, {
+      state: {
+        quadra: {
+          ...quadra,
+          imagem_url: imagem_nome,
+          imagem: `/quadras/${imagem_nome}`,
+        },
       },
-    },
-  });
-};
+    });
+  };
 
   // Nome do usuário
   useEffect(() => {
@@ -305,6 +313,7 @@ const handleQuadraClick = (quadra) => {
     setMostrarCookies(cookiesAceitos !== "true");
   }, []);
 
+  /* ================= Render ================= */
   return (
     <div className="flex min-h-screen overflow-x-hidden bg-white">
       <div className="hidden md:block">
@@ -316,40 +325,36 @@ const handleQuadraClick = (quadra) => {
       </div>
 
       <main className="flex-1 text-black transition-colors px-3 sm:px-4 md:pl-16 overflow-visible">
-        {/* HERO */}
         <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
 
-        {/* Carrossel "Para você" */}
+        {/* Para você */}
         <section className="mt-8 sm:mt-10">
           <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Para você</h2>
-
           <div className="relative">
             <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent sm:hidden" />
             <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent sm:hidden" />
-
             <div ref={sliderRef} className="keen-slider overflow-visible sm:overflow-hidden px-1 sm:px-0">
-             {quadrasCarrossel.map((q) => {
-  const isFav = favSet.has(Number(q.id));
-  const imgName = getImagemNome(q);
-  const qSan = {
-    ...q,
-    preco: precoSemSufixoBRL(q.preco),
-    imagem: `/quadras/${imgName}`, // <— força local
-  };
-  return (
-    <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
-      <CourtCard
-        key={`${q.id}-${isFav ? 1 : 0}`}
-        quadra={qSan}
-        variant="compact"
-        isFavorited={isFav}
-        onClick={() => handleQuadraClick(qSan)}
-        onFavorite={handleFavorite}
-      />
-    </div>
-  );
-})}
-
+              {quadrasCarrossel.map((q) => {
+                const isFav = favSet.has(Number(q.id));
+                const imgName = getImagemNome(q);
+                const qSan = {
+                  ...q,
+                  preco: precoSemSufixoBRL(q.preco),
+                  imagem: `/quadras/${imgName}`,
+                };
+                return (
+                  <div key={q.id} className="keen-slider__slide px-1 sm:px-2 touch-pan-y">
+                    <CourtCard
+                      key={`${q.id}-${isFav ? 1 : 0}`}
+                      quadra={qSan}
+                      variant="compact"
+                      isFavorited={isFav}
+                      onClick={() => handleQuadraClick(qSan)}
+                      onFavorite={handleFavorite}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -358,30 +363,29 @@ const handleQuadraClick = (quadra) => {
         <section className="mt-8 sm:mt-10">
           <h2 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-green-700">Quadras em destaque</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-           {quadras.map((q) => {
-  const isFav = favSet.has(Number(q.id));
-  const imgName = getImagemNome(q);
-  const qSan = {
-    ...q,
-    preco: precoSemSufixoBRL(q.preco),
-    imagem: `/quadras/${imgName}`, // <— força local
-  };
-  return (
-    <CourtCard
-      key={`${q.id}-${isFav ? 1 : 0}`}
-      quadra={qSan}
-      variant="default"
-      isFavorited={isFav}
-      onClick={() => handleQuadraClick(qSan)}
-      onFavorite={handleFavorite}
-    />
-  );
-})}
-
+            {quadras.slice(0, destaqueCount).map((q) => {
+              const isFav = favSet.has(Number(q.id));
+              const imgName = getImagemNome(q);
+              const qSan = {
+                ...q,
+                preco: precoSemSufixoBRL(q.preco),
+                imagem: `/quadras/${imgName}`,
+              };
+              return (
+                <CourtCard
+                  key={`${q.id}-${isFav ? 1 : 0}`}
+                  quadra={qSan}
+                  variant="default"
+                  isFavorited={isFav}
+                  onClick={() => handleQuadraClick(qSan)}
+                  onFavorite={handleFavorite}
+                />
+              );
+            })}
           </div>
         </section>
 
-        {/* COOKIES */}
+        {/* Cookies */}
         {mostrarCookies && (
           <section className="fixed bottom-6 left-3 sm:left-12 max-w-md w-[92%] sm:w-[400px] p-4 bg-green-700 text-white rounded-xl shadow-xl z-50">
             <h2 className="font-bold text-lg mb-1">🍪 Nós usamos cookies!</h2>
@@ -415,15 +419,13 @@ const handleQuadraClick = (quadra) => {
           </section>
         )}
 
-        {/* RODAPÉ */}
+        {/* Rodapé */}
         <footer className="bg-[#0f3d26] text-white mt-12">
           <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-sm">
               <div>
                 <h3 className="text-base font-bold mb-2">Aluguel de Quadras</h3>
-                <p className="text-white/80">
-                  Encontre, alugue e jogue nas melhores quadras da sua cidade.
-                </p>
+                <p className="text-white/80">Encontre, alugue e jogue nas melhores quadras da sua cidade.</p>
               </div>
               <div>
                 <h3 className="text-base font-bold mb-2">Navegação</h3>

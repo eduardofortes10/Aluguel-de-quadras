@@ -6,17 +6,21 @@ import { useNavigate } from "react-router-dom";
 export default function CarrosselParaVoce({ items = [] }) {
   const navigate = useNavigate();
 
-  const [sliderRef] = useKeenSlider({
-    mode: "free-snap",
-    rubberband: true,
-    slides: { perView: 1.1, spacing: 12 },
-    breakpoints: {
-      "(min-width: 400px)": { slides: { perView: 1.25, spacing: 14 } },
-      "(min-width: 640px)": { slides: { perView: 1.5,  spacing: 16 } },
-      "(min-width: 768px)": { slides: { perView: 2.25, spacing: 18 } },
-      "(min-width: 1024px)": { slides: { perView: 3,    spacing: 20 } },
-    },
-  });
+  const [sliderRef, instanceRef] = useKeenSlider({
+  loop: true,
+  mode: "free-snap",
+  drag: true,
+  rubberband: true,
+  slides: { perView: 4, spacing: 16 }, // desktop
+  breakpoints: {
+    "(max-width: 480px)":  { slides: { perView: 1.05, spacing: 14 } },
+    "(max-width: 640px)":  { slides: { perView: 1.2,  spacing: 14 } },
+    "(max-width: 768px)":  { slides: { perView: 1.6,  spacing: 16 } },
+    "(max-width: 1024px)": { slides: { perView: 2.5,  spacing: 16 } },
+    "(max-width: 1280px)": { slides: { perView: 3.25, spacing: 16 } },
+  },
+});
+
 
   const abrir = (id) => navigate(`/quadra/${id}`);
 
