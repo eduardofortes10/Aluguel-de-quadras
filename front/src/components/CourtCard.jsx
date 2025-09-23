@@ -3,8 +3,8 @@ import React, { useMemo, useState } from "react";
 import { MapPin, Star, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { fileURL } from "../services/api";
-import { api } from "../services/api"; // ✅ IMPORTA O API
-import { precoToNumberAny } from "../utils/preco";
+import { api } from "../services/api";
+
 function cx(...cls) {
   return cls.filter(Boolean).join(" ");
 }
@@ -19,7 +19,7 @@ const tipoClasses = {
   Golfe: "bg-lime-600/90 text-white",
 };
 
-// 🔎 normaliza valores de preço
+// Normaliza preço
 const formatBRL = (valor) => {
   if (valor == null) return "—";
   if (typeof valor === "string") {
@@ -43,8 +43,7 @@ const formatBRL = (valor) => {
   return String(valor);
 };
 
-// 🔑 resolve imagem (igual QuadraDetalhes.jsx)
-// 🔑 resolve imagem (corrigido)
+// Resolve imagem robusto
 function resolveImagemQuadra(q) {
   if (!q) return "/quadras/sem-imagem.png";
 
@@ -57,21 +56,22 @@ function resolveImagemQuadra(q) {
     // URL completa
     if (/^https?:\/\//i.test(s)) return s;
 
-    // imagens salvas no backend
+    // backend (/uploads, /avatars)
     if (s.includes("/uploads/") || s.startsWith("/avatars/")) return fileURL(s);
 
-    // imagens do frontend (public/quadras)
-    if (s.startsWith("/quadras/") || !s.includes("/")) return `/quadras/${s.replace(/^\/?quadras\//, "")}`;
+    // imagens locais do frontend
+    if (s.startsWith("/quadras/")) {
+      const nome = s.replace(/^\/?quadras\//, "");
+      return `/quadras/${nome}`;
+    }
+    if (!s.includes("/")) return `/quadras/${s}`;
 
-    // fallback: tenta no backend
+    // fallback: tenta como path absoluto no back
     if (s.startsWith("/")) return fileURL(s);
-
-    return `/quadras/${s}`;
   }
 
   return "/quadras/sem-imagem.png";
 }
-
 
 export default function CourtCard({
   quadra,
@@ -86,65 +86,72 @@ export default function CourtCard({
 
   const { id, nome, local, preco, avaliacao, tipo, dono, distancia } = quadra || {};
 
+  const sizes = {
+    default: {
+      card: "w-full",
+      mediaH: "h-56 sm:h-60 md:h-64", // altura fixa estável
+      title: "text-base md:text-lg",
+      meta: "text-xs md:text-sm",
+    },
+    compact: {
+      card: "w-full",
+      mediaH: "h-44 sm:h-48 md:h-52",
+      title: "text-sm md:text-base",
+      meta: "text-[11px] md:text-xs",
+    },
+  }[variant] || {
+    card: "w-full",
+    mediaH: "h-56",
+    title: "text-base",
+    meta: "text-xs",
+  };
+
   const badgeTipoClass = tipoClasses[tipo] || "bg-zinc-800/80 text-white";
-  const precoFmt = useMemo(
-    () => (preco ? `${formatBRL(preco)}/h` : "—"),
-    [preco]
-  );
+  const precoFmt = useMemo(() => (preco ? `${formatBRL(preco)}/h` : "—"), [preco]);
   const ratingFmt = useMemo(() => {
     const n = Number(avaliacao);
-    if (isNaN(n)) return null;
-    return n.toFixed(1);
+    return isNaN(n) ? null : n.toFixed(1);
   }, [avaliacao]);
 
   const handleFav = async (e) => {
-  e.stopPropagation();
-  const newVal = !fav;
-  setFav(newVal);
+    e.stopPropagation();
+    const newVal = !fav;
+    setFav(newVal);
 
-  if (newVal) {
-    const usuarioRaw = localStorage.getItem("usuario");
-    const uid = usuarioRaw ? JSON.parse(usuarioRaw).id : null;
-    if (!uid) {
-      alert("Faça login para favoritar");
-      return;
+    if (newVal) {
+      // salvar favorito
+      const usuarioRaw = localStorage.getItem("usuario");
+      const uid = usuarioRaw ? JSON.parse(usuarioRaw).id : null;
+      if (!uid) {
+        alert("Faça login para favoritar");
+        return;
+      }
+      const imgUrl = quadra?.imagem_url || quadra?.imagem || "sem-imagem.png";
+      const dadosFavorito = {
+        usuario_id: uid,
+        quadra_id: quadra?.id || quadra?.quadra_id || 0,
+        nome: quadra?.nome || "Quadra sem nome",
+        preco: quadra?.preco || 0,
+        local: quadra?.local || "Local não informado",
+        tipo: quadra?.tipo || "Quadra esportiva",
+        nota: quadra?.avaliacao || 4.5,
+        imagem_url: imgUrl,
+      };
+      try {
+        await api.post("/favoritos", dadosFavorito);
+      } catch (err) {
+        console.error("Erro ao salvar favorito:", err);
+      }
+    } else {
+      // desfavoritar
+      onFavorite?.(quadra, newVal);
     }
-
-    const imgUrl =
-      quadra?.imagem_url || quadra?.imagem || "sem-imagem.png";
-
-    const dadosFavorito = {
-      usuario_id: uid,
-      quadra_id: quadra?.id || quadra?.quadra_id || 0,
-      nome: quadra?.nome || "Quadra sem nome",
-      preco: quadra?.preco || 0,
-      local: quadra?.local || "Local não informado",
-      tipo: quadra?.tipo || "Quadra esportiva",
-      nota: quadra?.avaliacao || 4.5,
-      imagem_url: imgUrl,
-    };
-
-    try {
-      await api.post("/favoritos", dadosFavorito);
-    } catch (err) {
-      console.error("Erro ao salvar favorito:", err);
-    }
-  } else {
-    // desfavoritar → você pode chamar DELETE aqui
-    onFavorite?.(quadra, newVal);
-  }
-};
-
+  };
 
   const handleClick = () => {
     if (onClick) return onClick(quadra);
     if (id != null) navigate(`/quadra/${id}`);
   };
-
-const sizes = {
-  default: { card: "w-full", mediaH: "h-56 sm:h-60 md:h-64", title: "text-base md:text-lg", meta: "text-xs md:text-sm" },
-  compact: { card: "w-full", mediaH: "h-44 sm:h-48 md:h-52", title: "text-sm md:text-base", meta: "text-[11px] md:text-xs" },
-}[variant] || {};
 
   return (
     <article
@@ -157,17 +164,14 @@ const sizes = {
       )}
       aria-label={nome || "Quadra"}
     >
-      {/* Mídia */}
-      <div className={cx("relative w-full", sizes.aspect)}>
+      {/* Mídia (altura fixa; img não é absolute) */}
+      <div className={cx("relative w-full overflow-hidden rounded-t-2xl", sizes.mediaH)}>
         <img
           src={resolveImagemQuadra(quadra)}
           alt={nome || "Quadra"}
           loading="lazy"
           decoding="async"
-          className={cx(
-            "absolute inset-0 h-full w-full object-cover",
-            "transition-transform duration-500 group-hover:scale-[1.03]"
-          )}
+          className="h-full w-full object-cover"
           onError={(e) => {
             e.currentTarget.src = "/quadras/sem-imagem.png";
           }}
@@ -213,7 +217,7 @@ const sizes = {
           />
         </button>
 
-        {/* Preço */}
+        {/* Preço (cápsula no rodapé da mídia) */}
         <div className="absolute bottom-3 left-3">
           <span className="inline-flex items-center rounded-full bg-black/55 text-white px-2.5 py-1.5 backdrop-blur-md text-xs font-semibold">
             {precoFmt}
