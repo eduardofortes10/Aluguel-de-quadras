@@ -2,24 +2,37 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
+// PÁGINA INICIAL (pública, antes do login)
+import Landing from "./pages/Landing";
+
+// Páginas públicas de auth
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+
+// Páginas do cliente
 import Home from "./pages/home";
+import Favoritos from "./pages/Favoritos";
+import MinhasQuadras from "./pages/MinhasQuadras";
+
+// Páginas do locador
+import HomeLocador from "./pages/HomeLocador";
+import CadastrarQuadra from "./pages/CadastrarQuadra";
+import DetalheQuadraLocador from "./pages/DetalheQuadraLocador";
+
+// Páginas comuns autenticadas
 import Perfil from "./pages/Perfil";
 import Conta from "./pages/conta";
 import Pagamento from "./pages/pagamento";
 import Notificacao from "./pages/notificacao";
-import Privacidade from "./pages/privacidade";
-import Sobre from "./pages/sobre";
-import Favoritos from "./pages/Favoritos";
 import Chat from "./pages/chat";
+
+// Outras páginas públicas
+import Sobre from "./pages/sobre";
+import Privacidade from "./pages/privacidade";
 import QuadraDetalhe from "./pages/QuadraDetalhe";
-import HomeLocador from "./pages/HomeLocador";
-import CadastrarQuadra from "./pages/CadastrarQuadra";
 import Filtro from "./pages/Filtro";
 import Resultados from "./pages/Resultados";
-import DetalheQuadraLocador from "./pages/DetalheQuadraLocador";
-import MinhasQuadras from "./pages/MinhasQuadras";
+
 import { Toaster } from "react-hot-toast";
 
 /** Guard simples para autenticação + papel (cliente/locador).
@@ -40,7 +53,7 @@ function RequireAuth({ children, role }) {
     return <Navigate to="/login" replace />;
   }
 
-  // ✅ normaliza o campo de tipo
+  // normaliza o campo de tipo
   const tipo = usuario?.tipo || usuario?.tipo_usuario;
 
   if (role && tipo !== role) {
@@ -57,12 +70,15 @@ const App = () => {
       <Toaster position="top-center" reverseOrder={false} />
 
       <Routes>
+        {/* Página inicial PÚBLICA (sem redirecionamento automático) */}
+        <Route path="/" element={<Landing />} />
+
         {/* Públicas */}
-        <Route path="/" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/sobre" element={<Sobre />} />
         <Route path="/privacidade" element={<Privacidade />} />
+
         {/* Detalhe de quadra pode ser público */}
         <Route path="/quadra/:id" element={<QuadraDetalhe />} />
 
@@ -160,12 +176,12 @@ const App = () => {
           }
         />
 
-        {/* Filtros/resultados — atualmente públicos */}
+        {/* Filtros/resultados — públicos */}
         <Route path="/filtro" element={<Filtro />} />
         <Route path="/resultados" element={<Resultados />} />
 
-        {/* 404 */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        {/* 404 -> volta para a landing */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );
