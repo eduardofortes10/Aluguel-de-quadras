@@ -127,7 +127,7 @@ export default function Landing() {
 
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => navigate("/filtro")}
+                onClick={() => navigate("/login")}
                 className="flex-1 px-4 py-3 rounded-xl border border-white/60 bg-white/80 backdrop-blur text-gray-700 hover:border-gray-300 shadow-sm"
               >
                 Procurar quadras
@@ -170,7 +170,7 @@ export default function Landing() {
           <div className="flex items-end justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Destaques perto de você</h2>
             <button
-              onClick={() => navigate("/filtro")}
+              onClick={() => navigate("/login")}
               className="text-sm font-medium text-emerald-700 hover:text-emerald-800"
             >
               Ver todas
