@@ -145,7 +145,7 @@ const sizes = {
   default: { card: "w-full", mediaH: "h-56 sm:h-60 md:h-64", title: "text-base md:text-lg", meta: "text-xs md:text-sm" },
   compact: { card: "w-full", mediaH: "h-44 sm:h-48 md:h-52", title: "text-sm md:text-base", meta: "text-[11px] md:text-xs" },
 }[variant] || {};
-<div className={cx("relative w-full overflow-hidden rounded-t-2xl", sizes.mediaH)}></div>
+
   return (
     <article
       onClick={handleClick}
