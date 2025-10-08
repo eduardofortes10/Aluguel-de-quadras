@@ -11,6 +11,7 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const auth = require("./middleware/auth");
 
+// ===== App =====
 const app = express();
 app.set("trust proxy", 1);
 
@@ -40,17 +41,20 @@ function parseOrigins(env) {
 const allowed = parseOrigins(process.env.FRONTEND_ORIGINS || "");
 console.log("🌐 CORS allowed origins:", allowed);
 
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // curl/healthz
+  if (allowed.length === 0) return true;
+  return allowed.some(o => (o instanceof RegExp ? o.test(origin) : o === origin));
+}
+
 function corsOrigin(origin, cb) {
-  if (!origin) return cb(null, true); // curl/healthz
-  const ok = allowed.length === 0 || allowed.some(o =>
-    o instanceof RegExp ? o.test(origin) : o === origin
-  );
+  const ok = isAllowedOrigin(origin);
   return cb(ok ? null : new Error("CORS_ORIGIN_NOT_ALLOWED"), ok);
 }
 
 app.use(cors({
   origin: corsOrigin,
-  credentials: true, // só deixe true se estiver usando cookies no login
+  credentials: true, // deixe true apenas se estiver usando cookies/sessão
   methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type","Authorization"],
 }));
@@ -122,13 +126,59 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ erro: err?.message || "Erro interno do servidor" });
 });
 
+// ====== Socket.IO ======
+const http = require("http");
+const server = http.createServer(app);
+
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: {
+    // Para Socket.IO v4, podemos usar função (origin, cb)
+    origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+  // timeout/upgrade padrões funcionam bem no Render
+});
+
+// Disponibiliza o io para uso nas rotas: req.app.get('io')
+app.set("io", io);
+
+// Eventos básicos
+io.on("connection", (socket) => {
+  console.log("🔌 socket conectado:", socket.id);
+
+  // Entrar numa sala por conversa
+  socket.on("join_conversation", (conversaId) => {
+    const room = `conv:${conversaId}`;
+    socket.join(room);
+    // opcional: notificar entrada
+    // socket.to(room).emit("user:joined", { socketId: socket.id });
+  });
+
+  socket.on("leave_conversation", (conversaId) => {
+    socket.leave(`conv:${conversaId}`);
+  });
+
+  // Indicador de digitação (opcional)
+  socket.on("typing", ({ conversaId, usuarioId, typing }) => {
+    socket.to(`conv:${conversaId}`).emit("typing", { usuarioId, typing });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("🔌 socket desconectado:", socket.id);
+  });
+});
+
 // ====== Start ======
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || "0.0.0.0";
-app.listen(PORT, HOST, () => {
+server.listen(PORT, HOST, () => {
   console.log(`🚀 API ouvindo em http://${HOST}:${PORT}`);
+  console.log(`📣 Socket.IO ligado em ${PORT}`);
   console.log(`📂 Uploads: ${uploadDir}`);
   console.log(`👤 Avatars: ${avatarsDir}`);
 });
 
+// Exporta apenas o app para manter compatibilidade, io pode ser acessado via req.app.get('io')
 module.exports = app;

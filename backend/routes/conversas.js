@@ -24,12 +24,12 @@ async function getConversa(conversaId) {
   return row || null;
 }
 
-// Criar conversa (se não existir) e inserir mensagem
+// ===== Criar conversa (se não existir) e inserir PRIMEIRA mensagem =====
 router.post("/", async (req, res) => {
   try {
     let { cliente_id, locador_id, mensagem } = req.body;
 
-    // Sanitização básica
+    // Sanitização
     cliente_id = Number(cliente_id);
     locador_id = Number(locador_id);
     const autor_id = Number(req.user.id);
@@ -41,12 +41,11 @@ router.post("/", async (req, res) => {
     if (!texto) {
       return res.status(400).json({ erro: "mensagem é obrigatória." });
     }
-    // Autor precisa ser participante (cliente OU locador)
     if (autor_id !== cliente_id && autor_id !== locador_id) {
       return res.status(403).json({ erro: "Você não pode enviar mensagem em uma conversa de terceiros." });
     }
 
-    // Garante unicidade (recomenda-se UNIQUE KEY (cliente_id, locador_id) na tabela)
+    // Garante unicidade (ideal: UNIQUE KEY (cliente_id, locador_id))
     const [exist] = await db.query(
       "SELECT id FROM conversas WHERE cliente_id = ? AND locador_id = ?",
       [cliente_id, locador_id]
@@ -61,9 +60,15 @@ router.post("/", async (req, res) => {
       conversaId = nova.insertId;
     }
 
-    await db.query(
+    const [ins] = await db.query(
       "INSERT INTO mensagens (conversa_id, autor_id, mensagem, data_envio) VALUES (?, ?, ?, NOW())",
       [conversaId, autor_id, texto]
+    );
+
+    // Buscar a mensagem recém-criada para emitir completa
+    const [[novaMensagem]] = await db.query(
+      "SELECT id, conversa_id, autor_id, mensagem, data_envio FROM mensagens WHERE id = ?",
+      [ins.insertId]
     );
 
     // Notificação simples para o outro participante
@@ -73,14 +78,68 @@ router.post("/", async (req, res) => {
       [destinatario_id]
     );
 
-    res.status(201).json({ sucesso: true, conversa_id: conversaId });
+    // === Socket.IO: emitir nova mensagem para a sala da conversa ===
+    const io = req.app.get("io");
+    if (io && novaMensagem) {
+      io.to(`conv:${conversaId}`).emit("message:new", novaMensagem);
+    }
+
+    res.status(201).json({ sucesso: true, conversa_id: conversaId, mensagem: novaMensagem });
   } catch (err) {
     console.error("POST /conversas erro:", err);
     res.status(500).json({ erro: "Erro ao criar conversa ou mensagem." });
   }
 });
 
-// Mensagens da conversa (apenas para participantes)
+// ===== Enviar mensagem em conversa EXISTENTE =====
+router.post("/mensagens", async (req, res) => {
+  try {
+    let { conversa_id, mensagem } = req.body;
+    conversa_id = Number(conversa_id);
+    const autor_id = Number(req.user.id);
+    const texto = String(mensagem || "").trim();
+
+    if (!conversa_id) return res.status(400).json({ erro: "conversa_id inválido." });
+    if (!texto) return res.status(400).json({ erro: "mensagem é obrigatória." });
+
+    // Participante?
+    const participante = await ehParticipante(conversa_id, autor_id);
+    if (!participante) return res.status(403).json({ erro: "Acesso negado: você não participa desta conversa." });
+
+    const [ins] = await db.query(
+      "INSERT INTO mensagens (conversa_id, autor_id, mensagem, data_envio) VALUES (?, ?, ?, NOW())",
+      [conversa_id, autor_id, texto]
+    );
+
+    const [[msg]] = await db.query(
+      "SELECT id, conversa_id, autor_id, mensagem, data_envio FROM mensagens WHERE id = ?",
+      [ins.insertId]
+    );
+
+    // Descobrir outro participante para notificação
+    const conversa = await getConversa(conversa_id);
+    if (conversa) {
+      const destinatario_id = autor_id === conversa.cliente_id ? conversa.locador_id : conversa.cliente_id;
+      await db.query(
+        "INSERT INTO notificacoes (usuario_id, tipo, mensagem) VALUES (?, 'mensagem', 'Você recebeu uma nova mensagem.')",
+        [destinatario_id]
+      );
+    }
+
+    // === Socket.IO: emitir nova mensagem ===
+    const io = req.app.get("io");
+    if (io && msg) {
+      io.to(`conv:${conversa_id}`).emit("message:new", msg);
+    }
+
+    res.status(201).json(msg);
+  } catch (err) {
+    console.error("POST /conversas/mensagens erro:", err);
+    res.status(500).json({ erro: "Erro ao enviar mensagem." });
+  }
+});
+
+// ===== Mensagens da conversa (apenas participantes) =====
 router.get("/mensagens/:conversa_id", async (req, res) => {
   const conversa_id = Number(req.params.conversa_id);
   try {
@@ -90,20 +149,18 @@ router.get("/mensagens/:conversa_id", async (req, res) => {
     if (!participante) return res.status(403).json({ erro: "Acesso negado às mensagens desta conversa." });
 
     const [rows] = await db.query(
-      "SELECT id, conversa_id, autor_id, mensagem, data_envio FROM mensagens WHERE conversa_id = ? ORDER BY data_envio ASC",
+      "SELECT id, conversa_id, autor_id, mensagem, data_envio, IFNULL(lida, 0) AS lida FROM mensagens WHERE conversa_id = ? ORDER BY data_envio ASC",
       [conversa_id]
     );
 
-    // Compat: adiciona lida=false se a coluna não existir
-    const mensagens = rows.map((r) => ({ ...r, lida: r.lida ?? 0 }));
-    res.json(mensagens);
+    res.json(rows);
   } catch (err) {
     console.error("GET /conversas/mensagens erro:", err);
     res.status(500).json({ erro: "Erro ao buscar mensagens." });
   }
 });
 
-// Lista das últimas conversas do usuário (compat mantém :usuario_id, mas valida)
+// ===== Lista das últimas conversas do usuário =====
 router.get("/ultimas/:usuario_id", async (req, res) => {
   const paramId = Number(req.params.usuario_id);
   const usuario_id = Number(req.user.id);
@@ -150,7 +207,7 @@ router.get("/ultimas/:usuario_id", async (req, res) => {
   }
 });
 
-// Marcar mensagens como lidas (se coluna existir), apenas para participante
+// ===== Marcar mensagens como lidas (se coluna existir) =====
 router.patch("/mensagens/ler/:conversa_id", async (req, res) => {
   const conversa_id = Number(req.params.conversa_id);
   try {
@@ -181,7 +238,7 @@ router.patch("/mensagens/ler/:conversa_id", async (req, res) => {
   }
 });
 
-// Excluir uma mensagem (somente autor pode deletar)
+// ===== Excluir uma mensagem (somente autor) =====
 router.delete("/mensagens/:id", async (req, res) => {
   const id = Number(req.params.id);
   try {
@@ -197,6 +254,13 @@ router.delete("/mensagens/:id", async (req, res) => {
     }
 
     await db.query("DELETE FROM mensagens WHERE id = ?", [id]);
+
+    // === Socket.IO: avisar deleção da mensagem ===
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`conv:${msg.conversa_id}`).emit("message:deleted", { id: msg.id, conversa_id: msg.conversa_id });
+    }
+
     res.json({ sucesso: true });
   } catch (err) {
     console.error("DELETE /conversas/mensagens erro:", err);
@@ -204,7 +268,7 @@ router.delete("/mensagens/:id", async (req, res) => {
   }
 });
 
-// Excluir conversa (participante pode excluir o histórico da conversa)
+// ===== Excluir conversa (participante) =====
 router.delete("/:id", async (req, res) => {
   const id = Number(req.params.id);
   try {
@@ -220,6 +284,13 @@ router.delete("/:id", async (req, res) => {
 
     await db.query("DELETE FROM mensagens WHERE conversa_id = ?", [id]);
     await db.query("DELETE FROM conversas WHERE id = ?", [id]);
+
+    // === Socket.IO: avisar deleção da conversa ===
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`conv:${id}`).emit("conversation:deleted", { conversa_id: id });
+    }
+
     res.sendStatus(204);
   } catch (err) {
     console.error("DELETE /conversas erro:", err);

@@ -7,6 +7,7 @@ import { FaEllipsisV, FaTrash } from "react-icons/fa";
 import toast from "react-hot-toast";
 import { api } from "../services/api";
 import MessageBubble from "../components/MessageBubble";
+import { getSocket } from "../services/socket";
 
 /* ===== Helpers ===== */
 function getUsuarioLocal() {
@@ -70,9 +71,9 @@ export default function Chat() {
 
   // Refs
   const mensagensRef = useRef(null);
-  const pollRef = useRef(null);
   const carregandoConversasRef = useRef(false);
   const carregandoMensagensRef = useRef(false);
+  const socketRef = useRef(null);
 
   // Param ?id= (alvo com quem queremos conversar)
   const alvoId = useMemo(() => normalizarNumero(params.get("id")), [params]);
@@ -93,7 +94,6 @@ export default function Chat() {
       setConversas(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Erro ao carregar conversas:", err?.response?.data || err?.message);
-      // opcional: toast.error("Não foi possível carregar suas conversas.");
     } finally {
       carregandoConversasRef.current = false;
     }
@@ -104,7 +104,6 @@ export default function Chat() {
     try {
       await api.patch(`/conversas/mensagens/ler/${conversaId}`, { usuario_id: meId });
     } catch (err) {
-      // não quebra UX
       console.warn("Não foi possível marcar como lidas:", err?.response?.data || err?.message);
     }
   };
@@ -123,7 +122,7 @@ export default function Chat() {
     }
   };
 
-  // Garante uma conversa com o alvo (?id=...) sem duplicar
+  // Garante uma conversa com o alvo (?id=...) sem duplicar (cria a 1ª mensagem)
   const garantirConversaComAlvo = async (alvo) => {
     if (!meId || !alvo) return;
 
@@ -131,7 +130,6 @@ export default function Chat() {
     const cliente_id = euSouLocador ? alvo : meId;
     const locador_id = euSouLocador ? meId : alvo;
 
-    // lista pode dar 404 -> receber []
     const lista = await safeGet(`/conversas/ultimas/${meId}`, []);
     const existente =
       (lista || []).find(
@@ -151,7 +149,6 @@ export default function Chat() {
           mensagem: "Olá, gostaria de saber mais sobre o aluguel.",
         });
       } catch (err) {
-        // se o back responder 409 (já existe), ignorar
         if (err?.response?.status !== 409) throw err;
       }
     }
@@ -173,6 +170,61 @@ export default function Chat() {
     }
   };
 
+  /* ===== Socket.IO ===== */
+  // Conecta socket e registra listeners (uma vez, dependente de conversaAtiva para filtrar)
+  useEffect(() => {
+    socketRef.current = getSocket();
+
+    const onNew = (msg) => {
+      if (conversaAtiva && Number(msg.conversa_id) === Number(conversaAtiva.conversa_id)) {
+        setMensagens((prev) => [...prev, msg]);
+        // marcar como lidas mensagens que chegam (se não são minhas)
+        if (Number(msg.autor_id) !== Number(meId)) {
+          marcarComoLidas(conversaAtiva.conversa_id);
+        }
+      }
+      // atualizar última mensagem da lista
+      carregarConversas();
+    };
+
+    const onDeleted = ({ id, conversa_id }) => {
+      if (conversaAtiva && Number(conversa_id) === Number(conversaAtiva.conversa_id)) {
+        setMensagens((prev) => prev.filter((m) => m.id !== id));
+      }
+      carregarConversas();
+    };
+
+    const onConvDeleted = ({ conversa_id }) => {
+      if (conversaAtiva && Number(conversa_id) === Number(conversaAtiva.conversa_id)) {
+        setConversaAtiva(null);
+        setMensagens([]);
+        toast("Esta conversa foi excluída.");
+      }
+      carregarConversas();
+    };
+
+    socketRef.current.on("message:new", onNew);
+    socketRef.current.on("message:deleted", onDeleted);
+    socketRef.current.on("conversation:deleted", onConvDeleted);
+
+    return () => {
+      if (!socketRef.current) return;
+      socketRef.current.off("message:new", onNew);
+      socketRef.current.off("message:deleted", onDeleted);
+      socketRef.current.off("conversation:deleted", onConvDeleted);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversaAtiva, meId]);
+
+  // Entrar/Sair da sala quando a conversa ativa muda
+  useEffect(() => {
+    if (!socketRef.current) return;
+    if (!conversaAtiva?.conversa_id) return;
+    const id = conversaAtiva.conversa_id;
+    socketRef.current.emit("join_conversation", id);
+    return () => socketRef.current.emit("leave_conversation", id);
+  }, [conversaAtiva]);
+
   /* ===== Efeitos ===== */
   useEffect(() => {
     if (!meId) return;
@@ -191,39 +243,19 @@ export default function Chat() {
     }
   }, [conversaAtiva]);
 
-  // Polling leve (apenas quando há conversa ativa)
-  useEffect(() => {
-    if (!conversaAtiva?.conversa_id) return;
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      await carregarMensagens(conversaAtiva.conversa_id);
-      await carregarConversas();
-    }, 6000);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversaAtiva?.conversa_id]);
-
   /* ===== Ações ===== */
   const enviarMensagem = async () => {
     const texto = (novaMensagem || "").trim();
     if (!texto || !conversaAtiva) return;
 
-    const euSouLocador = (meTipo || "").toLowerCase() === "locador";
-    const cliente_id = euSouLocador ? conversaAtiva.cliente_id : meId;
-    const locador_id = euSouLocador ? meId : conversaAtiva.locador_id;
-
     try {
-      await api.post("/conversas", {
-        cliente_id,
-        locador_id,
-        autor_id: meId,
+      // Em conversa existente, use o endpoint dedicado:
+      await api.post("/conversas/mensagens", {
+        conversa_id: conversaAtiva.conversa_id,
         mensagem: texto,
       });
       setNovaMensagem("");
-      await carregarMensagens(conversaAtiva.conversa_id);
-      await carregarConversas();
+      // Não precisa recarregar; a mensagem vem pelo socket (message:new)
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err?.response?.data || err?.message);
       toast.error("Não foi possível enviar sua mensagem.");
@@ -263,7 +295,7 @@ export default function Chat() {
                   await api.delete(`/conversas/mensagens/${id}`);
                   toast.dismiss(t.id);
                   toast.success("Mensagem excluída com sucesso!");
-                  if (conversaAtiva) carregarMensagens(conversaAtiva.conversa_id);
+                  // UI será atualizada via socket (message:deleted)
                 } catch (err) {
                   toast.error("Erro ao excluir a mensagem.");
                 }
