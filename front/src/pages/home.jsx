@@ -327,10 +327,12 @@ export default function Home() {
         <MobileNav />
       </div>
 
-      {/* Conteúdo central — REMOVIDO md:pl-64 / md:ml-14; agora alinha com a largura colapsada do Sidebar */}
-      <main className="flex-1 text-black md:ml-16 xl:ml-56">
-        {/* ⬇️ Container do topo: central no mobile, ANCORADO À ESQUERDA no desktop */}
-        <div className="w-full max-w-[1200px] px-3 sm:px-4 lg:px-6 pt-16 md:pt-10 mx-auto md:mx-0">
+      {/* Conteúdo central:
+          - Centralizado em todas as telas com container;
+          - No desktop, damos um padding-left suave para respirar da sidebar (sem empurrar demais);
+          - Safe-area no mobile para não colidir com a barra inferior. */}
+      <main className="flex-1 text-black">
+        <div className="container mx-auto px-4 sm:px-5 lg:px-8 pt-16 md:pt-10 md:pl-20 xl:pl-24 2xl:pl-28 pb-[calc(env(safe-area-inset-bottom)+4.5rem)] md:pb-10">
           {/* HERO com z alto e overflow visível (dropdown) */}
           <div className="relative z-50 overflow-visible">
             <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
@@ -349,7 +351,7 @@ export default function Home() {
 
               <div
                 ref={sliderRef}
-                className="keen-slider overflow-hidden sm:overflow-visible px-0 sm:px-0"
+                className="keen-slider overflow-hidden sm:overflow-visible px-0"
               >
                 {quadrasCarrossel.map((q) => {
                   const isFav = favSet.has(Number(q.id));
@@ -377,10 +379,18 @@ export default function Home() {
             </div>
           </section>
 
-          {/* Quadras em destaque */}
+          {/* Quadras em destaque (NÃO corta no celular) */}
           <section className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 tracking-tight">Quadras em destaque</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4 tracking-tight">
+              Quadras em destaque
+            </h2>
 
+            {/* 
+              Regras para não cortar:
+              - padding horizontal do container já garante respiro (px-4+);
+              - grid fluída com 1col no mobile, 2 no sm, 3 no lg, 4 no 2xl;
+              - cada card com width 100% e sem fixed width.
+            */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
               {quadras.slice(0, destaqueCount).map((q) => {
                 const isFav = favSet.has(Number(q.id));
@@ -393,7 +403,7 @@ export default function Home() {
                 return (
                   <div
                     key={`${q.id}-${isFav ? 1 : 0}`}
-                    className="bg-white rounded-2xl shadow-md ring-1 ring-black/5 hover:shadow-lg transition"
+                    className="bg-white rounded-2xl shadow-md ring-1 ring-black/5 hover:shadow-lg transition w-full"
                   >
                     <CourtCard
                       quadra={qSan}
