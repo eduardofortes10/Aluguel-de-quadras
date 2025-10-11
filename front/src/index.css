@@ -124,3 +124,15 @@ img, video {
     min-width: 0 !important;
   }
 }
+/* === Visual Kit 2025 – utilidades === */
+.glass-panel{
+  background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,.25);
+}
+
+.chip{
+  @apply inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium
+         bg-white/10 text-white ring-1 ring-white/25 hover:bg-white/15 transition;
+}

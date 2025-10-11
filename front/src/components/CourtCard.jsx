@@ -1,266 +1,118 @@
-// src/components/CourtCard.jsx
-import React, { useMemo, useState } from "react";
+// front/src/components/CourtCard.jsx
+import React, { useState } from "react";
 import { MapPin, Star, Heart } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { fileURL } from "../services/api";
-import { api } from "../services/api";
-
-function cx(...cls) {
-  return cls.filter(Boolean).join(" ");
-}
+import { fileURL, api } from "../services/api";
 
 const tipoClasses = {
-  Futebol: "bg-emerald-600/90 text-white",
-  Futsal: "bg-emerald-600/90 text-white",
-  Vôlei: "bg-indigo-600/90 text-white",
-  Basquete: "bg-orange-600/90 text-white",
-  Tênis: "bg-cyan-600/90 text-white",
-  Poliesportiva: "bg-fuchsia-600/90 text-white",
-  Golfe: "bg-lime-600/90 text-white",
+  Futebol: "bg-emerald-600 text-white",
+  Futsal: "bg-emerald-600 text-white",
+  Vôlei: "bg-indigo-600 text-white",
+  Basquete: "bg-orange-600 text-white",
+  Tênis: "bg-teal-600 text-white",
+  Society: "bg-lime-600 text-white",
+  Poliesportiva: "bg-fuchsia-600 text-white",
 };
 
-// -------- Preço: normaliza e evita "/h" duplicado --------
-function normalizePrecoToDisplay(preco) {
-  if (preco == null || preco === "") return "—";
-
-  if (typeof preco === "string") {
-    let s = preco.trim();
-
-    // se já tem "/h" em qualquer formato, padroniza e garante uma vez só
-    if (/\/\s*h\b/i.test(s)) {
-      s = s.replace(/\s*\/\s*h\b/gi, "/h");    // ex: "/ hora" → "/h"
-      s = s.replace(/\/h\s*\/h\b/gi, "/h");    // evita "/h/h"
-      return s;
-    }
-
-    // se já começa com "R$" sem "/h", só anexa "/h"
-    if (/^R\$\s*/.test(s)) {
-      return s.replace(/\s+/g, " ").trim() + "/h";
-    }
-
-    // tenta parse numérico vindo como string ("200", "200,00", "200.00")
-    const n = parseFloat(
-      s.replace(/[^\d.,-]/g, "").replace(/\./g, "").replace(",", ".")
-    );
-    if (Number.isFinite(n)) {
-      const inteiro = Math.round(n);
-      return `R$ ${inteiro.toLocaleString("pt-BR")}/h`;
-    }
-
-    return s; // fallback: mostra como veio
-  }
-
-  if (typeof preco === "number") {
-    const inteiro = Math.round(preco);
-    return `R$ ${inteiro.toLocaleString("pt-BR")}/h`;
-  }
-
-  return String(preco);
-}
-
-// -------- Resolve imagem robusto --------
-function resolveImagemQuadra(q) {
-  if (!q) return "/quadras/sem-imagem.png";
-
-  const candidatos = [q.imagem, q.imagem_url, ...(Array.isArray(q.imagens) ? q.imagens : [])];
-
-  for (let c of candidatos) {
-    if (!c) continue;
-    const s = String(c).trim().replace(/\\/g, "/");
-
-    // URL completa
-    if (/^https?:\/\//i.test(s)) return s;
-
-    // backend (/uploads, /avatars)
-    if (s.includes("/uploads/") || s.startsWith("/avatars/")) return fileURL(s);
-
-    // imagens locais do frontend
-    if (s.startsWith("/quadras/")) {
-      const nome = s.replace(/^\/?quadras\//, "");
-      return `/quadras/${nome}`;
-    }
-    if (!s.includes("/")) return `/quadras/${s}`;
-
-    // fallback: tenta como path absoluto no back
-    if (s.startsWith("/")) return fileURL(s);
-  }
-
-  return "/quadras/sem-imagem.png";
-}
-
 export default function CourtCard({
-  quadra,
-  onFavorite,
+  quadra,            // { id, imagem, nome, local, preco, avaliacao/nota, tipo }
+  variant = "default",
   isFavorited = false,
   onClick,
-  variant = "default", // "default" | "compact"
-  showOwner = false,
+  onFavorite,        // (quadra, isNowFav) => Promise<void> | void
 }) {
-  const navigate = useNavigate();
-  const [fav, setFav] = useState(!!isFavorited);
+  const {
+    id,
+    imagem,
+    imagem_url,
+    nome,
+    local,
+    preco,
+    avaliacao,
+    nota,
+    tipo,
+  } = quadra || {};
 
-  const { id, nome, local, preco, avaliacao, tipo, dono, distancia } = quadra || {};
+  const [fav, setFav] = useState(Boolean(isFavorited));
+  const rating = typeof avaliacao === "number" ? avaliacao : (typeof nota === "number" ? nota : null);
+  const badge = tipo && (tipoClasses[tipo] || "bg-slate-700 text-white");
+  const imgSrc = imagem_url
+    ? fileURL(imagem_url)
+    : imagem
+    ? imagem
+    : "/quadras/sem-imagem.png";
 
-  const sizes = {
-    default: {
-      card: "w-full",
-      mediaH: "h-56 sm:h-60 md:h-64", // altura fixa estável e maior no mobile
-      title: "text-base md:text-lg",
-      meta: "text-xs md:text-sm",
-    },
-    compact: {
-      card: "w-full",
-      mediaH: "h-44 sm:h-48 md:h-52",
-      title: "text-sm md:text-base",
-      meta: "text-[11px] md:text-xs",
-    },
-  }[variant] || {
-    card: "w-full",
-    mediaH: "h-56",
-    title: "text-base",
-    meta: "text-xs",
-  };
-
-  const badgeTipoClass = tipoClasses[tipo] || "bg-zinc-800/80 text-white";
-  const precoFmt = useMemo(() => normalizePrecoToDisplay(preco), [preco]);
-  const ratingFmt = useMemo(() => {
-    const n = Number(avaliacao);
-    return isNaN(n) ? null : n.toFixed(1);
-  }, [avaliacao]);
-
-  const handleFav = async (e) => {
+  async function toggleFav(e) {
     e.stopPropagation();
-    const newVal = !fav;
-    setFav(newVal);
-
-    if (newVal) {
-      // salvar favorito
-      const usuarioRaw = localStorage.getItem("usuario");
-      const uid = usuarioRaw ? JSON.parse(usuarioRaw).id : null;
-      if (!uid) {
-        alert("Faça login para favoritar");
-        return;
-      }
-      const imgUrl = quadra?.imagem_url || quadra?.imagem || "sem-imagem.png";
-      const dadosFavorito = {
-        usuario_id: uid,
-        quadra_id: quadra?.id || quadra?.quadra_id || 0,
-        nome: quadra?.nome || "Quadra sem nome",
-        preco: quadra?.preco || 0,
-        local: quadra?.local || "Local não informado",
-        tipo: quadra?.tipo || "Quadra esportiva",
-        nota: quadra?.avaliacao || 4.5,
-        imagem_url: imgUrl,
-      };
-      try {
-        await api.post("/favoritos", dadosFavorito);
-      } catch (err) {
-        console.error("Erro ao salvar favorito:", err);
-      }
-    } else {
-      // desfavoritar
-      onFavorite?.(quadra, newVal);
+    const next = !fav;
+    setFav(next);
+    try {
+      if (onFavorite) await onFavorite({ ...quadra, id }, next);
+      else await api.post("/favoritos/toggle", { quadra_id: id });
+    } catch (err) {
+      setFav(!next); // rollback
+      console.error(err);
     }
-  };
-
-  const handleClick = () => {
-    if (onClick) return onClick(quadra);
-    if (id != null) navigate(`/quadra/${id}`);
-  };
+  }
 
   return (
     <article
-      onClick={handleClick}
-      className={cx(
-        "group relative overflow-hidden rounded-2xl border border-zinc-200/70",
-        "bg-white shadow-sm hover:shadow-xl transition-all duration-300",
-        "hover:-translate-y-0.5 cursor-pointer",
-        sizes.card
-      )}
-      aria-label={nome || "Quadra"}
+      onClick={onClick}
+      className="group cursor-pointer rounded-2xl ring-1 ring-black/10 bg-white shadow-sm hover:shadow-lg transition overflow-hidden"
     >
-      {/* Mídia */}
-      <div className={cx("relative w-full overflow-hidden rounded-t-2xl", sizes.mediaH)}>
-        <img
-          src={resolveImagemQuadra(quadra)}
-          alt={nome || "Quadra"}
-          loading="lazy"
-          decoding="async"
-          className="h-full w-full object-cover"
-          onError={(e) => {
-            e.currentTarget.src = "/quadras/sem-imagem.png";
-          }}
-        />
+      {/* Imagem com proporção fixa (4:3 mobile, 16:10 desktop) */}
+      <div className="relative">
+        <div className="aspect-[4/3] sm:aspect-[16/10] overflow-hidden">
+          <img
+            src={imgSrc}
+            alt={nome || "Quadra"}
+            className="h-full w-full object-cover group-hover:scale-[1.02] transition-transform"
+            loading="lazy"
+            onError={(e) => (e.currentTarget.src = "/quadras/sem-imagem.png")}
+          />
+        </div>
 
-        {/* Badges topo */}
+        {/* badges topo */}
         <div className="absolute left-3 top-3 flex items-center gap-2">
-          {ratingFmt && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-black/55 text-white px-2 py-1 backdrop-blur-md">
-              <Star size={14} className="fill-current" />
-              <span className="text-xs font-medium">{ratingFmt}</span>
+          {rating != null && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-black/55 text-white px-2 py-1 backdrop-blur">
+              <Star className="h-3.5 w-3.5 fill-current" />
+              <span className="text-xs font-semibold">{Number(rating).toFixed(1)}</span>
             </span>
           )}
           {tipo && (
-            <span
-              className={cx(
-                "inline-flex items-center rounded-full px-2 py-1",
-                "text-xs font-medium",
-                badgeTipoClass
-              )}
-            >
+            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${badge}`}>
               {tipo}
             </span>
           )}
         </div>
 
-        {/* Favorito */}
+        {/* coração */}
         <button
-          onClick={handleFav}
-          aria-label={fav ? "Desfavoritar" : "Favoritar"}
-          className={cx(
-            "absolute right-3 top-3 inline-flex items-center justify-center rounded-full",
-            "backdrop-blur-md bg-white/70 border border-zinc-200/70",
-            "h-9 w-9 transition-all duration-300 hover:scale-105 active:scale-95"
-          )}
+          onClick={toggleFav}
+          className={`absolute right-3 top-3 grid place-items-center h-9 w-9 rounded-full bg-white/90 text-slate-800 hover:bg-white transition ${fav ? "ring-2 ring-rose-500" : "ring-1 ring-black/10"}`}
+          aria-label={fav ? "Remover dos favoritos" : "Adicionar aos favoritos"}
         >
-          <Heart
-            size={18}
-            className={cx(
-              "transition-transform duration-300",
-              fav ? "fill-rose-500 text-rose-500 scale-110" : "text-zinc-700"
-            )}
-          />
+          <Heart className={`h-5 w-5 ${fav ? "fill-rose-500 text-rose-500" : ""}`} />
         </button>
 
-        {/* Preço (cápsula no rodapé da mídia) */}
-        <div className="absolute bottom-3 left-3">
-          <span className="inline-flex items-center rounded-full bg-black/55 text-white px-2.5 py-1.5 backdrop-blur-md text-xs font-semibold">
-            {precoFmt}
+        {/* preço */}
+        {preco && (
+          <span className="absolute left-3 bottom-3 rounded-lg bg-black/60 px-2 py-1 text-white text-xs backdrop-blur">
+            {String(preco)}
           </span>
-        </div>
-
-        {/* Gradiente rodapé */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent" />
+        )}
       </div>
 
-      {/* Info */}
-      <div className="p-3 md:p-4 bg-white">
-        <h3 className={cx("line-clamp-1 font-semibold text-zinc-900", sizes.title)}>
-          {nome || "Quadra sem nome"}
+      {/* corpo */}
+      <div className={`p-4 ${variant === "compact" ? "pb-4" : "pb-5"}`}>
+        <h3 className="line-clamp-1 text-[15px] sm:text-base font-semibold text-slate-900">
+          {nome || "Quadra"}
         </h3>
-
-        <div className={cx("mt-1 flex items-center gap-1.5 text-zinc-600", sizes.meta)}>
-          <MapPin size={14} className="shrink-0" />
-          <span className="line-clamp-1">
-            {local || "Local não informado"}
-            {distancia ? <span className="text-zinc-400"> • {distancia}</span> : null}
-          </span>
-        </div>
-
-        {showOwner && dono && (
-          <div className={cx("mt-1 text-zinc-600", sizes.meta)}>
-            Proprietário: <span className="font-medium text-zinc-700">{dono}</span>
-          </div>
+        {local && (
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-600">
+            <MapPin className="h-4 w-4" />
+            <span className="line-clamp-1">{local}</span>
+          </p>
         )}
       </div>
     </article>
