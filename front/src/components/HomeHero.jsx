@@ -83,27 +83,25 @@ export default function HomeHero({ nomeUsuario = "Usuário", notificacoesNaoLida
   };
 
   return (
-   <section
-  ref={heroRef}
-  className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800 text-white p-4 sm:p-6 shadow-xl"
->
-
+    <section
+      ref={heroRef}
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-emerald-800 text-white p-4 sm:p-6 shadow-xl"
+    >
       {/* brilhos de fundo (z-0) */}
       <div ref={glowTR} className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-3xl transition-transform duration-200 will-change-transform z-0" />
       <div ref={glowBL} className="pointer-events-none absolute -bottom-28 -left-20 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl transition-transform duration-200 will-change-transform z-0" />
 
       {/* spotlight do mouse (entre fundo e conteúdo) */}
       <div
-  ref={spotRef}
-  aria-hidden
-  className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-150"
-  style={{
-    backgroundImage:
-      "radial-gradient(700px circle at var(--mx) var(--my), rgba(255,255,255,0.36), rgba(255,255,255,0.18) 35%, transparent 60%)",
-    mixBlendMode: "screen",   // troquei p/ garantir contraste
-  }}
-/>
-
+        ref={spotRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-150"
+        style={{
+          backgroundImage:
+            "radial-gradient(700px circle at var(--mx) var(--my), rgba(255,255,255,0.36), rgba(255,255,255,0.18) 35%, transparent 60%)",
+          mixBlendMode: "screen",
+        }}
+      />
 
       {/* conteúdo (z-10) */}
       <div ref={innerRef} className="relative z-10 will-change-transform transition-transform duration-150">
@@ -167,16 +165,23 @@ export default function HomeHero({ nomeUsuario = "Usuário", notificacoesNaoLida
           </div>
         </div>
 
-        {/* categorias rápidas (mantidas) */}
-        <div className="mt-3 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <ul className="flex gap-3 min-w-max">
-            {categorias.map(({ nome, img }) => (
-              <li key={nome}>
+        {/* categorias rápidas — AGORA ARRASTÁVEIS NO CELULAR */}
+        {/* wrapper full-bleed negativo só no mobile p/ não “cortar” sombra/arestas */}
+        <div className="-mx-4 sm:mx-0 mt-3">
+          <ul
+            className="flex gap-3 overflow-x-auto sm:overflow-visible no-scrollbar snap-x snap-mandatory px-4 sm:px-0 touch-pan-x"
+            role="tablist"
+            aria-label="Categorias rápidas"
+          >
+            {categorias.map(({ nome, img }, idx) => (
+              <li key={nome} className="shrink-0 snap-start">
                 <button
                   onClick={() => irParaCategoria(nome)}
                   className="group inline-flex items-center gap-2 h-11 px-3 pr-4 rounded-full outline outline-1 outline-white/25 -outline-offset-1 bg-white/10 hover:bg-white/15 transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.15)]"
                   style={{ WebkitTapHighlightColor: "transparent" }}
                   title={nome}
+                  role="tab"
+                  aria-selected={idx === 0 ? "true" : "false"}
                 >
                   <span className="relative shrink-0 w-9 h-9 rounded-full overflow-hidden bg-white/0">
                     <img

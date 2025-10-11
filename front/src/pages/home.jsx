@@ -316,7 +316,7 @@ export default function Home() {
 
   /* ================= Render ================= */
   return (
-    <div className="flex min-h-screen overflow-x-hidden touch-pan-y bg-gradient-to-b from-white to-gray-50">
+    <div className="flex min-h-screen overflow-x-visible sm:overflow-x-hidden touch-pan-y bg-gradient-to-b from-white to-gray-50">
       {/* Sidebar fixa no desktop (não reservamos largura aqui) */}
       <div className="hidden md:block">
         <Sidebar />
@@ -391,7 +391,7 @@ export default function Home() {
               - grid fluída com 1col no mobile, 2 no sm, 3 no lg, 4 no 2xl;
               - cada card com width 100% e sem fixed width.
             */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6 overflow-visible">
               {quadras.slice(0, destaqueCount).map((q) => {
                 const isFav = favSet.has(Number(q.id));
                 const imgName = getImagemNome(q);
