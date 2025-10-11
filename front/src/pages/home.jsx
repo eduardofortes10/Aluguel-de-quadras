@@ -327,10 +327,10 @@ export default function Home() {
         <MobileNav />
       </div>
 
-      {/* Conteúdo central — removido md:pl-64 (causava o espaço em branco).
-          Usamos um deslocamento mais leve para conviver com o estado COLAPSADO do Sidebar. */}
-      <main className="flex-1 text-black md:ml-14 xl:ml-56">
-        <div className="mx-auto w-full max-w-[1200px] px-3 sm:px-4 lg:px-6 pt-16 md:pt-10">
+      {/* Conteúdo central — REMOVIDO md:pl-64 / md:ml-14; agora alinha com a largura colapsada do Sidebar */}
+      <main className="flex-1 text-black md:ml-16 xl:ml-56">
+        {/* ⬇️ Container do topo: central no mobile, ANCORADO À ESQUERDA no desktop */}
+        <div className="w-full max-w-[1200px] px-3 sm:px-4 lg:px-6 pt-16 md:pt-10 mx-auto md:mx-0">
           {/* HERO com z alto e overflow visível (dropdown) */}
           <div className="relative z-50 overflow-visible">
             <HomeHero nomeUsuario={nomeUsuario} notificacoesNaoLidas={notificacoesNaoLidas} />
