@@ -2,7 +2,7 @@
 // Visual 2025 – vidro + gradiente, responsivo e leve
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Bell, ChevronDown, Search, SlidersHorizontal, SoccerBall } from "lucide-react";
+import { Bell, ChevronDown, Search, SlidersHorizontal, CircleDot } from "lucide-react";
 import DropdownUser from "./DropdownUser";
 
 export default function HomeHero({
@@ -110,7 +110,7 @@ export default function HomeHero({
           {/* Categorias */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {[
-              { nome: "Futebol", icon: <SoccerBall className="h-4 w-4" /> },
+              { nome: "Futebol", icon: <CircleDot className="h-4 w-4" /> },
               { nome: "Basquete" },
               { nome: "Vôlei" },
               { nome: "Tênis" },
